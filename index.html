@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dulidan Studios | 3D, Ads & Game Development</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700;800&display=swap" rel="stylesheet">    <style>
+        :root {
+            --brand-purple: #a855f7;
+            --brand-magenta: #ec4899;
+        }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #030303; 
+            color: #ffffff;
+            scroll-behavior: smooth;
+        }
+        .brand-gradient { 
+            background: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-magenta) 100%); 
+        }
+        .text-gradient { 
+            background: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-magenta) 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.02); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .glass-card:hover { 
+            border-color: var(--brand-purple); 
+            background: rgba(168, 85, 247, 0.05);
+            transform: translateY(-5px);
+        }
+        .hero-glow {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="antialiased">    <!-- Navigation -->
+    <nav class="fixed w-full z-50 px-8 py-5 flex justify-between items-center bg-black/60 backdrop-blur-xl border-b border-white/5">
+        <a href="#"><img src="images/logo.png" alt="Dulidan Studios" class="h-8 md:h-10"></a>
+        <div class="hidden md:flex space-x-12 text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
+            <a href="#services" class="hover:text-white transition">Services</a>
+            <a href="#games" class="hover:text-white transition">Games</a>
+            <a href="#contact" class="hover:text-white transition">Contact</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex flex-col justify-center items-center px-6 pt-20 overflow-hidden">
+        <div class="hero-glow"></div>
+        <div class="hero-glow" style="left: -300px; bottom: -300px; opacity: 0.5;"></div>
+        
+        <img src="images/logo.png" alt="Dulidan Studios Logo" class="w-72 md:w-96 mb-16 animate-pulse" style="animation-duration: 4s;">
+        
+        <h1 class="text-5xl md:text-8xl font-extrabold text-center max-w-5xl tracking-tighter leading-none mb-8">
+            WE BUILD <span class="text-gradient">DIGITAL</span> FRONTIERS.
+        </h1>
+        <p class="text-gray-400 text-lg md:text-xl max-w-2xl text-center font-light leading-relaxed">
+            High-fidelity 3D assets, cinematic advertisements, and boundary-pushing game simulations.
+        </p>
+        <div class="mt-12 flex space-x-4">
+            <a href="#games" class="brand-gradient px-10 py-4 rounded-full font-bold uppercase text-xs tracking-widest hover:opacity-90 transition shadow-lg shadow-purple-500/20">Our Games</a>
+            <a href="#services" class="bg-white/5 border border-white/10 px-10 py-4 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-white/10 transition">Services</a>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-32 px-8 max-w-7xl mx-auto">
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="glass-card p-10 rounded-3xl">
+                <div class="w-12 h-12 brand-gradient rounded-xl mb-8 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+                <h3 class="text-2xl font-bold mb-4 uppercase tracking-tight">3D Modeling</h3>
+                <p class="text-gray-500 leading-relaxed">High-poly environment and character assets optimized for Unreal Engine 5 and cinematic rendering.</p>
+            </div>
+            <div class="glass-card p-10 rounded-3xl">
+                <div class="w-12 h-12 brand-gradient rounded-xl mb-8 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </div>
+                <h3 class="text-2xl font-bold mb-4 uppercase tracking-tight">Ad Production</h3>
+                <p class="text-gray-500 leading-relaxed">Dynamic commercial content and motion graphics for companies looking to disrupt their industry.</p>
+            </div>
+            <div class="glass-card p-10 rounded-3xl">
+                <div class="w-12 h-12 brand-gradient rounded-xl mb-8 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.364-5.636l-.707-.707m1.414 14.142l-.707-.707M15.818 17.818l-.707-.707M8 12a4 4 0 118 0 4 4 0 01-8 0z"></path></svg>
+                </div>
+                <h3 class="text-2xl font-bold mb-4 uppercase tracking-tight">AI Simulation</h3>
+                <p class="text-gray-500 leading-relaxed">Specialized AI-driven logic for realistic political and diplomatic simulators.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Games Section -->
+    <section id="games" class="py-32 px-8 bg-[#060606]">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
+                <div>
+                    <h2 class="text-xs font-black tracking-[0.5em] text-purple-500 uppercase mb-4">Internal Projects</h2>
+                    <h3 class="text-4xl md:text-5xl font-extrabold uppercase tracking-tighter">Now in Development</h3>
+                </div>
+                <p class="text-gray-500 max-w-md">Pushing the limits of storytelling and technical simulation in the indie gaming space.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-16">
+                <!-- Horror Game -->
+                <div class="group cursor-pointer">
+                    <div class="relative aspect-video rounded-3xl overflow-hidden mb-8 border border-white/10">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10"></div>
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&q=80')] bg-cover bg-center grayscale group-hover:grayscale-0 group-hover:scale-110 transition duration-700"></div>
+                        <div class="absolute bottom-8 left-8 z-20">
+                            <span class="bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full">Psychological Horror</span>
+                        </div>
+                    </div>
+                    <h4 class="text-3xl font-bold mb-3 uppercase tracking-tight">Static Descent</h4>
+                    <p class="text-gray-400 leading-relaxed mb-6">Experience the isolation of an ATC tower operator. When the planes stop responding and the radar shows things that shouldn't exist, madness is the only signal left.</p>
+                    <button class="text-xs font-bold uppercase tracking-widest border-b-2 border-purple-500 pb-1 hover:text-purple-400 transition">Explore Project</button>
+                </div>
+
+                <!-- Simulation Game -->
+                <div class="group cursor-pointer">                    <div class="relative aspect-video rounded-3xl overflow-hidden mb-8 border border-white/10">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent z-10"></div>
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&q=80')] bg-cover bg-center group-hover:scale-110 transition duration-700"></div>
+                        <div class="absolute bottom-8 left-8 z-20">
+                            <span class="brand-gradient px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full">Diplomacy Sim</span>
+                        </div>
+                    </div>
+                    <h4 class="text-3xl font-bold mb-3 uppercase tracking-tight">Sovereign AI</h4>
+                    <p class="text-gray-400 leading-relaxed mb-6">A hyper-realistic political engine. Navigate complex global treaties and domestic crises powered by a neural simulation that reacts to every word you speak.</p>
+                    <button class="text-xs font-bold uppercase tracking-widest border-b-2 border-purple-500 pb-1 hover:text-purple-400 transition">Explore Project</button>
+                </div>
+            </div>
+        </div>
+    </section>    <!-- Footer -->
+    <footer id="contact" class="py-24 px-8 border-t border-white/5">
+        <div class="max-w-7xl mx-auto flex flex-col items-center">
+            <img src="images/logo.png" alt="Dulidan Studios" class="h-10 mb-12 opacity-80">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-12 text-center mb-16">
+                <div>
+                    <h5 class="text-white font-bold uppercase text-[10px] tracking-widest mb-6">Socials</h5>
+                    <ul class="text-gray-500 text-sm space-y-4">                        <li><a href="#" class="hover:text-purple-500">Twitter</a></li>
+                        <li><a href="#" class="hover:text-purple-500">ArtStation</a></li>
+                        <li><a href="#" class="hover:text-purple-500">LinkedIn</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="text-white font-bold uppercase text-[10px] tracking-widest mb-6">Studio</h5>
+                    <ul class="text-gray-500 text-sm space-y-4">
+                        <li><a href="#" class="hover:text-purple-500">Projects</a></li>
+                        <li><a href="#" class="hover:text-purple-500">About</a></li>
+                        <li><a href="#" class="hover:text-purple-500">Careers</a></li>
+                    </ul>                </div>
+                <div>
+                    <h5 class="text-white font-bold uppercase text-[10px] tracking-widest mb-6">Legal</h5>
+                    <ul class="text-gray-500 text-sm space-y-4">
+                        <li><a href="#" class="hover:text-purple-500">Privacy</a></li>
+                        <li><a href="#" class="hover:text-purple-500">Terms</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="text-white font-bold uppercase text-[10px] tracking-widest mb-6">Contact</h5>
+                    <p class="text-gray-500 text-sm">hello@dulidan.com</p>
+                </div>            </div>
+            <p class="text-zinc-700 text-[10px] font-bold uppercase tracking-[0.5em]">&copy; 2024 Dulidan Studios. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
