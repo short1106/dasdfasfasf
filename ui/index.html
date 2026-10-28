@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="de" data-anim="episch">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'; connect-src 'self'">
+<title>Dulidan Web</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/chrome.css">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/overlays.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body class="preboot">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-acc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--vio)"/><stop offset="1" style="stop-color:var(--mag)"/></linearGradient>
+  </defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/><path d="M8 12h11" class="tail"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/><path d="M16 12H5" class="tail"/></symbol>
+  <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5"/><circle cx="12" cy="12" r="6.4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-tab" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M8 6v4"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+  <symbol id="i-color" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-1-1.6-1-2.6 1-1.4 2-1.4h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-yt" viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10 9l5 3-5 3z"/></symbol>
+  <symbol id="i-gh" viewBox="0 0 24 24"><path d="M9 19c-4 1.3-4-2-6-2.5M15 21v-3.4a3 3 0 0 0-.8-2.3c2.8-.3 5.8-1.4 5.8-6.2A4.8 4.8 0 0 0 18.7 6 4.5 4.5 0 0 0 18.6 3S17.5 2.7 15 4.4a12.4 12.4 0 0 0-6 0C6.5 2.7 5.4 3 5.4 3a4.5 4.5 0 0 0-.1 3A4.8 4.8 0 0 0 4 9.1c0 4.8 3 5.9 5.8 6.2a3 3 0 0 0-.8 2.3V21"/></symbol>
+  <symbol id="i-wiki" viewBox="0 0 24 24"><path d="M2.5 6h4M9.5 6h4M16.5 6h5"/><path d="M4.5 6l4.5 12 3-7.5 3 7.5 4.5-12"/></symbol>
+  <symbol id="i-maps" viewBox="0 0 24 24"><path d="M12 21s-6.5-6.2-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21z"/><circle cx="12" cy="10" r="2.4"/></symbol>
+  <symbol id="i-mc" viewBox="0 0 24 24"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></symbol>
+  <symbol id="i-d" viewBox="0 0 100 100"><path d="M18 12h30c22 0 36 15 36 38S70 88 48 88H18zM34 28v44h13c12 0 20-9 20-22s-8-22-20-22z" fill-rule="evenodd"/></symbol>
+  <symbol id="i-min" viewBox="0 0 12 12"><path d="M2 6h8"/></symbol>
+  <symbol id="i-max" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1"/></symbol>
+  <symbol id="i-restore" viewBox="0 0 12 12"><rect x="2" y="4" width="6" height="6" rx="1"/><path d="M4 4V2.5h5.5V8H8"/></symbol>
+  <symbol id="i-close" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/></symbol>
+</svg>
+
+<div id="app">
+  <!-- ===== Chrome ===== -->
+  <header id="chrome">
+    <div class="titlebar" id="titlebar">
+      <div class="brand mag-soft" data-cursor="DULIDAN WEB">
+        <img src="../assets/img/logo-mark.webp" alt="" draggable="false">
+        <span class="brand-t">DULIDAN<b>WEB</b></span>
+      </div>
+      <div class="tabstrip" id="tabstrip">
+        <div class="tabs" id="tabs" role="tablist"></div>
+        <div class="tab-glow" id="tabGlow"><i></i></div>
+        <button class="icon-btn fx mag new-tab" id="newTab" data-cursor="NEUER TAB" data-snd="click" aria-label="Neuer Tab"><svg><use href="#i-plus"/></svg></button>
+      </div>
+      <div class="drag-fill"></div>
+      <div class="winctl" id="winctl">
+        <button class="wc wc-min" data-act="min" aria-label="Minimieren"><svg viewBox="0 0 12 12"><use href="#i-min"/></svg></button>
+        <button class="wc wc-max" data-act="max" aria-label="Maximieren"><svg viewBox="0 0 12 12" class="ic-max"><use href="#i-max"/></svg><svg viewBox="0 0 12 12" class="ic-restore"><use href="#i-restore"/></svg></button>
+        <button class="wc wc-close" data-act="close" aria-label="Schließen"><svg viewBox="0 0 12 12"><use href="#i-close"/></svg><i class="wc-burst"></i></button>
+      </div>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <div class="nav-group">
+        <button class="icon-btn fx mag" id="btnBack" data-cursor="ZURÜCK" data-ico="back" aria-label="Zurück"><svg><use href="#i-back"/></svg></button>
+        <button class="icon-btn fx mag" id="btnFwd" data-cursor="VOR" data-ico="fwd" aria-label="Vor"><svg><use href="#i-fwd"/></svg></button>
+        <button class="icon-btn fx mag" id="btnReload" data-cursor="NEU LADEN" data-ico="spin" aria-label="Neu laden"><svg class="ic-reload"><use href="#i-reload"/></svg><svg class="ic-stop"><use href="#i-stop"/></svg></button>
+        <button class="icon-btn fx mag" id="btnHome" data-cursor="START" data-ico="hop" aria-label="Startseite"><svg><use href="#i-home"/></svg></button>
+      </div>
+
+      <form class="omni" id="omni" autocomplete="off">
+        <div class="beam" aria-hidden="true"></div>
+        <span class="omni-ico" id="omniIco"><svg><use href="#i-search"/></svg></span>
+        <span class="sc-chip" id="omniChip" hidden></span>
+        <div class="omni-field">
+          <input id="omniInput" spellcheck="false" placeholder="Suche oder Adresse eingeben" aria-label="Adresse und Suche">
+          <div class="omni-pretty" id="omniPretty" aria-hidden="true"></div>
+        </div>
+        <button type="button" class="icon-btn sm fx star" id="btnStar" data-cursor="MERKEN" data-ico="pop" aria-label="Lesezeichen"><svg><use href="#i-star"/></svg></button>
+        <div class="load-line" id="omniLoad"><i></i></div>
+      </form>
+
+      <div class="tool-group">
+        <button class="icon-btn fx mag" id="btnDl" data-cursor="DOWNLOADS" data-ico="drop" aria-label="Downloads"><svg><use href="#i-dl"/></svg><b class="badge" id="dlBadge" hidden></b><i class="ring-prog" id="dlRing"></i></button>
+        <button class="chip-btn fx mag" id="btnPal" data-cursor="BEFEHLE" aria-label="Command Palette"><svg><use href="#i-cmd"/></svg><kbd>Strg K</kbd></button>
+        <button class="icon-btn fx mag" id="btnSettings" data-cursor="EINSTELLUNGEN" data-ico="spin" aria-label="Einstellungen"><svg><use href="#i-gear"/></svg></button>
+        <button class="icon-btn fx mag" id="btnMenu" data-cursor="MENÜ" data-ico="wiggle" aria-label="Menü"><svg><use href="#i-menu"/></svg></button>
+      </div>
+    </div>
+    <div class="scroll-hud" aria-hidden="true"><i id="scrollHud"></i><span id="scrollPct">000</span></div>
+  </header>
+
+  <!-- ===== Inhalt ===== -->
+  <main id="viewport">
+    <section id="home" class="home">
+      <canvas id="nebula" class="nebula"></canvas>
+      <div class="home-grid" aria-hidden="true"></div>
+      <canvas id="logoGL" class="logo-gl"></canvas>
+
+      <div class="hud hud-tl" aria-hidden="true">
+        <div><span class="status-dot"></span><span class="scramble" data-text="SYSTEM ONLINE">SYSTEM ONLINE</span></div>
+        <div class="dim"><b id="fps">60</b> FPS · <span id="tabCount">1</span> TAB</div>
+      </div>
+      <div class="hud hud-tr">
+        <div class="clock" id="clock">00:00<span class="sec">:00</span></div>
+        <div class="dim" id="date">—</div>
+      </div>
+      <div class="hud hud-bl" aria-hidden="true">
+        <div class="dim">CURSOR</div>
+        <div id="coords">X 0000 · Y 0000</div>
+      </div>
+      <div class="hud hud-br" id="weather">
+        <div class="dim"><span id="wCity">WETTER</span></div>
+        <div class="w-row"><span class="w-ico" id="wIco">◌</span><b id="wTemp">--°</b><span id="wText">verbinde …</span></div>
+      </div>
+      <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
+
+      <div class="hero">
+        <div class="logo-stage" id="logoStage">
+          <img id="logoFallback" src="../assets/img/logo-mark.webp" alt="Dulidan" draggable="false">
+        </div>
+        <h1 class="hero-title" id="heroTitle" aria-label="Dulidan Web"><span class="w1">DULIDAN</span> <span class="w2 outline">WEB</span></h1>
+        <form class="bigbar" id="bigbar" autocomplete="off">
+          <div class="beam" aria-hidden="true"></div>
+          <div class="bigbar-in">
+            <span class="big-ico"><svg><use href="#i-search"/></svg></span>
+            <span class="sc-chip" id="bigChip" hidden></span>
+            <input id="bigInput" spellcheck="false" placeholder="Suche das Web oder gib eine Adresse ein …" aria-label="Suche">
+            <span class="big-engine" id="bigEngine">DUCKDUCKGO</span>
+            <button class="big-go fx" type="submit" data-cursor="FEUER" aria-label="Los"><svg><use href="#i-arrow"/></svg></button>
+          </div>
+          <div class="load-line" id="bigLoad"><i></i></div>
+        </form>
+        <div class="sc-hints" id="scHints"></div>
+        <div class="quick" id="quick"></div>
+      </div>
+
+      <div class="band band-a" aria-hidden="true"><div class="band-track" id="bandA"></div></div>
+      <div class="band band-b" aria-hidden="true"><div class="band-track rev" id="bandB"></div></div>
+    </section>
+
+    <img id="snap" class="snap" alt="">
+    <div id="wipe" class="wipe" aria-hidden="true">
+      <div class="wipe-logo"><img src="../assets/img/logo-mark.webp" alt=""></div>
+      <div class="wipe-line"></div>
+      <div class="wipe-txt mono" id="wipeTxt">LADE</div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== Overlays ===== -->
+<div class="suggest" id="suggest" role="listbox" hidden><div class="sg-hl" id="sgHl"></div><ul id="sgList"></ul></div>
+
+<div class="modal" id="palette" hidden>
+  <div class="pal" role="dialog" aria-label="Command Palette">
+    <div class="pal-in"><svg><use href="#i-cmd"/></svg><input id="palInput" spellcheck="false" placeholder="Tabs, Lesezeichen, Verlauf, Befehle …"><kbd>ESC</kbd></div>
+    <div class="pal-body"><div class="pal-hl" id="palHl"></div><ul class="pal-list" id="palList"></ul></div>
+    <div class="pal-foot"><span><kbd>↑↓</kbd> wählen</span><span><kbd>↵</kbd> ausführen</span><span><kbd>Strg K</kbd> schließen</span><span class="grow"></span><span class="grad-text">DULIDAN://COMMAND</span></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<aside class="panel panel-side" id="settings" hidden>
+  <div class="panel-head stg"><h2>Einstellungen</h2><button class="icon-btn sm fx" data-close aria-label="Schließen" data-ico="spin"><svg><use href="#i-x"/></svg></button></div>
+  <div class="panel-body stg" id="settingsBody"></div>
+</aside>
+
+<aside class="panel panel-drop" id="downloads" hidden>
+  <div class="panel-head stg"><h2>Downloads</h2><button class="icon-btn sm fx" data-close aria-label="Schließen" data-ico="spin"><svg><use href="#i-x"/></svg></button></div>
+  <ul class="dl-list stg" id="dlList"></ul>
+</aside>
+
+<aside class="panel panel-drop panel-menu" id="menu" hidden>
+  <ul class="menu-list stg" id="menuList"></ul>
+</aside>
+
+<div class="boot" id="boot" hidden>
+  <div class="boot-grid"></div>
+  <div class="boot-in">
+    <div class="boot-logo"><img src="../assets/img/logo-mark.webp" alt=""><i></i></div>
+    <div class="boot-lines" id="bootLines"></div>
+    <div class="boot-bar"><i id="bootBar"></i></div>
+    <div class="boot-foot"><span>DULIDAN WEB · v0.1</span><span id="bootPct">0%</span></div>
+  </div>
+  <button class="boot-skip" id="bootSkip">ÜBERSPRINGEN <kbd>ENTER</kbd> / <kbd>ESC</kbd></button>
+</div>
+
+<div class="shutdown" id="shutdown" hidden><i></i></div>
+<canvas id="fx" class="fx-canvas"></canvas>
+<div class="tex tex-scan"></div>
+<div class="tex tex-noise"></div>
+<div class="toast" id="toast"></div>
+<div class="cursor" id="cursor"><span class="cursor-label" id="cursorLabel"></span></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+</body>
+</html>

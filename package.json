@@ -1,0 +1,14 @@
+{
+  "name": "dulidan-web",
+  "version": "0.1.0",
+  "description": "Dulidan Web – ein übertrieben epischer Desktop-Browser von Dulidan Studios",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Dulidan Studios",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^45.1.0"
+  }
+}
