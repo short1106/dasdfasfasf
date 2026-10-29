@@ -4,11 +4,43 @@
   "description": "Dulidan Web – ein übertrieben epischer Desktop-Browser von Dulidan Studios",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
   },
   "author": "Dulidan Studios",
   "license": "UNLICENSED",
   "devDependencies": {
-    "electron": "^45.1.0"
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.dulidanstudios.web",
+    "productName": "Dulidan Web",
+    "files": [
+      "main.js",
+      "preload.js",
+      "tab-preload.js",
+      "package.json",
+      "ui/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signExecutable": false,
+      "icon": "assets/img/icon-256.png"
+    },
+    "portable": {
+      "artifactName": "DulidanWeb.exe"
+    }
   }
 }

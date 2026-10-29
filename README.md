@@ -4,7 +4,15 @@ Ein Desktop-Browser von **Dulidan Studios**, gebaut mit Electron. Version 0.1 ko
 
 > Dream. Design. Develop. Dominate.
 
-## Starten
+## Windows: einfach die exe
+
+`DulidanWeb.exe` herunterladen und doppelklicken. Eine Installation, Node.js oder sonst etwas ist nicht nötig. Die exe findest du unter **Releases → „Dulidan Web (neuester Build)"**. Der Workflow `.github/workflows/build-exe.yml` baut sie bei jedem Push neu.
+
+Beim ersten Start zeigt Windows eventuell „Der Computer wurde durch Windows geschützt", weil die exe nicht kostenpflichtig signiert ist. Dann auf **Weitere Informationen → Trotzdem ausführen** klicken.
+
+Selbst bauen: `npm install` und dann `npm run dist`. Die exe landet in `dist/`.
+
+## Starten (Entwicklung)
 
 Voraussetzung: [Node.js](https://nodejs.org) 20 oder neuer.
 

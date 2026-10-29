@@ -1,0 +1,35 @@
+# Baut DulidanWeb.exe (portable, keine Installation) und stellt sie als Release-Download bereit.
+name: Windows-exe bauen
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ccr-5bc0fb9e-frlec2, main]
+    paths-ignore: ['README.md', 'dulidan-web.zip']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DulidanWeb
+          path: dist/DulidanWeb.exe
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Dulidan Web (neuester Build)
+          prerelease: true
+          make_latest: false
+          body: Portable Windows-Version. DulidanWeb.exe herunterladen und doppelklicken, eine Installation ist nicht nötig.
+          files: dist/DulidanWeb.exe
