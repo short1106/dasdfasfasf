@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>Kasse</title>
+<body style="font:15px sans-serif;padding:30px;background:#f4f4f4">
+<h1>Kasse</h1>
+<form id="f" onsubmit="return false">
+<label>Vorname <input id="vn" name="vorname"></label>
+<label>Nachname <input id="nn" name="nachname"></label><br><br>
+<label>Straße und Hausnummer <input id="str" name="strasse"></label><br><br>
+<label>PLZ <input id="plz" name="plz"></label> <label>Ort <input id="ort" name="ort"></label>
+<label>Land <select id="land" name="land"><option value="">Bitte wählen</option><option value="AT">Österreich</option><option value="DE">Deutschland</option><option value="CH">Schweiz</option></select></label><br><br>
+<label>E-Mail <input id="mail" type="email" name="email"></label><br><br>
+<label>Kartennummer <input id="cc" name="kartennummer"></label>
+<label>Karteninhaber <input id="cch" name="karteninhaber"></label>
+<label>Gültig bis <input id="exp" name="gueltig" placeholder="MM/JJ"></label>
+<label>CVC <input id="cvc" name="cvc"></label><br><br>
+<button type="button" id="buy" onclick="document.getElementById('status').textContent='BESTELLT'">Zahlungspflichtig bestellen</button>
+<p id="status">offen</p>
+</form>

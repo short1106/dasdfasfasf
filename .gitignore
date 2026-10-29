@@ -8,3 +8,6 @@ android/app/build/
 android/local.properties
 android/DulidanWeb.apk
 *.jks
+tests/out/
+tests/fixtures/disco/track*.wav
+tests/fixtures/disco/track*.webm
