@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Leuchtender Verlaufsrand (Violett → Magenta → Pink) um dunkle Pille -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="32dp" />
+            <gradient android:angle="0" android:startColor="#8122B5" android:centerColor="#C020B8" android:endColor="#FF7AE6" />
+        </shape>
+    </item>
+    <item android:left="1.5dp" android:top="1.5dp" android:right="1.5dp" android:bottom="1.5dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="31dp" />
+            <gradient android:angle="270" android:startColor="#F2151022" android:endColor="#F207060B" />
+        </shape>
+    </item>
+</layer-list>

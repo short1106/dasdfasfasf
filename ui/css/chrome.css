@@ -1,0 +1,255 @@
+/* Dulidan Web · chrome.css
+   Aufbau: App-Rahmen · Titelleiste · Tabs · Fenster-Controls · Toolbar · Omnibox · Ladebalken · Viewport · Wipe */
+
+#app{position:fixed;inset:0;display:flex;flex-direction:column;transform-origin:50% 40%}
+#chrome{position:relative;z-index:50;flex-shrink:0;background:linear-gradient(180deg,#0b0911,#09070f);border-bottom:1px solid var(--line)}
+#chrome::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--mag-rgb),.5),transparent);opacity:.6}
+body.win-blur #chrome{filter:saturate(.6) brightness(.85)}
+body.html-full #chrome{display:none}
+
+/* Einflug beim Start */
+.intro #titlebar>*,.intro #toolbar>*{opacity:0;transform:translateY(calc(-26px * var(--amp))) scale(.96);filter:blur(6px)}
+.intro-run #titlebar>*,.intro-run #toolbar>*{transition:opacity .7s var(--ease),transform 1s var(--spring),filter .7s;transition-delay:calc(var(--i,0) * 60ms)}
+
+/* ---------- Titelleiste ---------- */
+.titlebar{height:var(--title-h);display:flex;align-items:flex-end;gap:10px;padding:0 0 0 12px;-webkit-app-region:drag}
+.titlebar button,.tab,.brand{-webkit-app-region:no-drag}
+.brand{display:flex;align-items:center;gap:9px;height:100%;padding-right:6px;flex-shrink:0}
+.brand img{width:24px;height:24px;filter:drop-shadow(0 0 8px rgba(var(--mag-rgb),.6));animation:brandpulse 3.2s ease-in-out infinite}
+@keyframes brandpulse{50%{filter:drop-shadow(0 0 16px rgba(var(--pink-rgb),.95));transform:scale(1.06)}}
+.brand-t{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--text)}
+.brand-t b{margin-left:5px;background:var(--grad-x);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand:hover img{animation:brandspin 1s var(--spring)}
+@keyframes brandspin{from{transform:rotate(-180deg) scale(.6)}to{transform:none}}
+
+.tabstrip{position:relative;display:flex;align-items:flex-end;min-width:0;flex:0 1 auto;height:100%;padding:0 4px}
+.tabs{display:flex;align-items:flex-end;min-width:0;height:100%;gap:4px}
+.drag-fill{flex:1;min-width:40px;height:100%}
+.new-tab{margin:0 0 3px 6px;width:32px;height:32px;flex-shrink:0}
+.new-tab:hover svg{transform:rotate(calc(90deg * var(--amp))) scale(1.15)}
+
+/* ---------- Tabs ---------- */
+.tab{--w:216px;position:relative;flex:0 1 var(--w);width:var(--w);min-width:46px;max-width:var(--w);height:34px;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;
+  border-radius:11px 11px 0 0;color:var(--dim);background:rgba(255,255,255,.015);border:1px solid transparent;border-bottom:0;overflow:hidden;isolation:isolate;
+  transition:color .3s,background .3s,border-color .3s,transform .55s var(--spring),box-shadow .3s}
+.tab::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .3s;background:radial-gradient(120px circle at var(--mx,50%) 120%,rgba(var(--mag-rgb),.28),transparent 70%)}
+.tab:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.tab:hover::before{opacity:1}
+.tab.active{color:#fff;background:linear-gradient(180deg,rgba(var(--mag-rgb),.14),rgba(23,19,35,.9));border-color:rgba(var(--mag-rgb),.28)}
+.tab.active::before{opacity:1}
+.tab.enter{animation:tabIn calc(1.1s * var(--spd)) var(--elastic) both}
+@keyframes tabIn{
+  0%{max-width:0;min-width:0;padding:0;opacity:0;transform:translateY(calc(22px * var(--amp))) scale(.3) rotate(calc(-10deg * var(--amp)))}
+  30%{opacity:1}
+  100%{max-width:var(--w);opacity:1;transform:none}
+}
+.tab.enter::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);animation:sheen .9s .15s var(--ease) both;pointer-events:none}
+@keyframes sheen{from{transform:translateX(-120%)}to{transform:translateX(120%)}}
+.tab.closing{pointer-events:none;transition:max-width .42s var(--ease-io),min-width .42s var(--ease-io),padding .42s var(--ease-io),margin .42s var(--ease-io),opacity .2s;max-width:0;min-width:0;padding:0;margin:0 -2px;opacity:0}
+.tab.dragging{z-index:10;transition:color .3s,background .3s,box-shadow .3s;box-shadow:var(--glow),0 18px 30px -10px rgba(0,0,0,.8);background:linear-gradient(180deg,rgba(var(--mag-rgb),.3),rgba(23,19,35,.95));color:#fff;border-radius:11px}
+.tab.settle{transition:transform .7s var(--elastic),color .3s,background .3s,box-shadow .5s}
+
+.tab .fav{position:relative;width:16px;height:16px;flex-shrink:0;display:grid;place-items:center}
+.tab .fav img{width:16px;height:16px;border-radius:3px;transition:transform .5s var(--spring),opacity .3s}
+.tab .fav svg{width:15px;height:15px}
+.tab .fav .d-ico{fill:url(#g-acc);stroke:none;filter:drop-shadow(0 0 4px rgba(var(--mag-rgb),.8))}
+.tab .spin{position:absolute;inset:-3px;border-radius:50%;border:2px solid transparent;border-top-color:var(--pink);border-right-color:var(--mag);opacity:0;transition:opacity .3s;box-shadow:0 0 8px rgba(var(--mag-rgb),.6)}
+.tab.loading .spin{opacity:1;animation:spin .7s linear infinite}
+.tab.loading .fav img,.tab.loading .fav svg{transform:scale(.6)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tab .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;font-size:12.5px;letter-spacing:.01em;-webkit-mask-image:linear-gradient(90deg,#000 80%,transparent);mask-image:linear-gradient(90deg,#000 80%,transparent)}
+.tab .t span{display:inline-block;animation:titleIn .6s var(--spring)}
+@keyframes titleIn{from{transform:translateY(calc(10px * var(--amp)));opacity:0;filter:blur(4px)}}
+.tab .x{width:22px;height:22px;flex-shrink:0;display:grid;place-items:center;border-radius:6px;color:var(--dim);opacity:0;transform:scale(.6);transition:opacity .2s,transform .4s var(--spring),background .2s,color .2s}
+.tab .x svg{width:13px;height:13px;transition:transform .5s var(--spring)}
+.tab:hover .x,.tab.active .x{opacity:1;transform:none}
+.tab .x:hover{background:rgba(255,77,109,.18);color:#fff}
+.tab .x:hover svg{transform:rotate(calc(180deg * var(--amp)))}
+.tab.narrow .t{display:none}
+.tab.narrow:not(.active) .x{display:none}
+
+/* Wandernder Glow-Indikator unter dem aktiven Tab */
+.tab-glow{position:absolute;left:0;bottom:0;height:2px;width:100px;pointer-events:none;z-index:12;border-radius:2px;background:var(--grad-x);box-shadow:0 0 10px var(--pink),0 0 24px var(--mag),0 -6px 20px rgba(var(--mag-rgb),.5);transform-origin:50% 50%;will-change:transform,width}
+.tab-glow i{position:absolute;top:-1px;width:30px;height:4px;border-radius:4px;background:#fff;filter:blur(2px);box-shadow:0 0 14px #fff,0 0 30px var(--pink);animation:comet 2.6s var(--ease-io) infinite}
+@keyframes comet{0%{left:-10%;opacity:0}20%{opacity:1}80%{opacity:1}100%{left:100%;opacity:0}}
+
+/* ---------- Fenster-Controls ---------- */
+.winctl{display:flex;align-self:stretch;-webkit-app-region:no-drag}
+.wc{position:relative;width:48px;height:100%;display:grid;place-items:center;color:var(--muted);overflow:hidden;isolation:isolate;transition:color .2s,background .3s}
+.wc svg{width:12px;height:12px;stroke-width:1.3;transition:transform .5s var(--spring)}
+.wc::before{content:"";position:absolute;inset:0;z-index:-1;transform:scaleY(0);transform-origin:top;transition:transform .45s var(--spring)}
+.wc:hover{color:#fff}
+.wc:hover::before{transform:none}
+.wc-min::before{background:rgba(var(--vio-rgb),.35)}
+.wc-min:hover svg{animation:minsquash .6s var(--spring)}
+@keyframes minsquash{30%{transform:translateY(4px) scaleX(1.6) scaleY(.5)}60%{transform:translateY(-2px) scaleX(.8)}}
+.wc-max::before{background:rgba(var(--mag-rgb),.3)}
+.wc-max:hover svg{transform:scale(1.25) rotate(calc(90deg * var(--amp)))}
+.wc-max .ic-restore{display:none}
+body.maximized .wc-max .ic-restore{display:block}
+body.maximized .wc-max .ic-max{display:none}
+.wc-close::before{background:linear-gradient(135deg,#ff2d55,#c020b8);transform:scaleX(0);transform-origin:right}
+.wc-close:hover{box-shadow:0 0 30px rgba(255,45,85,.6)}
+.wc-close:hover svg{transform:rotate(calc(90deg * var(--amp))) scale(1.2)}
+.wc-burst{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;border:1px solid #fff;opacity:0;pointer-events:none}
+.wc-close:hover .wc-burst{animation:burst .6s var(--ease)}
+@keyframes burst{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(9)}}
+
+/* ---------- Toolbar ---------- */
+.toolbar{height:var(--tool-h);display:flex;align-items:center;gap:10px;padding:0 10px;background:rgba(17,14,26,.55)}
+.nav-group,.tool-group{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.ic-stop{display:none}
+body.loading #btnReload .ic-reload{display:none}
+body.loading #btnReload .ic-stop{display:block}
+.badge{position:absolute;right:4px;top:4px;z-index:3;min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--grad);font-family:var(--mono);font-size:9px;font-weight:700;line-height:15px;color:#fff;box-shadow:var(--glow-sm);animation:badge 1.6s ease-in-out infinite}
+@keyframes badge{50%{transform:scale(1.2);box-shadow:var(--glow)}}
+.ring-prog{position:absolute;inset:3px;border-radius:9px;pointer-events:none;opacity:0;background:conic-gradient(var(--pink) calc(var(--p,0) * 1turn),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:2px;transition:opacity .3s}
+.ring-prog.on{opacity:1}
+
+/* ---------- Omnibox ---------- */
+.omni{position:relative;flex:1;min-width:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;border-radius:12px;background:rgba(7,6,11,.75);border:1px solid var(--line);
+  transition:border-color .3s,box-shadow .5s var(--ease),background .3s,transform .6s var(--spring)}
+.omni:hover{border-color:rgba(var(--mag-rgb),.3)}
+.omni.focus{border-color:transparent;background:rgba(12,10,19,.95);box-shadow:0 0 0 4px rgba(var(--mag-rgb),.12),0 0 40px -8px rgba(var(--mag-rgb),.7);transform:scale(calc(1 + .008 * var(--amp)))}
+.omni-ico{display:grid;place-items:center;color:var(--dim);transition:color .3s,transform .5s var(--spring)}
+.omni-ico svg{width:15px;height:15px}
+.omni-ico.secure{color:var(--ok)}
+.omni.focus .omni-ico{color:var(--pink);transform:scale(1.15) rotate(-10deg)}
+.omni-field{position:relative;flex:1;min-width:0;height:100%}
+.omni-field input{position:absolute;inset:0;width:100%;background:none;border:0;outline:none;font-size:13.5px;letter-spacing:.01em;color:var(--text)}
+.omni-field input::placeholder{color:var(--dim);transition:opacity .3s,transform .5s var(--spring)}
+.omni.focus input::placeholder{opacity:.5;transform:translateX(6px)}
+.omni-pretty{position:absolute;inset:0;display:flex;align-items:center;font-size:13.5px;white-space:nowrap;overflow:hidden;pointer-events:none;color:var(--dim)}
+.omni-pretty b{color:var(--text);font-weight:500}
+.omni-pretty:empty{display:none}
+.omni.show-pretty input{color:transparent}
+.omni.focus .omni-pretty{display:none}
+.omni.focus input{color:var(--text)}
+.star.on{color:var(--pink)}
+.star.on svg{fill:var(--pink);filter:drop-shadow(0 0 6px var(--pink))}
+.star.boom svg{animation:starboom .8s var(--elastic)}
+@keyframes starboom{0%{transform:scale(.3) rotate(-120deg)}100%{transform:none}}
+
+/* Such-Shortcut-Chip */
+.sc-chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px 0 7px;border-radius:7px;background:var(--grad);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;white-space:nowrap;box-shadow:var(--glow-sm);flex-shrink:0;animation:chipIn .6s var(--elastic)}
+.sc-chip svg{width:13px;height:13px}
+@keyframes chipIn{from{transform:scale(0) rotate(-20deg);opacity:0}}
+
+/* Energiestrahl, der beim Tippen um die Leiste rast (Winkel per JS) */
+.beam{position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .5s;filter:drop-shadow(0 0 5px rgba(var(--pink-rgb),.9)) drop-shadow(0 0 14px rgba(var(--mag-rgb),.8))}
+.beam::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.6px;
+  background:conic-gradient(from var(--beam),transparent 0deg,transparent 200deg,rgba(var(--vio-rgb),.5) 260deg,var(--mag) 315deg,var(--pink) 345deg,#fff 356deg,transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.beam::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;opacity:.5;
+  background:conic-gradient(from calc(var(--beam) + 180deg),transparent 0deg,transparent 280deg,rgba(var(--vio-rgb),.8) 340deg,transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.focus>.beam{opacity:1}
+
+/* Feuern beim Absenden */
+.fire{animation:fire .7s var(--elastic)}
+@keyframes fire{0%{transform:scale(calc(1 - .05 * var(--amp)))}25%{transform:scale(calc(1 + .04 * var(--amp)));filter:brightness(1.8)}100%{transform:none}}
+.shock{position:fixed;z-index:1250;pointer-events:none;border-radius:999px;border:2px solid var(--pink);box-shadow:0 0 30px var(--mag),inset 0 0 30px rgba(var(--mag-rgb),.6);animation:shock .9s var(--ease) forwards}
+.shock.s2{border-width:1px;animation-delay:.08s;animation-duration:1.1s;opacity:0}
+@keyframes shock{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(calc(1 + 1.6 * var(--amp)),calc(1 + 5 * var(--amp)))}}
+
+/* Ladebalken als leuchtende Linie */
+.load-line{position:absolute;left:14px;right:14px;bottom:-2px;height:2px;pointer-events:none;opacity:0;transition:opacity .4s .2s}
+.load-line i{position:absolute;inset:0;border-radius:2px;background:var(--grad-x);transform-origin:0 50%;transform:scaleX(var(--p,0));box-shadow:0 0 8px var(--pink),0 0 22px var(--mag);transition:transform .5s var(--ease)}
+.load-line i::after{content:"";position:absolute;right:-2px;top:-3px;width:40px;height:8px;border-radius:50%;background:#fff;filter:blur(4px);opacity:.9}
+.load-line.on{opacity:1;transition-delay:0s}
+.load-line.done i{transform:scaleX(1);transition:transform .25s var(--ease)}
+
+/* Scroll-Fortschritt als HUD-Linie */
+.scroll-hud{position:relative;height:2px;background:rgba(255,255,255,.02)}
+.scroll-hud i{position:absolute;inset:0;transform-origin:0 50%;transform:scaleX(var(--p,0));background:var(--grad-x);box-shadow:0 0 10px var(--mag);transition:transform .15s linear}
+.scroll-hud span{position:absolute;right:10px;top:4px;z-index:60;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--pink);opacity:0;transition:opacity .4s;pointer-events:none;text-shadow:0 0 8px rgba(var(--mag-rgb),.8)}
+.scroll-hud.on span{opacity:.8}
+
+/* ---------- Viewport ---------- */
+#viewport{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--bg)}
+.snap{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:5;opacity:0;pointer-events:none;transition:filter .45s var(--ease),transform .6s var(--spring),opacity .2s}
+.snap.on{opacity:1}
+.snap.blur{filter:blur(16px) brightness(.45) saturate(1.4);transform:scale(calc(1 + .04 * var(--amp)))}
+
+/* Logo-Wipe wie auf dulidan-studios.com, nur krasser */
+.wipe{position:absolute;inset:0;z-index:20;pointer-events:none;background:#07060b;display:grid;place-items:center;clip-path:inset(0 0 100% 0)}
+.wipe::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(var(--mag-rgb),.25),transparent 55%),repeating-linear-gradient(90deg,rgba(var(--vio-rgb),.06) 0 1px,transparent 1px 64px)}
+.wipe.on{clip-path:inset(0 0 0 0);transition:clip-path calc(.45s * var(--spd)) var(--ease-io)}
+.wipe.out{clip-path:inset(100% 0 0 0);transition:clip-path calc(.5s * var(--spd)) var(--ease-io)}
+.wipe-logo{position:relative;width:90px;height:90px}
+.wipe-logo img{width:100%;height:100%;filter:drop-shadow(0 0 30px var(--mag))}
+.wipe.on .wipe-logo{animation:wlogo 1.2s var(--elastic) both}
+.wipe.on .wipe-logo::after{content:"";position:absolute;inset:-30px;border-radius:50%;border:1px solid rgba(var(--pink-rgb),.6);animation:wring 1.2s var(--ease) infinite}
+@keyframes wlogo{from{transform:scale(.2) rotate(-90deg);opacity:0}}
+@keyframes wring{from{transform:scale(.4);opacity:1}to{transform:scale(1.6);opacity:0}}
+.wipe-line{position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--pink),transparent);box-shadow:0 0 20px var(--mag)}
+.wipe-txt{position:absolute;left:50%;top:calc(50% + 74px);transform:translateX(-50%);font-size:10px;letter-spacing:.3em;color:var(--muted);white-space:nowrap}
+.wipe-txt::after{content:"_";animation:blink 1s steps(2) infinite;color:var(--pink)}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- Omnibox-Chips: Zoom, Werbeblocker, Passwörter ---------- */
+.omni-chip{position:relative;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:7px;flex-shrink:0;border:1px solid var(--line);background:rgba(255,255,255,.03);
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);overflow:hidden;animation:chipIn .6s var(--elastic);transition:color .2s,border-color .2s,box-shadow .3s}
+.omni-chip:hover{color:#fff;border-color:rgba(var(--mag-rgb),.5);box-shadow:var(--glow-sm)}
+.omni-chip svg{width:13px;height:13px}
+.shield-chip{color:var(--ok);border-color:rgba(61,220,151,.25)}
+.shield-chip b{font-weight:600}
+.shield-chip.bump{animation:bump .5s var(--elastic)}
+.shield-chip.off{color:var(--dim);border-color:var(--line)}
+@keyframes bump{30%{transform:scale(1.18);box-shadow:0 0 16px rgba(61,220,151,.6)}}
+.key-btn{color:var(--pink)}
+.key-btn.filled svg{filter:drop-shadow(0 0 6px var(--pink));animation:keyturn .9s var(--elastic)}
+@keyframes keyturn{from{transform:rotate(-200deg) scale(.4)}}
+
+/* Passwort speichern? – wächst aus der Omnibox, verdeckt nie die Seite */
+.pw-offer{position:absolute;right:4px;top:3px;bottom:3px;z-index:6;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;border-radius:9px;
+  background:linear-gradient(90deg,rgba(20,15,31,.97),rgba(40,16,48,.97));border:1px solid rgba(var(--pink-rgb),.55);box-shadow:var(--glow);transform-origin:100% 50%;animation:offerIn .8s var(--elastic)}
+@keyframes offerIn{from{transform:scaleX(.05);opacity:0}}
+.pw-offer.out{animation:offerOut .35s var(--ease-io) forwards}
+@keyframes offerOut{to{transform:scaleX(.05);opacity:0}}
+.pw-offer-ico svg{width:16px;height:16px;color:var(--pink);animation:keyturn .9s var(--elastic)}
+.pw-offer-t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+.pw-offer-t b{color:#fff}
+.pw-b{position:relative;height:26px;padding:0 12px;border-radius:7px;border:1px solid var(--line-2);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;overflow:hidden;isolation:isolate;transition:background .2s,color .2s}
+.pw-b:hover{background:rgba(var(--mag-rgb),.15);color:#fff}
+.pw-save{background:var(--grad);border-color:transparent;color:#fff;box-shadow:var(--glow-sm)}
+
+/* ---------- Suchen auf der Seite ---------- */
+.findbar{height:0;overflow:hidden;display:flex;justify-content:flex-end;padding:0 10px;transition:height .55s var(--spring)}
+body.find-open{--chrome-h:calc(var(--title-h) + var(--tool-h) + 46px)}
+body.find-open .findbar{height:44px}
+.find-in{position:relative;display:flex;align-items:center;gap:6px;width:min(460px,100%);height:36px;margin-top:2px;padding:0 4px 0 12px;border-radius:11px;background:rgba(7,6,11,.85);border:1px solid rgba(var(--mag-rgb),.45);box-shadow:0 0 30px -8px rgba(var(--mag-rgb),.7);
+  transform:translateY(-30px) scale(.9);opacity:0;filter:blur(6px);transition:transform .6s var(--spring),opacity .3s,filter .4s}
+body.find-open .find-in{transform:none;opacity:1;filter:none}
+.find-in>svg{width:15px;height:15px;color:var(--pink)}
+.find-in input{flex:1;min-width:0;height:100%;background:none;border:0;outline:none;font-size:13.5px}
+.find-n{font-size:10.5px;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
+.find-n.none{color:var(--bad)}
+.find-in.miss{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+/* Update-Knopf in der Titelleiste: lädt (Ring füllt sich) → bereit (pulsiert) */
+.upd{-webkit-app-region:no-drag;align-self:center;position:relative;display:flex;align-items:center;gap:7px;height:30px;margin-right:8px;padding:0 13px 0 10px;border-radius:10px;
+  font:700 10.5px var(--mono);letter-spacing:.12em;color:var(--muted);background:rgba(var(--mag-rgb),.1);border:1px solid rgba(var(--pink-rgb),.25);overflow:hidden;
+  animation:updin .8s var(--elastic, cubic-bezier(.2,.8,.2,1))}
+.upd svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.upd-ring{position:absolute;left:0;bottom:0;height:2px;width:calc(var(--p,0) * 1%);background:var(--grad-x, linear-gradient(90deg,#8122b5,#ff7ae6));transition:width .4s}
+.upd.ready{color:#fff;background:linear-gradient(135deg,var(--vio, #8122b5),var(--mag, #c020b8));border-color:transparent;cursor:pointer;animation:updin .8s var(--elastic, ease),updpulse 2.4s ease-in-out infinite .8s}
+.upd.ready .upd-ring{display:none}
+.upd.ready:hover{transform:scale(1.05)}
+.upd.ready svg{animation:updbob 1.6s ease-in-out infinite}
+@keyframes updin{from{opacity:0;transform:translateY(-10px) scale(.7)}}
+@keyframes updpulse{50%{box-shadow:0 0 22px rgba(var(--pink-rgb),.75)}}
+@keyframes updbob{50%{transform:translateY(2px)}}
+
+/* Disko-Knopf: fliegt ein, sobald im Tab Musik läuft, Mini-Equalizer tanzt mit */
+.disco-btn{position:relative;display:flex;align-items:center;gap:7px;height:34px;padding:0 12px 0 10px;margin-right:4px;border-radius:12px;cursor:pointer;
+  font:700 10.5px var(--mono);letter-spacing:.16em;color:#fff;background:linear-gradient(135deg,var(--vio),var(--mag));
+  box-shadow:0 0 calc(10px + var(--bass,0) * 26px) rgba(var(--pink-rgb),calc(.35 + var(--bass,0) * .5));
+  transform:scale(calc(1 + var(--bass,0) * .06));transition:box-shadow .08s,transform .08s;animation:discoin .8s var(--elastic) both}
+.disco-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;animation:discospin 3s linear infinite}
+.disco-btn .eq{display:flex;gap:2px;align-items:flex-end;height:12px}
+.disco-btn .eq b{width:3px;height:100%;border-radius:2px;background:#fff;transform-origin:bottom;transform:scaleY(.2);transition:transform .07s}
+.disco-btn:hover{filter:brightness(1.15)}
+@keyframes discoin{from{opacity:0;transform:translateY(-12px) scale(.5) rotate(-12deg)}}
+@keyframes discospin{to{transform:rotate(360deg)}}

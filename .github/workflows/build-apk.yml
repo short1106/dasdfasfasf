@@ -1,0 +1,74 @@
+# Baut DulidanWeb.apk (Android) und stellt sie als Release-Download bereit.
+name: Android-APK bauen
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ccr-5bc0fb9e-frlec2, main]
+    paths: ['android/**', 'shared/**', '.github/workflows/build-apk.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KS: ${{ secrets.DW_KEYSTORE != '' }}
+      # Jeder Build zählt hoch, damit Android das Update annimmt und die App es erkennt
+      DW_VERSION_CODE: ${{ github.run_number }}
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      # Signierschlüssel: Secret DW_KEYSTORE (Base64) + DW_KEYSTORE_PASS, sonst ein frisch erzeugter Schlüssel
+      - name: Signierschlüssel aus Secret
+        if: env.HAS_KS == 'true'
+        env:
+          KS: ${{ secrets.DW_KEYSTORE }}
+          KS_PASS: ${{ secrets.DW_KEYSTORE_PASS }}
+        run: |
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/dw.jks"
+          echo "DW_KEYSTORE_FILE=$RUNNER_TEMP/dw.jks" >> "$GITHUB_ENV"
+          echo "::add-mask::$KS_PASS"
+          echo "DW_KEYSTORE_PASS=$KS_PASS" >> "$GITHUB_ENV"
+      - name: Einmal-Schlüssel erzeugen (ohne Secret)
+        if: env.HAS_KS != 'true'
+        run: |
+          PASS=$(openssl rand -hex 16)
+          echo "::add-mask::$PASS"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/dw.jks" -storepass "$PASS" -keypass "$PASS" -alias dulidan \
+            -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Dulidan Web, O=Dulidan Studios, C=DE"
+          echo "DW_KEYSTORE_FILE=$RUNNER_TEMP/dw.jks" >> "$GITHUB_ENV"
+          echo "DW_KEYSTORE_PASS=$PASS" >> "$GITHUB_ENV"
+      - run: chmod +x gradlew
+      - run: ./gradlew assembleRelease --no-daemon --stacktrace
+      - run: cp app/build/outputs/apk/release/app-release.apk DulidanWeb.apk
+      # Versionsinfo für den Update-Check der App, samt Fingerabdruck des Signierschlüssels
+      - name: android-version.json
+        run: |
+          SHA=$(keytool -list -v -keystore "$DW_KEYSTORE_FILE" -storepass "$DW_KEYSTORE_PASS" -alias "${DW_KEY_ALIAS:-dulidan}" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//; s/://g' | tr 'A-F' 'a-f')
+          printf '{"versionCode":%s,"versionName":"0.2.%s","cert":"%s","stableKey":%s}\n' "$DW_VERSION_CODE" "$DW_VERSION_CODE" "$SHA" "$HAS_KS" > android-version.json
+          cat android-version.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DulidanWeb-apk
+          path: android/DulidanWeb.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Dulidan Web für Android (neuester Build)
+          prerelease: true
+          make_latest: false
+          body: |
+            DulidanWeb.apk auf dem Handy herunterladen und öffnen.
+            Beim ersten Mal fragt Android, ob Installationen aus dieser Quelle erlaubt sind – einmal erlauben.
+          files: |
+            android/DulidanWeb.apk
+            android/android-version.json

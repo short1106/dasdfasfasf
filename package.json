@@ -1,0 +1,67 @@
+{
+  "name": "dulidan-web",
+  "version": "0.1.0",
+  "description": "Dulidan Web – ein übertrieben epischer Desktop-Browser von Dulidan Studios",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "author": "Dulidan Studios",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.dulidanstudios.web",
+    "productName": "Dulidan Web",
+    "files": [
+      "main.js",
+      "preload.js",
+      "tab-preload.js",
+      "package.json",
+      "main/**/*",
+      "ui/**/*",
+      "shared/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signExecutable": false,
+      "icon": "assets/img/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "DulidanWeb-Setup.exe",
+      "shortcutName": "Dulidan Web",
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "assets/img/icon.ico",
+      "uninstallerIcon": "assets/img/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/short1106/dasdfasfasf/releases/download/latest-build"
+      }
+    ]
+  }
+}
