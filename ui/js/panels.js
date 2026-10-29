@@ -148,6 +148,7 @@ function buildMenu() {
     mi('star', 'Lesezeichen', '', () => ctx.palette('')),
     mi('key', 'Passwörter', '', () => ctx.passwords()),
     mi('card', 'Adressen & Karten', '', () => ctx.wallet()),
+    mi('calc', 'Taschenrechner', 'Strg ⇧ R', () => ctx.calc()),
     mi('history', 'Verlauf', '', () => ctx.palette('')),
     mi('dl', 'Downloads', 'Strg J', () => ctx.downloads()),
     h('li', { class: 'sep' }),

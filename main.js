@@ -346,7 +346,7 @@ function wireAutofill(t, wc) {
 }
 
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords']);
+const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
@@ -355,6 +355,7 @@ function keyName(i) {
     if (k === 'l') return 'focus-omnibox';
     if (k === 'k') return 'palette';
     if (k === 'tab') return i.shift ? 'prev-tab' : 'next-tab';
+    if (k === 'r' && i.shift) return 'calc';
     if (k === 'r') return 'reload';
     if (k === ',') return 'settings';
     if (k === 'j') return 'downloads';

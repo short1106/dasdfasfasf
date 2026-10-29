@@ -55,6 +55,7 @@
   <symbol id="i-orbit" viewBox="0 0 24 24"><rect x="8" y="8" width="8" height="8" rx="1.5"/><path d="M3 9.5v5M21 9.5v5"/><path d="M5.5 7.5v9M18.5 7.5v9"/></symbol>
   <symbol id="i-eq" viewBox="0 0 24 24"><path d="M6 16v-4M10 16V8M14 16v-6M18 16v-9"/></symbol>
   <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8 7h8"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15v2.5M8.5 18.5h.01M12 18.5h.01"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/></symbol>
   <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
@@ -117,6 +118,7 @@
       </form>
 
       <div class="tool-group">
+        <button class="icon-btn fx mag" id="btnCalc" data-cursor="RECHNER" data-ico="pop" aria-label="Taschenrechner"><svg><use href="#i-calc"/></svg></button>
         <button class="icon-btn fx mag" id="btnDl" data-cursor="DOWNLOADS" data-ico="drop" aria-label="Downloads"><svg><use href="#i-dl"/></svg><b class="badge" id="dlBadge" hidden></b><i class="ring-prog" id="dlRing"></i></button>
         <button class="chip-btn fx mag" id="btnPal" data-cursor="BEFEHLE" aria-label="Command Palette"><svg><use href="#i-cmd"/></svg><kbd>Strg K</kbd></button>
         <button class="icon-btn fx mag" id="btnSettings" data-cursor="EINSTELLUNGEN" data-ico="spin" aria-label="Einstellungen"><svg><use href="#i-gear"/></svg></button>
@@ -229,6 +231,11 @@
 <aside class="panel panel-side" id="wallet" hidden>
   <div class="panel-head stg"><h2>Adressen &amp; Karten</h2><button class="icon-btn sm fx" data-close aria-label="Schließen" data-ico="spin"><svg><use href="#i-x"/></svg></button></div>
   <div class="panel-body stg" id="walletBody"></div>
+</aside>
+
+<aside class="panel panel-drop panel-calc" id="calc" hidden>
+  <div class="panel-head stg"><h2>Rechner</h2><button class="icon-btn sm fx" data-close aria-label="Schließen" data-ico="spin"><svg><use href="#i-x"/></svg></button></div>
+  <div class="calc-body stg" id="calcBody"></div>
 </aside>
 
 <aside class="panel panel-drop" id="downloads" hidden>

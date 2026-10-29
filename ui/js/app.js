@@ -7,6 +7,7 @@ import { createLogo, createNebula } from './gl.js';
 import { Suggest, engineName, resolve } from './omnibox.js';
 import * as pwUi from './passwords.js';
 import { initWallet } from './wallet.js';
+import { initCalc } from './calcpanel.js';
 import { TabStrip } from './tabs.js';
 import * as view from './view.js';
 import * as pal from './palette.js';
@@ -137,6 +138,13 @@ function go(t, url) {
 }
 
 function submit(target, form) {
+  if (target.kind === 'calc') {
+    navigator.clipboard.writeText(target.value).catch(() => {});
+    omniInput.blur(); bigInput.blur();
+    toast('= ' + target.value + '  ·  kopiert');
+    sfx('fire');
+    return;
+  }
   shockwave(form);
   if (form === bigForm) logo.shock();
   omniInput.blur(); bigInput.blur();
@@ -386,7 +394,8 @@ const ACTIONS = {
   'zoom-out': () => zoom(-1),
   'zoom-reset': () => zoom(0),
   passwords: () => openPanel('passwords', $('#btnKey').hidden ? $('#btnMenu') : $('#btnKey')),
-  wallet: () => openPanel('wallet', $('#btnMenu'))
+  wallet: () => openPanel('wallet', $('#btnMenu')),
+  calc: () => openPanel('calc', $('#btnCalc'))
 };
 
 const COMMANDS = () => [
@@ -409,6 +418,7 @@ const COMMANDS = () => [
   { icon: 'search', name: 'Auf der Seite suchen', key: 'Strg F', run: () => openFind() },
   { icon: 'key', name: 'Passwörter verwalten', run: () => ACTIONS.passwords() },
   { icon: 'card', name: 'Adressen & Karten', run: () => ACTIONS.wallet() },
+  { icon: 'calc', name: 'Taschenrechner', key: 'Strg ⇧ R', run: () => ACTIONS.calc() },
   { icon: 'shield', name: settings.adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten', run: () => { setSetting('adblock', !settings.adblock); toast('Werbeblocker: ' + (settings.adblock ? 'AN' : 'AUS')); } },
   { icon: 'plus', name: 'Zoom: größer', key: 'Strg +', run: () => zoom(1) },
   { icon: 'x', name: 'Zoom zurücksetzen', key: 'Strg 0', run: () => zoom(0) },
@@ -461,6 +471,7 @@ $('#btnStar').addEventListener('click', toggleStar);
 $('#btnPal').addEventListener('click', () => pal.toggle());
 $('#btnSettings').addEventListener('click', e => openPanel('settings', e.currentTarget));
 $('#btnDl').addEventListener('click', e => openPanel('downloads', e.currentTarget));
+$('#btnCalc').addEventListener('click', e => openPanel('calc', e.currentTarget));
 $('#btnMenu').addEventListener('click', e => openPanel('menu', e.currentTarget));
 $('#titlebar').addEventListener('dblclick', e => { if (e.target.closest('.tabstrip') && !e.target.closest('.tab,button')) newTab(); });
 addEventListener('resize', () => { omni.close(); big.close(); });
@@ -468,6 +479,7 @@ addEventListener('resize', () => { omni.close(); big.close(); });
 /* Fallback: Tasten, die nicht über before-input-event im Main-Prozess laufen (z. B. synthetische Eingaben) */
 function keyName(e) {
   const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (c && e.shiftKey && k === 'r') return 'calc';
   if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
@@ -628,7 +640,8 @@ async function start() {
   buildHome();
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
-  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initCalc();
+  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

@@ -37,6 +37,19 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .hud .dim{color:var(--dim)}
 .hud b{color:var(--text);font-weight:500}
 .hud-r{text-align:right}
+/* Rechner-Knopf oben in der Mitte */
+.hud-calc{position:absolute;left:50%;top:2px;transform:translateX(-50%);pointer-events:auto;display:flex;align-items:center;gap:7px;height:34px;padding:0 13px 0 10px;border-radius:12px;
+  background:rgba(var(--mag-rgb),.14);border:1px solid rgba(var(--pink-rgb),.35);color:var(--pink);font:700 9px var(--mono);letter-spacing:.18em;
+  box-shadow:0 0 18px rgba(var(--mag-rgb),.35),inset 0 0 12px rgba(var(--pink-rgb),.12);transition:transform .5s var(--spring),box-shadow .3s;animation:calcglow 3.2s ease-in-out infinite}
+.hud-calc svg{width:17px;height:17px}
+@media (max-width:389px){.hud-calc{padding:0 9px}.hud-calc span{display:none}}
+.hud-calc:active{transform:translateX(-50%) scale(.86);box-shadow:0 0 30px rgba(var(--pink-rgb),.8)}
+@keyframes calcglow{50%{box-shadow:0 0 26px rgba(var(--mag-rgb),.6),inset 0 0 14px rgba(var(--pink-rgb),.2)}}
+.intro .hud-calc{opacity:0;transform:translateX(-50%) translateY(-30px) scale(.6)}
+.run .hud-calc{transition:opacity .6s .5s,transform .9s .5s var(--elastic)}
+/* Live-Ergebnis unter der Suchleiste */
+.calcres{margin-top:12px;height:38px;padding:0 16px;border-radius:12px;background:var(--grad);color:#fff;font:700 17px var(--sans);letter-spacing:-.01em;box-shadow:0 0 24px rgba(var(--mag-rgb),.7);animation:chipin .6s var(--elastic)}
+.calcres small{font:700 9px var(--mono);letter-spacing:.16em;opacity:.75;margin-left:10px}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#3ddc97;box-shadow:0 0 8px #3ddc97;margin-right:7px;vertical-align:1px;animation:dot 1.6s ease-in-out infinite}
 @keyframes dot{50%{box-shadow:0 0 16px #3ddc97,0 0 2px #fff}}
 .clock{font-size:30px;font-weight:300;letter-spacing:.02em;color:var(--text);line-height:1;text-shadow:0 0 22px rgba(var(--mag-rgb),.7)}

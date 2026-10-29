@@ -15,6 +15,7 @@
 
   <header class="hud">
     <div class="hud-l"><span class="dot"></span><span id="status">SYSTEM ONLINE</span><br><span class="dim"><b id="fps">60</b> FPS · <b id="tabs">1</b> TAB</span></div>
+    <button class="hud-calc" id="calcBtn" aria-label="Rechner"><svg viewBox="0 0 24 24"><rect x="5" y="2.8" width="14" height="18.4" rx="2.6"/><path d="M8.4 6.4h7.2v3.2H8.4z"/><path d="M8.8 13.2h.01M12 13.2h.01M15.2 13.2h.01M8.8 16.8h.01M12 16.8h.01M15.2 16.8h.01" stroke-width="2.6"/></svg><span>RECHNER</span></button>
     <div class="hud-r"><div class="clock" id="clock">00:00</div><div class="dim" id="date"></div></div>
   </header>
 
@@ -30,6 +31,7 @@
         <button class="go" type="submit" aria-label="Los"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
     </form>
+    <button class="calcres" id="calcres" hidden></button>
     <div class="chips" id="chips"></div>
     <div class="cards" id="cards"></div>
   </main>

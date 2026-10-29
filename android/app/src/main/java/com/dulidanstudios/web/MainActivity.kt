@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.speech.RecognizerIntent
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -72,6 +73,7 @@ class MainActivity : Activity() {
     private lateinit var suggest: SuggestPanel
     private lateinit var switcher: SwitcherView
     private lateinit var menu: MenuSheet
+    private lateinit var calc: CalcPanel
     private lateinit var toaster: Toaster
     private val ui = Handler(Looper.getMainLooper())
 
@@ -125,6 +127,7 @@ class MainActivity : Activity() {
             override fun dismissed() {}
         }).apply { visibility = View.INVISIBLE }
         menu = MenuSheet(this, store) { menuAction(it) }
+        calc = CalcPanel(this, topFx) { toast(it) }
 
         val mp = ViewGroup.LayoutParams.MATCH_PARENT
         root.addView(pages, FrameLayout.LayoutParams(mp, mp))
@@ -134,6 +137,7 @@ class MainActivity : Activity() {
         root.addView(suggest, FrameLayout.LayoutParams(mp, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM).apply { leftMargin = dp(10).toInt(); rightMargin = dp(10).toInt() })
         root.addView(switcher, FrameLayout.LayoutParams(mp, mp))
         root.addView(menu, FrameLayout.LayoutParams(mp, mp))
+        root.addView(calc, FrameLayout.LayoutParams(mp, mp))
         root.addView(topFx, FrameLayout.LayoutParams(mp, mp))
         toaster = Toaster(root)
         setContentView(root)
@@ -191,6 +195,7 @@ class MainActivity : Activity() {
             (suggest.layoutParams as FrameLayout.LayoutParams).bottomMargin = barH + dp(6).toInt(); suggest.requestLayout()
             switcher.contentTop = insetTop.toFloat(); switcher.contentBottom = (root.height - barH).toFloat(); switcher.bottomInset = barH.toFloat()
             menu.bottomInset = bottom
+            calc.topInset = insetTop
             toaster.bottom = barH
             pushHome()
         }
@@ -388,6 +393,11 @@ class MainActivity : Activity() {
     @Deprecated("Framework-Activity")
     override fun onActivityResult(req: Int, res: Int, data: Intent?) {
         if (req == REQ_FILE) { fileCb?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data)); fileCb = null; return }
+        if (req == REQ_VOICE) {
+            val said = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (res == RESULT_OK && !said.isNullOrBlank()) { if (Calc.tryCalc(said) != null) calc.show(said) else go(said) } else focusSearch()
+            return
+        }
         @Suppress("DEPRECATION") super.onActivityResult(req, res, data)
     }
 
@@ -453,6 +463,8 @@ class MainActivity : Activity() {
         @JavascriptInterface fun go(text: String) { ui.post { this@MainActivity.go(text) } }
         @JavascriptInterface fun haptic(kind: String) { ui.post { Haptic.play(kind) } }
         @JavascriptInterface fun ready() { ui.post { homeReady = true; pushHome() } }
+        @JavascriptInterface fun calcValue(expr: String): String = Calc.tryCalc(expr)?.let { Calc.format(it) } ?: ""
+        @JavascriptInterface fun calc(expr: String) { ui.post { hideKeyboard(); this@MainActivity.calc.show(expr.ifEmpty { null }) } }
     }
     private fun homeJs(js: String) { if (homeReady) home.evaluateJavascript(js, null) }
     private fun pushHome() {
@@ -474,7 +486,12 @@ class MainActivity : Activity() {
             bar.pill.animate().scaleX(if (f) 1.02f else 1f).scaleY(if (f) 1.06f else 1f).setDuration(500).setInterpolator(Spring()).start()
         }
         inp.setOnEditorActionListener { _, id, ev ->
-            if (id == EditorInfo.IME_ACTION_GO || ev?.keyCode == KeyEvent.KEYCODE_ENTER) { fire(); go(inp.text.toString()); inp.clearFocus(); true } else false
+            if (id == EditorInfo.IME_ACTION_GO || ev?.keyCode == KeyEvent.KEYCODE_ENTER) {
+                val q = inp.text.toString()
+                fire()
+                if (Calc.tryCalc(q) != null) { hideKeyboard(); calc.show(q) } else { go(q); inp.clearFocus() }
+                true
+            } else false
         }
         inp.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -494,6 +511,7 @@ class MainActivity : Activity() {
         val text = q.trim()
         if (text.isEmpty()) { suggest.hide(); return }
         val items = ArrayList<Triple<String, String, String>>()
+        Calc.tryCalc(text)?.let { items.add(Triple("=", "= " + Calc.format(it), "rechner · kopieren")) }
         val sc = Search.shortcutOf(text)
         val isUrl = !text.contains(' ') && Search.resolve(text, store.engine)?.let { !it.contains(Search.engineName(store.engine).lowercase()) && !it.contains("?q=") && !it.contains("query=") } == true
         items.add(Triple(if (sc != null) "◉" else if (isUrl) "◎" else "⌕", text, if (sc != null) Search.SHORTCUTS.getValue(sc).first else if (isUrl) "öffnen" else Search.engineName(store.engine)))
@@ -517,6 +535,11 @@ class MainActivity : Activity() {
     }
 
     private fun pickSuggestion(text: String) {
+        if (text.startsWith("= ")) {
+            val r = text.removePrefix("= ")
+            Calc.copy(this, r); Haptic.play("fire"); toast("Ergebnis kopiert: $r")
+            return
+        }
         val hit = store.history().firstOrNull { it.second == text }
         fire()
         bar.pill.input.clearFocus()
@@ -584,6 +607,10 @@ class MainActivity : Activity() {
                 w.reload(); toast(if (t.desktop) "Desktop-Version" else "Mobile Version")
             }
             "boot" -> playBoot()
+            "calc" -> calc.show()
+            "widget" -> if (!SearchWidget.pin(this)) toast("Startbildschirm lange drücken → Widgets → Dulidan Suche")
+            "fwd" -> t?.web?.let { if (it.canGoForward()) it.goForward() }
+            "copy" -> if (t != null && !t.home) { Calc.copy(this, t.url); toast("Link kopiert") }
             "engine" -> toast("Suchmaschine: ${Search.engineName(store.engine)}")
             "accent" -> { bar.pill.resetShader(); bar.invalidate(); homeThumbCache = null; pushHome() }
             "anim" -> { pushHome(); toast("Animationen: ${Dw.anim.uppercase()}") }
@@ -599,7 +626,35 @@ class MainActivity : Activity() {
         when (i.action) {
             Intent.ACTION_VIEW -> i.dataString?.let { if (it.startsWith("http")) newTab(it) }
             Intent.ACTION_WEB_SEARCH -> i.getStringExtra(SearchManager.QUERY)?.let { newTab(null, intro = false); go(it) }
+            SearchWidget.ACTION_SEARCH -> { freshHome(); focusSearch() }
+            SearchWidget.ACTION_CALC -> { closeOverlays(); calc.show() }
+            SearchWidget.ACTION_VOICE -> {
+                freshHome()
+                val v = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
+                    .putExtra(RecognizerIntent.EXTRA_PROMPT, "Sag, was du suchst")
+                try { @Suppress("DEPRECATION") startActivityForResult(v, REQ_VOICE) } catch (_: ActivityNotFoundException) { toast("Keine Spracherkennung gefunden"); focusSearch() }
+            }
         }
+        i.action = null      /* nicht beim Drehen erneut auslösen */
+    }
+    /* Vom Widget: leerer Starttab statt die offene Seite zu überschreiben */
+    private fun freshHome() {
+        closeOverlays()
+        if (active?.home != true) newTab(null, intro = false)
+    }
+    private fun closeOverlays() {
+        if (switcher.visibility == View.VISIBLE) switcher.hide()
+        if (menu.open) menu.hide()
+        calc.hide()
+    }
+    private fun focusSearch() {
+        val inp = bar.pill.input
+        ui.postDelayed({
+            inp.requestFocus()
+            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(inp, InputMethodManager.SHOW_IMPLICIT)
+        }, 350)
     }
     override fun onNewIntent(i: Intent) { super.onNewIntent(i); handleIntent(i) }
 
@@ -608,6 +663,7 @@ class MainActivity : Activity() {
         when {
             fullView != null -> (active?.web?.webChromeClient as? ChromeClient)?.onHideCustomView()
             menu.open -> menu.hide()
+            calc.open -> calc.hide()
             switcher.visibility == View.VISIBLE -> switcher.hide()
             suggest.visibility == View.VISIBLE -> { suggest.hide(); hideKeyboard() }
             active?.let { !it.home && it.web?.canGoBack() == true } == true -> active?.web?.goBack()
@@ -622,5 +678,5 @@ class MainActivity : Activity() {
     override fun onPause() { super.onPause(); saveSession(); CookieManager.getInstance().flush() }
     override fun onDestroy() { for (t in tabs) t.web?.destroy(); home.destroy(); super.onDestroy() }
 
-    companion object { private const val REQ_FILE = 42 }
+    companion object { private const val REQ_FILE = 42; private const val REQ_VOICE = 43 }
 }

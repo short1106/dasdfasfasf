@@ -124,8 +124,9 @@ class MenuSheet(ctx: Context, private val store: Store, private val act: (String
             LinearLayout.LayoutParams(dp(42).toInt(), dp(4).toInt()).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(12).toInt() })
         sheet.addView(context.label("Dulidan Web", 22f, Dw.TEXT, bold = true).apply { letterSpacing = -0.02f })
         /* Aktionen als Kacheln */
-        val acts = listOf("＋" to "Neuer Tab" to "new", "▤" to "Tabs" to "tabs", "↻" to "Neu laden" to "reload", "⌂" to "Start" to "home",
-            "⇪" to "Teilen" to "share", "▭" to "Desktop" to "desktop", "⚡" to "Boot" to "boot", "⨯" to "Tab zu" to "close")
+        val acts = listOf("＋" to "Neuer Tab" to "new", "▤" to "Tabs" to "tabs", "↻" to "Neu laden" to "reload", "→" to "Vorwärts" to "fwd",
+            "÷" to "Rechner" to "calc", "▦" to "Widget" to "widget", "⇪" to "Teilen" to "share", "⧉" to "Link" to "copy",
+            "▭" to "Desktop" to "desktop", "⌂" to "Start" to "home", "⚡" to "Boot" to "boot", "⨯" to "Tab zu" to "close")
         var row: LinearLayout? = null
         acts.forEachIndexed { i, (pair, key) ->
             if (i % 4 == 0) { row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }; sheet.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10).toInt() }) }

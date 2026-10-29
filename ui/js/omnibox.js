@@ -3,6 +3,7 @@
 import { $, h, icon, api, anim, amp, Highlighter, hostOf } from './util.js';
 import { settings, ENGINES, SHORTCUTS } from './settings.js';
 import { searchLocal } from './data.js';
+import { tryCalc, format } from './calc.js';
 import { sfx } from './sound.js';
 
 const fill = (tpl, q) => tpl.replace('%s', encodeURIComponent(q));
@@ -145,6 +146,9 @@ export class Suggest {
   local(q) {
     const out = [], t = resolve(q, this.sc);
     if (!t) return out;
+    /* Rechnung? Ergebnis sofort als erster Vorschlag – Enter kopiert es */
+    const v = this.sc ? null : tryCalc(q);
+    if (v !== null) out.push({ key: 'calc', icon: 'calc', text: `= ${format(v)}`, hint: 'Rechner · Enter kopiert', target: { kind: 'calc', value: format(v) } });
     if (t.kind === 'shortcut') out.push({ key: 'p', icon: SHORTCUTS[t.sc].icon, text: q.trim() ? `${q.trim()}` : `${SHORTCUTS[t.sc].name} öffnen`, hint: q.trim() ? `${SHORTCUTS[t.sc].name} durchsuchen` : 'Öffnen', target: t });
     else if (t.kind === 'url') out.push({ key: 'p', icon: 'globe', text: q.trim(), hint: 'Öffnen', target: t });
     else out.push({ key: 'p', icon: 'search', text: q.trim(), hint: `${engineName()} · Suche`, target: t, q: q.trim() });

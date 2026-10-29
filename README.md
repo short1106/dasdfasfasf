@@ -28,6 +28,13 @@ Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ord
 - **Funktionen:**
   - Live-Vorschläge, Werbeblocker (Hosts-Liste), Tabs wiederherstellen, Vollbild-Videos, Downloads, Datei-Upload.
   - Teilen, Desktop-Version, Boot-Sequenz.
+  - Rechner: über den Knopf oben auf der Startseite oder im Menü. Er fällt von oben ein, Wischen nach oben schließt ihn.
+    - Tippst du eine Rechnung ins Suchfeld (etwa `12*(3+4)`), steht das Ergebnis sofort darunter.
+    - Enter öffnet den Rechner, Antippen des Vorschlags kopiert das Ergebnis.
+- **Widget „Dulidan Suche“ für den Startbildschirm:** Menü → „Widget“ legt es direkt ab. Alternativ: Startbildschirm lange drücken → Widgets → Dulidan Web.
+  - Tippen öffnet einen leeren Tab mit Tastatur.
+  - Das Mikrofon startet die Sprachsuche.
+  - Der Rechner-Knopf öffnet sofort den Rechner.
   - Dulidan Web lässt sich als Standard-Browser wählen.
 
 Gebaut wird die APK vom Workflow `.github/workflows/build-apk.yml`. **Signierschlüssel:** Ohne Secret erzeugt jeder Build einen neuen Schlüssel. Dann muss man vor einem Update die alte Version deinstallieren. Für nahtlose Updates legt man einmalig die Repository-Secrets `DW_KEYSTORE` (Keystore als Base64) und `DW_KEYSTORE_PASS` an. Der Schlüssel gehört nie ins Repo.
@@ -60,6 +67,7 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | `Strg+D` | Lesezeichen setzen oder entfernen |
 | `Strg+J` | Downloads |
 | `Strg+,` | Einstellungen |
+| `Strg+Umschalt+R` | Taschenrechner |
 | `F5` / `Strg+R` | Neu laden |
 | `Alt+←` / `Alt+→` | Zurück / Vor |
 | `Alt+Pos1` | Startseite |
@@ -80,6 +88,12 @@ Such-Shortcuts: Wenn du ein Kürzel und ein Leerzeichen tippst, wird daraus ein 
 | `mc …` | Minecraft Wiki (de) |
 
 Mit Rücktaste in der leeren Leiste entfernst du den Chip wieder.
+
+Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 30`, Enter kopiert das Ergebnis. Unterstützt werden:
+
+- `+ − × ÷ ^ % !` und Klammern
+- `√`/`sqrt`, `sin`/`cos`/`tan` (in Grad), `log`, `ln`, `π`, `e`
+- Komma als Dezimalzeichen
 
 ## Was drin ist
 
@@ -105,6 +119,10 @@ Mit Rücktaste in der leeren Leiste entfernst du den Chip wieder.
 - **Werbeblocker:** Ghostery-Engine mit Werbe- und Tracker-Listen. Das Schild in der Adressleiste zählt, was auf der Seite blockiert wurde. Abschalten kannst du ihn in den Einstellungen.
 - **Tabs wiederherstellen:** Beim Start sind deine Tabs wieder da. Abschalten kannst du das in den Einstellungen.
 - **Rechtsklick-Menü:** Link oder Bild in neuem Tab öffnen, speichern und kopieren, markierten Text im Web suchen, Rechtschreibvorschläge, Untersuchen.
+- **Taschenrechner** (Knopf oben rechts in der Leiste oder `Strg+Umschalt+R`): Das Panel fällt mit Feder ein und funktioniert mit Maus und Tastatur.
+  - Das Ergebnis erscheint live, `=` löst einen Partikel-Burst aus.
+  - Die letzten Rechnungen bleiben als Verlauf stehen, Kopieren geht per Klick.
+  - Ein eigener Parser rechnet, `eval` wird nie benutzt.
 - **Suchen auf der Seite und Zoom** pro Tab, mit Trefferzähler und Zoom-Anzeige.
 - **Einstellungen:** Suchmaschine, Animationen (Normal, Episch, Aus), Akzentfarbe (sechs Presets und eine freie Farbe), Mikro-Sounds (standardmäßig aus). `prefers-reduced-motion` wird respektiert: Ist es aktiv, steht der Standard auf „Aus".
 

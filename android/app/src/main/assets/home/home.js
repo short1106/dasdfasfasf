@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   const $ = s => document.querySelector(s);
-  const app = window.Dulidan || { go() {}, haptic() {}, ready() {} };
+  const app = window.Dulidan || { go() {}, haptic() {}, ready() {}, calc() {}, calcValue() { return ''; } };
   const root = document.documentElement;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), lerp = (a, b, t) => a + (b - a) * t;
   let anim = 'episch';
@@ -21,7 +21,7 @@
   window.dwAnim = a => { anim = a; root.dataset.anim = a; };
   window.dwTabs = n => { $('#tabs').textContent = n; };
   window.dwIntro = () => intro();
-  window.dwClear = () => { q.value = ''; setChip(null); };
+  window.dwClear = () => { q.value = ''; setChip(null); $('#calcres').hidden = true; };
 
   /* ===== GL-Helfer ===== */
   function program(gl, vs, fs) {
@@ -208,8 +208,20 @@
   q.addEventListener('input', () => {
     beamV = Math.min(beamV + 500, 2800);
     const m = !sc && /^(yt|gh|wiki|maps|mc)\s(.*)$/i.exec(q.value);
-    if (m) { setChip(m[1].toLowerCase()); q.value = m[2]; }
+    if (m) { setChip(m[1].toLowerCase()); q.value = m[2]; }    showCalc();
   });
+  /* Rechnung im Suchfeld → Ergebnis live darunter, Tippen öffnet den Rechner */
+  const cres = $('#calcres');
+  function showCalc() {
+    const r = sc ? '' : String(app.calcValue(q.value.trim()) || '');
+    if (!r) { cres.hidden = true; return; }
+    const was = !cres.hidden;
+    cres.innerHTML = '= <b></b><small>RECHNER</small>'; cres.querySelector('b').textContent = r;
+    cres.hidden = false;
+    if (!was) app.haptic('tick');
+  }
+  cres.addEventListener('click', () => { fire(cres); app.calc(q.value.trim()); });
+  $('#calcBtn').addEventListener('click', e => { fire(e.currentTarget); app.calc(''); });
   q.addEventListener('keydown', e => { if (e.key === 'Backspace' && sc && !q.value) { e.preventDefault(); setChip(null); } });
   function fire(el) {
     const r = el.getBoundingClientRect();
@@ -227,6 +239,7 @@
     if (!text.trim()) return;
     fire(bar);
     q.blur();
+    if (!sc && app.calcValue(text)) { app.calc(text); return; }
     setTimeout(() => app.go(text), anim === 'aus' ? 0 : 180);
   });
 
