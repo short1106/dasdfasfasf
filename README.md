@@ -35,6 +35,8 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | `Strg+L` | Adressleiste fokussieren |
 | `Strg+K` | Command Palette (Tabs, Lesezeichen, Verlauf, Befehle) |
 | `Strg+E` | Orbit: 3D-Tab-Übersicht |
+| `Strg+F` / `F3` | Auf der Seite suchen / nächster Treffer |
+| `Strg +` / `Strg -` / `Strg 0` | Zoom größer / kleiner / zurücksetzen |
 | `Strg+D` | Lesezeichen setzen oder entfernen |
 | `Strg+J` | Downloads |
 | `Strg+,` | Einstellungen |
@@ -70,6 +72,14 @@ Mit Rücktaste in der leeren Leiste entfernst du den Chip wieder.
   - `Entf` schließt einen Tab, `Esc` zoomt zurück in den aktiven Tab.
 - **Partikel-Übergang:** Beim Seitenwechsel zerfällt das Foto der alten Seite in rund 26 000 Partikel, die zum Dulidan-D zusammenfliegen. Ist die neue Seite geladen, wird sie unsichtbar fotografiert. Dann explodiert das D, und die neue Seite erscheint in einem wachsenden Kreis mit Schockwellen-Ring. Ohne WebGL läuft weiter der Logo-Wipe.
 - **Musik-Reaktion:** Läuft in einem Tab Ton (etwa YouTube), pulsieren Logo-Partikel, Nebel, Energiestrahl und Glow zum Bass. Starke Kicks lassen das D beben, und der Tab zeigt einen Mini-Equalizer. Das funktioniert auch, während du auf einem anderen Tab bist.
+- **Passwort-Manager:** Nach dem Anmelden fragt die Adressleiste „Passwort speichern?“. Beim nächsten Besuch füllt Dulidan Web Benutzername und Passwort ein und meldet dich automatisch an.
+  - Auch zweistufige Logins wie bei Google oder Microsoft gehen: erst die E-Mail, dann das Passwort.
+  - Verwalten kannst du alles über den Schlüssel in der Adressleiste, im Menü oder in der Palette: suchen, anzeigen, kopieren (die Zwischenablage wird nach 30 s geleert) und löschen.
+  - Ist ein gespeichertes Passwort falsch, gibt es höchstens einen automatischen Versuch pro Minute, also keine Endlosschleife.
+- **Werbeblocker:** Ghostery-Engine mit Werbe- und Tracker-Listen. Das Schild in der Adressleiste zählt, was auf der Seite blockiert wurde. Abschalten kannst du ihn in den Einstellungen.
+- **Tabs wiederherstellen:** Beim Start sind deine Tabs wieder da. Abschalten kannst du das in den Einstellungen.
+- **Rechtsklick-Menü:** Link oder Bild in neuem Tab öffnen, speichern und kopieren, markierten Text im Web suchen, Rechtschreibvorschläge, Untersuchen.
+- **Suchen auf der Seite und Zoom** pro Tab, mit Trefferzähler und Zoom-Anzeige.
 - **Einstellungen:** Suchmaschine, Animationen (Normal, Episch, Aus), Akzentfarbe (sechs Presets und eine freie Farbe), Mikro-Sounds (standardmäßig aus). `prefers-reduced-motion` wird respektiert: Ist es aktiv, steht der Standard auf „Aus".
 
 Ohne WebGL (etwa ohne GPU) erscheint automatisch das statische Logo.
@@ -78,11 +88,12 @@ Ohne WebGL (etwa ohne GPU) erscheint automatisch das statische Logo.
 
 ```
 main.js          Main-Prozess: Fenster (frameless), Tabs als WebContentsView, Protokoll dulidan://, IPC, Downloads
+main/            passwords.js (Tresor) · adblock.js (Werbeblocker) · contextmenu.js (Rechtsklick)
 preload.js       Schmale IPC-Brücke für die Oberfläche (contextBridge)
 tab-preload.js   Läuft isoliert in Webseiten und meldet nur den Scroll-Fortschritt
 ui/              Oberfläche: Vanilla HTML/CSS/JS, ES-Module, kein Build-Schritt
   css/           tokens · chrome · home · overlays · error
-  js/            app · tabs · omnibox · view · morph · overview · audio · gl · fx · palette · panels · boot · settings · data · sound · util
+  js/            app · tabs · omnibox · view · morph · overview · audio · passwords · gl · fx · palette · panels · boot · settings · data · sound · util
 assets/          Logo und Schriften (Space Grotesk, JetBrains Mono, OFL)
 ```
 
@@ -94,8 +105,16 @@ Eine `WebContentsView` liegt immer über der HTML-Oberfläche. Bevor ein Dropdow
 
 `tab-preload.js` greift den Ton von `<video>`- und `<audio>`-Elementen über `captureStream()` ab. Die Wiedergabe der Seite bleibt dabei unverändert. Ein Analyser liefert Bass, Mitten und Höhen rund 30-mal pro Sekunde an die Oberfläche. Geschützte Medien (DRM, etwa Spotify oder Netflix) und fremde Medien ohne CORS geben aus Sicherheitsgründen keinen Ton heraus. Dort bleibt die Musik-Reaktion aus. Damit die Analyse auch in Hintergrund-Tabs weiterläuft, haben Tabs `backgroundThrottling: false`.
 
+### Wo die Passwörter liegen
+
+Alles bleibt lokal in `vault.json` im App-Datenordner (Windows: `%APPDATA%\dulidan-web`). Jedes Passwort ist einzeln mit Electrons `safeStorage` verschlüsselt, unter Windows ist das **DPAPI**. Nur dein Windows-Benutzerkonto auf diesem PC kann es entschlüsseln. Gibt es keinen System-Schlüsselbund (manche Linux-Systeme), verschlüsselt Dulidan Web mit AES-256-GCM und einem zufälligen lokalen Schlüssel.
+
+- Welche Zugangsdaten eine Seite bekommt, entscheidet der Main-Prozess anhand der echten Frame-URL, nie die Webseite selbst. Ausgefüllt wird nur im Hauptframe und nur auf `https` (plus `localhost` zum Entwickeln).
+- Beim Speichern bekommt die Oberfläche das Passwort nie zu sehen. Sie sagt dem Main-Prozess nur „speichern“ oder „nie“.
+
 ### Sicherheit
 
+- Webseiten laufen in einer eigenen Session (`persist:web`), getrennt von der Oberfläche.
 - `contextIsolation: true`, `nodeIntegration: false` und `sandbox: true` für Oberfläche und Tabs
 - Die Oberfläche läuft über ein eigenes Protokoll `dulidan://app/` mit strenger CSP. Es liefert nur `ui/` und `assets/` aus und blockt Path-Traversal.
 - IPC-Aufrufe werden nur von der Oberfläche angenommen. Navigation erlaubt nur `http(s)`, `file` und `dulidan`.

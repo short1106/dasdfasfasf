@@ -1,10 +1,14 @@
 'use strict';
 /* Dulidan Web · Main-Prozess
-   Aufbau: Protokoll · Fenster · Tabs (WebContentsView) · Enthüllung · Shortcuts · Downloads · IPC */
+   Aufbau: Protokoll · Fenster · Tabs (WebContentsView) · Enthüllung · Shortcuts · Downloads · Passwörter · IPC
+   Module: main/passwords.js (Tresor) · main/adblock.js (Werbeblocker) · main/contextmenu.js (Rechtsklick) */
 
-const { app, BrowserWindow, WebContentsView, ipcMain, protocol, net, session, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, protocol, net, session, shell, clipboard } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const vault = require('./main/passwords.js');
+const adblock = require('./main/adblock.js');
+const { pageMenu } = require('./main/contextmenu.js');
 
 const ROOT = __dirname;
 const UI_URL = 'dulidan://app/ui/index.html';
@@ -37,7 +41,7 @@ function serveApp() {
 }
 
 /* ===== Zustand ===== */
-let win = null;
+let win = null, webSes = null;
 const tabs = new Map();
 let nextId = 1, activeId = null, viewVisible = false, htmlFull = false;
 let bounds = { x: 0, y: 100, width: 800, height: 600 };
@@ -61,6 +65,11 @@ function createWindow() {
   ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'focus', 'blur'].forEach(e => win.on(e, state));
   win.webContents.on('will-navigate', e => e.preventDefault());
   win.webContents.on('before-input-event', (e, i) => shortcut(e, i));
+  win.webContents.on('context-menu', (_, p) => {
+    if (!p.isEditable) return;
+    const m = pageMenu(win.webContents, p, {});
+    if (m) m.popup({ window: win });
+  });
   win.on('closed', () => { win = null; tabs.clear(); });
 }
 
@@ -71,7 +80,7 @@ function ensureView(t) {
     webPreferences: {
       preload: path.join(ROOT, 'tab-preload.js'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true,
-      backgroundThrottling: false
+      backgroundThrottling: false, session: webSes
     }
   });
   view.setBackgroundColor('#07060b');
@@ -87,8 +96,9 @@ function tabState(t) {
   const wc = t.view.webContents;
   let url = wc.getURL();
   if (url.startsWith(ERROR_URL)) url = t.failedUrl || url;
+  const origin = vault.originOf(url);
   return {
-    id: t.id, url, title: wc.getTitle(), loading: wc.isLoading(),
+    id: t.id, url, title: wc.getTitle(), loading: wc.isLoading(), pw: origin ? vault.count(origin) : 0, zoom: wc.getZoomFactor(),
     canBack: wc.navigationHistory.canGoBack(), canFwd: wc.navigationHistory.canGoForward()
   };
 }
@@ -102,7 +112,10 @@ function wire(t, wc) {
   wc.on('did-navigate-in-page', push);
   wc.on('page-favicon-updated', (_, icons) => ui('tab', { id: t.id, favicon: icons[0] || null }));
   wc.on('did-start-navigation', d => {
-    if (d.isMainFrame && !d.isSameDocument && !d.url.startsWith(ERROR_URL)) ui('nav-start', { id: t.id, url: d.url });
+    if (d.isMainFrame && !d.isSameDocument && !d.url.startsWith(ERROR_URL)) {
+      t.blocked = 0; ui('blocked', { id: t.id, n: 0 });
+      ui('nav-start', { id: t.id, url: d.url });
+    }
   });
   wc.on('dom-ready', () => ui('dom-ready', { id: t.id }));
   wc.on('did-fail-load', (_, code, desc, url, isMain) => {
@@ -119,6 +132,18 @@ function wire(t, wc) {
     return { action: 'deny' };
   });
   wc.on('will-attach-webview', e => e.preventDefault());
+  wc.on('found-in-page', (_, r) => ui('found', { id: t.id, active: r.activeMatchOrdinal, matches: r.matches, final: r.finalUpdate }));
+  wc.on('zoom-changed', (_, dir) => ui('zoom', { id: t.id, f: zoomStep(wc, dir === 'in' ? 1 : -1) }));
+  wc.on('context-menu', (_, p) => {
+    const m = pageMenu(wc, p, {
+      openTab: url => { if (/^https?:/i.test(url)) ui('open-tab', { url, background: true }); },
+      search: text => ui('search', { text: text.slice(0, 500) }),
+      passwords: () => { win.webContents.focus(); ui('shortcut', { name: 'passwords' }); },
+      nav: true, inspect: true
+    });
+    if (m) m.popup({ window: win });
+  });
+  wirePasswords(t, wc);
   wc.ipc.on('scroll', (_, p) => { if (t.id === activeId) ui('scroll', { id: t.id, p: Number(p) || 0 }); });
   wc.ipc.on('audio', (_, a) => {
     if (!Array.isArray(a) || a.length !== 4) return;
@@ -197,8 +222,52 @@ async function showView(id, mode, focus, accent) {
   return true;
 }
 
+/* ===== Zoom ===== */
+const ZOOMS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+function zoomStep(wc, dir) {
+  const f = wc.getZoomFactor();
+  let n = 1;
+  if (dir > 0) n = ZOOMS.find(z => z > f + 0.001) ?? ZOOMS[ZOOMS.length - 1];
+  else if (dir < 0) n = [...ZOOMS].reverse().find(z => z < f - 0.001) ?? ZOOMS[0];
+  wc.setZoomFactor(n);
+  return n;
+}
+
+/* ===== Passwörter: Herkunft immer aus der echten Frame-URL, nur Hauptframe ===== */
+function wirePasswords(t, wc) {
+  const originOfEvent = e => (e.senderFrame && e.senderFrame === wc.mainFrame ? vault.originOf(e.senderFrame.url) : null);
+  const str = (v, max) => (typeof v === 'string' && v.length <= max ? v : null);
+  t.autoAt = {};
+  wc.ipc.handle('pw:get', e => {
+    const origin = originOfEvent(e);
+    if (!origin) return null;
+    const creds = vault.find(origin).slice(0, 5);
+    if (!creds.length) return null;
+    const cfg = vault.config();
+    const free = k => cfg.auto && Date.now() - (t.autoAt[k] || 0) > 60000;
+    return { creds: creds.map(c => ({ username: c.username, password: c.password })), auto: free(origin), autoUser: free(origin + '#user') };
+  });
+  wc.ipc.on('pw:filled', (e, info = {}) => {
+    const origin = originOfEvent(e);
+    if (!origin) return;
+    const c = vault.find(origin).find(x => x.username === info.username);
+    if (c) vault.touch(c.id);
+    if (info.auto) t.autoAt[info.stage === 'user' ? origin + '#user' : origin] = Date.now();
+    ui('pw-filled', { id: t.id, origin, username: String(info.username || ''), auto: !!info.auto });
+  });
+  wc.ipc.on('pw:capture', (e, c = {}) => {
+    const origin = originOfEvent(e);
+    const username = str(c.username, 300) ?? '', password = str(c.password, 1000);
+    if (!origin || !password || !vault.config().offer || vault.isNever(origin)) return;
+    const kind = vault.compare(origin, username, password);
+    if (kind === 'same') return;
+    t.pendingPw = { origin, username, password, at: Date.now() };
+    ui('pw-offer', { id: t.id, origin, username, update: kind === 'update' });
+  });
+}
+
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview']);
+const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords']);
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
@@ -212,7 +281,12 @@ function keyName(i) {
     if (k === 'j') return 'downloads';
     if (k === 'd') return 'bookmark';
     if (k === 'e') return 'overview';
+    if (k === 'f') return 'find';
+    if (k === '+' || k === '=') return 'zoom-in';
+    if (k === '-') return 'zoom-out';
+    if (k === '0') return 'zoom-reset';
   }
+  if (k === 'f3') return i.shift ? 'find-prev' : 'find-next';
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
   if (i.alt && !c) {
@@ -278,6 +352,39 @@ function ipc() {
     if (t.failedUrl && w.getURL().startsWith(ERROR_URL)) w.loadURL(t.failedUrl).catch(() => {}); else w.reload();
   });
   h('tab:stop', id => { const w = wcOf(id); if (w) w.stop(); });
+  h('tab:find', (id, text, opts = {}) => {
+    const w = wcOf(id);
+    if (!w || typeof text !== 'string' || !text) return;
+    w.findInPage(text.slice(0, 300), { forward: opts.forward !== false, findNext: !!opts.next });
+  });
+  h('tab:stopFind', id => { const w = wcOf(id); if (w) w.stopFindInPage('clearSelection'); });
+  h('tab:zoom', (id, dir) => { const w = wcOf(id); return w ? zoomStep(w, Math.sign(Number(dir) || 0)) : 1; });
+
+  /* Passwörter: die Oberfläche sieht Klartext nur auf ausdrücklichen Wunsch (Anzeigen) */
+  h('pw:list', () => vault.list());
+  h('pw:reveal', id => vault.reveal(String(id)));
+  h('pw:copy', id => {
+    const p = vault.reveal(String(id));
+    if (p === null) return false;
+    clipboard.writeText(p);
+    setTimeout(() => { if (clipboard.readText() === p) clipboard.clear(); }, 30000);
+    return true;
+  });
+  h('pw:remove', id => vault.remove(String(id)));
+  h('pw:config', c => (c ? vault.setConfig(c) : vault.config()));
+  h('pw:never', () => vault.neverList());
+  h('pw:unnever', o => vault.unNever(String(o)));
+  h('pw:backend', () => vault.backend());
+  h('pw:respond', (id, action) => {
+    const t = tab(id);
+    if (!t || !t.pendingPw) return null;
+    const p = t.pendingPw; t.pendingPw = null;
+    if (Date.now() - p.at > 10 * 60000) return null;
+    if (action === 'save') { vault.save(p.origin, p.username, p.password); return true; }
+    if (action === 'never') vault.never(p.origin);
+    return false;
+  });
+  h('adblock:set', on => adblock.setEnabled(!!on));
 
   h('view:bounds', r => {
     if (!r) return;
@@ -349,9 +456,18 @@ app.on('web-contents-created', (_, wc) => {
 app.whenReady().then(() => {
   serveApp();
   ipc();
-  const ses = session.defaultSession;
-  ses.setPermissionRequestHandler((_, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
-  wireDownloads(ses);
+  /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */
+  webSes = session.fromPartition('persist:web');
+  for (const s of [session.defaultSession, webSes]) {
+    s.setPermissionRequestHandler((_, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
+  }
+  wireDownloads(webSes);
+  adblock.init(webSes, {
+    blocked: wcId => {
+      for (const t of tabs.values()) if (t.view && t.view.webContents.id === wcId) { t.blocked = (t.blocked || 0) + 1; ui('blocked', { id: t.id, n: t.blocked }); }
+    },
+    changed: state => ui('adblock', { state })
+  });
   createWindow();
   app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
 });

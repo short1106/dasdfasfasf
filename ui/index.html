@@ -54,6 +54,12 @@
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
   <symbol id="i-orbit" viewBox="0 0 24 24"><rect x="8" y="8" width="8" height="8" rx="1.5"/><path d="M3 9.5v5M21 9.5v5"/><path d="M5.5 7.5v9M18.5 7.5v9"/></symbol>
   <symbol id="i-eq" viewBox="0 0 24 24"><path d="M6 16v-4M10 16V8M14 16v-6M18 16v-9"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/></symbol>
 </svg>
 
@@ -95,6 +101,16 @@
           <input id="omniInput" spellcheck="false" placeholder="Suche oder Adresse eingeben" aria-label="Adresse und Suche">
           <div class="omni-pretty" id="omniPretty" aria-hidden="true"></div>
         </div>
+        <div class="pw-offer" id="pwOffer" hidden>
+          <span class="pw-offer-ico"><svg><use href="#i-key"/></svg></span>
+          <span class="pw-offer-t" id="pwOfferT">Passwort speichern?</span>
+          <button type="button" class="pw-b pw-save fx" data-pw="save">Speichern</button>
+          <button type="button" class="pw-b fx" data-pw="never">Nie</button>
+          <button type="button" class="icon-btn sm fx" data-pw="dismiss" aria-label="Schließen"><svg><use href="#i-x"/></svg></button>
+        </div>
+        <button type="button" class="omni-chip zoom-chip fx" id="zoomChip" data-cursor="ZOOM ZURÜCKSETZEN" hidden>100%</button>
+        <button type="button" class="omni-chip shield-chip fx" id="shieldChip" data-cursor="WERBEBLOCKER" hidden><svg><use href="#i-shield"/></svg><b id="shieldN">0</b></button>
+        <button type="button" class="icon-btn sm fx key-btn" id="btnKey" data-cursor="PASSWÖRTER" data-ico="pop" aria-label="Passwörter" hidden><svg><use href="#i-key"/></svg></button>
         <button type="button" class="icon-btn sm fx star" id="btnStar" data-cursor="MERKEN" data-ico="pop" aria-label="Lesezeichen"><svg><use href="#i-star"/></svg></button>
         <div class="load-line" id="omniLoad"><i></i></div>
       </form>
@@ -104,6 +120,16 @@
         <button class="chip-btn fx mag" id="btnPal" data-cursor="BEFEHLE" aria-label="Command Palette"><svg><use href="#i-cmd"/></svg><kbd>Strg K</kbd></button>
         <button class="icon-btn fx mag" id="btnSettings" data-cursor="EINSTELLUNGEN" data-ico="spin" aria-label="Einstellungen"><svg><use href="#i-gear"/></svg></button>
         <button class="icon-btn fx mag" id="btnMenu" data-cursor="MENÜ" data-ico="wiggle" aria-label="Menü"><svg><use href="#i-menu"/></svg></button>
+      </div>
+    </div>
+    <div class="findbar" id="findbar" aria-hidden="true">
+      <div class="find-in">
+        <svg><use href="#i-search"/></svg>
+        <input id="findInput" spellcheck="false" placeholder="Auf der Seite suchen …" aria-label="Auf der Seite suchen">
+        <span class="find-n mono" id="findN"></span>
+        <button class="icon-btn sm fx" id="findPrev" data-cursor="ZURÜCK · ⇧↵" aria-label="Vorheriger Treffer"><svg><use href="#i-up"/></svg></button>
+        <button class="icon-btn sm fx" id="findNext" data-cursor="WEITER · ↵" aria-label="Nächster Treffer"><svg><use href="#i-down"/></svg></button>
+        <button class="icon-btn sm fx" id="findClose" data-ico="spin" aria-label="Suche schließen"><svg><use href="#i-x"/></svg></button>
       </div>
     </div>
     <div class="scroll-hud" aria-hidden="true"><i id="scrollHud"></i><span id="scrollPct">000</span></div>
@@ -192,6 +218,11 @@
 <aside class="panel panel-side" id="settings" hidden>
   <div class="panel-head stg"><h2>Einstellungen</h2><button class="icon-btn sm fx" data-close aria-label="Schließen" data-ico="spin"><svg><use href="#i-x"/></svg></button></div>
   <div class="panel-body stg" id="settingsBody"></div>
+</aside>
+
+<aside class="panel panel-side" id="passwords" hidden>
+  <div class="panel-head stg"><h2>Passwörter</h2><button class="icon-btn sm fx" data-close aria-label="Schließen" data-ico="spin"><svg><use href="#i-x"/></svg></button></div>
+  <div class="panel-body stg" id="pwBody"></div>
 </aside>
 
 <aside class="panel panel-drop" id="downloads" hidden>

@@ -1,10 +1,11 @@
 /* Dulidan Web · app.js – verdrahtet alles
    Aufbau: Module · Tabs · Navigation · Toolbar/Ladebalken · Startseite (HUD, Karten, Bänder) · Shortcuts · Events · Start */
-import { $, $$, h, icon, api, sleep, scramble, toast, hostOf, anim, amp } from './util.js';
+import { $, $$, h, icon, api, sleep, scramble, toast, hostOf, anim, amp, store } from './util.js';
 import { settings, setSetting, onSettings, SHORTCUTS, ACCENTS } from './settings.js';
 import { initCursor, initButtons, shockwave, burst } from './fx.js';
 import { createLogo, createNebula } from './gl.js';
-import { Suggest, engineName } from './omnibox.js';
+import { Suggest, engineName, resolve } from './omnibox.js';
+import * as pwUi from './passwords.js';
 import { TabStrip } from './tabs.js';
 import * as view from './view.js';
 import * as pal from './palette.js';
@@ -21,7 +22,7 @@ const tabs = new Map();
 let active = null;
 
 /* ===== Module ===== */
-const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: () => {} });
+const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: () => saveSession() });
 view.bindActive(() => active);
 const logo = createLogo($('#logoGL'), $('#logoStage'), homeEl);
 const nebula = createNebula($('#nebula'), homeEl);
@@ -57,15 +58,25 @@ onKick(b => {
 omniInput.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== omniInput) updateToolbar(); }, 150));
 
 /* ===== Tabs ===== */
-async function newTab(url = null, { focus = true, intro = true } = {}) {
+async function newTab(url = null, { focus = true, intro = true, background = false } = {}) {
   const id = await api.tab.create();
-  const t = { id, url: '', title: '', favicon: null, loading: false, canBack: false, canFwd: false, home: true, hasView: false, progress: 0, scroll: 0 };
+  const t = { id, url: '', title: '', favicon: null, loading: false, canBack: false, canFwd: false, home: true, hasView: false, progress: 0, scroll: 0, pw: 0, blocked: 0, zoom: 1 };
   tabs.set(id, t);
   strip.add(t);
+  if (background && url) {
+    /* Im Hintergrund laden (Rechtsklick „In neuem Tab öffnen“, Wiederherstellen) */
+    t.url = url; t.home = false;
+    startProgress(t);
+    strip.update(t);
+    await api.tab.navigate(id, url);
+    t.hasView = true;
+    updateCount(); saveSession();
+    return t;
+  }
   activate(t, { fresh: intro && !url });
   if (url) go(t, url);
   else if (focus) setTimeout(() => { if (active === t && t.home) bigInput.focus(); }, anim() === 'aus' ? 0 : 500);
-  updateCount();
+  updateCount(); saveSession();
   return t;
 }
 
@@ -75,13 +86,14 @@ function activate(t, { fresh = false } = {}) {
   active = t;
   strip.setActive(t);
   if (!same && !t.home) t.reveal = 'switch';
-  if (!same) { omni.close(); big.close(); }
+  if (!same) { omni.close(); big.close(); closeFind(); pwUi.onTabSwitch(t.id); }
   updateHome(fresh);
   updateToolbar();
   updateLoad();
   setScroll(t.home ? 0 : t.scroll);
   view.sync();
   if (!t.transitioning) view.settleWipe();
+  saveSession();
 }
 
 async function closeTab(t) {
@@ -98,7 +110,7 @@ async function closeTab(t) {
   await api.tab.close(t.id);
   view.forget(t.id);
   forgetTab(t.id);
-  updateCount();
+  updateCount(); saveSession();
 }
 
 function cycle(d) {
@@ -168,6 +180,14 @@ function updateToolbar() {
   $('#btnBack').disabled = !(t.canBack || (t.home && t.hasView));
   $('#btnFwd').disabled = t.home || !t.canFwd;
   body.classList.toggle('loading', !!t.loading && !t.home);
+  const key = $('#btnKey');
+  key.hidden = t.home || !t.pw;
+  const shield = $('#shieldChip');
+  shield.hidden = t.home || !settings.adblock || adblockState !== 'an';
+  $('#shieldN').textContent = t.blocked || 0;
+  const zc = $('#zoomChip');
+  zc.hidden = t.home || Math.abs((t.zoom || 1) - 1) < 0.001;
+  zc.textContent = Math.round((t.zoom || 1) * 100) + '%';
   const star = $('#btnStar');
   star.disabled = t.home;
   star.classList.toggle('on', !t.home && isBookmarked(t.url));
@@ -357,7 +377,14 @@ const ACTIONS = {
   back: () => back(active),
   forward: () => forward(active),
   home: () => goHome(active),
-  overview: () => ov.toggle()
+  overview: () => ov.toggle(),
+  find: () => openFind(),
+  'find-next': () => (findOpen ? runFind(true, true) : openFind()),
+  'find-prev': () => (findOpen ? runFind(true, false) : openFind()),
+  'zoom-in': () => zoom(1),
+  'zoom-out': () => zoom(-1),
+  'zoom-reset': () => zoom(0),
+  passwords: () => openPanel('passwords', $('#btnKey').hidden ? $('#btnMenu') : $('#btnKey'))
 };
 
 const COMMANDS = () => [
@@ -377,6 +404,11 @@ const COMMANDS = () => [
   { icon: 'color', name: 'Akzentfarbe wechseln', run: nextAccent },
   { icon: 'sound', name: settings.sound ? 'Mikro-Sounds aus' : 'Mikro-Sounds an', run: () => { setSetting('sound', !settings.sound); toast('Mikro-Sounds: ' + (settings.sound ? 'AN' : 'AUS')); } },
   { icon: 'orbit', name: 'Tab-Übersicht (Orbit 3D)', key: 'Strg E', run: () => ov.open() },
+  { icon: 'search', name: 'Auf der Seite suchen', key: 'Strg F', run: () => openFind() },
+  { icon: 'key', name: 'Passwörter verwalten', run: () => ACTIONS.passwords() },
+  { icon: 'shield', name: settings.adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten', run: () => { setSetting('adblock', !settings.adblock); toast('Werbeblocker: ' + (settings.adblock ? 'AN' : 'AUS')); } },
+  { icon: 'plus', name: 'Zoom: größer', key: 'Strg +', run: () => zoom(1) },
+  { icon: 'x', name: 'Zoom zurücksetzen', key: 'Strg 0', run: () => zoom(0) },
   { icon: 'power', name: 'Boot-Sequenz abspielen', run: replayBoot },
   { icon: 'trash', name: 'Verlauf löschen', run: () => { clearHistory(); toast('Verlauf gelöscht'); } },
   { icon: 'power', name: 'Dulidan Web beenden', run: quit }
@@ -433,9 +465,10 @@ addEventListener('resize', () => { omni.close(); big.close(); });
 /* Fallback: Tasten, die nicht über before-input-event im Main-Prozess laufen (z. B. synthetische Eingaben) */
 function keyName(e) {
   const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-  if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
+  if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
+  if (k === 'f3') return e.shiftKey ? 'find-prev' : 'find-next';
   if (e.altKey && !c) return ({ arrowleft: 'back', arrowright: 'forward', home: 'home' })[k];
 }
 document.addEventListener('keydown', e => {
@@ -453,9 +486,11 @@ function onTabState(t, e) {
   if (typeof e.title === 'string') t.title = e.title;
   if (typeof e.loading === 'boolean') t.loading = e.loading;
   if (typeof e.canBack === 'boolean') { t.canBack = e.canBack; t.canFwd = e.canFwd; }
+  if (typeof e.pw === 'number') t.pw = e.pw;
+  if (typeof e.zoom === 'number') t.zoom = e.zoom;
   if (wasLoading && !t.loading) { endProgress(t); view.domReady(t); }
   if (!wasLoading && t.loading) startProgress(t);
-  if (t.url !== prevUrl) addHistory(t.url, t.title, t.favicon);
+  if (t.url !== prevUrl) { addHistory(t.url, t.title, t.favicon); saveSession(); }
   else if (t.title !== prevTitle) updateHistory(t.url, { title: t.title });
   strip.update(t);
   if (t === active) updateToolbar();
@@ -475,7 +510,14 @@ api.on(e => {
       if (t === active && view.isShown(t.id) && !t.transitioning && performance.now() - (t.revealAt || 0) > 1500) view.transition(t, async () => {}, e.url);
       break;
     case 'dom-ready': if (t) view.domReady(t); break;
-    case 'open-tab': newTab(e.url); break;
+    case 'open-tab': newTab(e.url, { background: !!e.background }); if (e.background) toast('Im Hintergrund geöffnet'); break;
+    case 'search': { const r = resolve(e.text); if (r) newTab(r.url); break; }
+    case 'pw-offer': pwUi.onOffer(e); break;
+    case 'pw-filled': if (t) { t.pw = Math.max(1, t.pw || 0); if (t === active) updateToolbar(); } pwUi.onFilled(e); break;
+    case 'blocked': if (t) { t.blocked = e.n; if (t === active) { $('#shieldN').textContent = e.n; if (e.n) bumpShield(); } } break;
+    case 'adblock': adblockState = e.state; updateToolbar(); break;
+    case 'found': if (t === active && findOpen) onFound(e); break;
+    case 'zoom': if (t) { t.zoom = e.f; if (t === active) { updateToolbar(); toast('Zoom ' + Math.round(e.f * 100) + '%'); } } break;
     case 'shortcut': ACTIONS[e.name] && ACTIONS[e.name](); break;
     case 'scroll': if (t) { t.scroll = e.p; if (t === active && !t.home) setScroll(e.p); } break;
     case 'download': onDownload(e); break;
@@ -490,16 +532,98 @@ api.on(e => {
 });
 
 onSettings(k => {
+  if (k === 'adblock') { api.adblock(settings.adblock); updateToolbar(); }
   if (k === 'accent' || k === 'custom' || k === 'anim') { logo.refresh(); nebula.refresh(); }
   if (k === 'engine') $('#bigEngine').textContent = engineName().toUpperCase();
 });
+
+
+/* ===== Werbeblocker-Anzeige ===== */
+let adblockState = 'aus';
+function bumpShield() { const c = $('#shieldChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+$('#shieldChip').addEventListener('click', () => toast(`🛡 ${active.blocked || 0} Werbe- und Tracker-Anfragen auf dieser Seite blockiert`));
+$('#btnKey').addEventListener('click', e => openPanel('passwords', e.currentTarget));
+
+/* ===== Zoom ===== */
+async function zoom(dir) {
+  const t = active;
+  if (!t || t.home || !t.hasView) return;
+  t.zoom = await api.tab.zoom(t.id, dir);
+  updateToolbar();
+  toast('Zoom ' + Math.round(t.zoom * 100) + '%');
+}
+$('#zoomChip').addEventListener('click', () => zoom(0));
+
+/* ===== Auf der Seite suchen ===== */
+const findInput = $('#findInput'), findN = $('#findN');
+let findOpen = false;
+function openFind() {
+  if (!active || active.home || !active.hasView) return;
+  findOpen = true;
+  body.classList.add('find-open');
+  $('#findbar').setAttribute('aria-hidden', 'false');
+  findInput.focus(); findInput.select();
+  if (findInput.value) runFind();
+}
+function closeFind() {
+  if (!findOpen) return;
+  findOpen = false;
+  body.classList.remove('find-open');
+  $('#findbar').setAttribute('aria-hidden', 'true');
+  findN.textContent = '';
+  if (active && active.hasView) api.tab.stopFind(active.id);
+}
+function runFind(next = false, forward = true) {
+  const q = findInput.value;
+  if (!q) { findN.textContent = ''; if (active) api.tab.stopFind(active.id); return; }
+  api.tab.find(active.id, q, { next, forward });
+}
+function onFound(e) {
+  if (!e.final) return;
+  findN.classList.toggle('none', !e.matches);
+  findN.textContent = e.matches ? `${e.active} / ${e.matches}` : 'KEINE TREFFER';
+  if (!e.matches) { const b = $('.find-in'); b.classList.remove('miss'); void b.offsetWidth; b.classList.add('miss'); }
+}
+findInput.addEventListener('input', () => runFind());
+findInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); runFind(true, !e.shiftKey); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+});
+$('#findNext').addEventListener('click', () => runFind(true, true));
+$('#findPrev').addEventListener('click', () => runFind(true, false));
+$('#findClose').addEventListener('click', closeFind);
+
+/* ===== Sitzung: offene Tabs merken und beim Start wiederherstellen ===== */
+let saveT = 0, restoring = false;
+function saveSession(now = false) {
+  if (restoring) return;
+  clearTimeout(saveT);
+  const write = () => {
+    const ids = strip.ids();
+    store.set('dw_session', { tabs: ids.map(id => { const t = tabs.get(id); return t && !t.home && /^https?:/i.test(t.url) ? t.url : ''; }), active: Math.max(0, ids.indexOf(active && active.id)) });
+  };
+  if (now) write(); else saveT = setTimeout(write, 300);
+}
+async function restoreSession() {
+  const s = store.get('dw_session', null);
+  if (!settings.restore || !s || !Array.isArray(s.tabs) || !s.tabs.some(Boolean)) return false;
+  restoring = true;
+  const made = [];
+  for (const url of s.tabs.slice(0, 30)) made.push(url ? await newTab(url, { background: true }) : await newTab(null, { focus: false, intro: false }));
+  restoring = false;
+  activate(made[Math.min(s.active || 0, made.length - 1)] || made[0]);
+  toast(`↺ ${made.length} ${made.length === 1 ? 'Tab' : 'Tabs'} wiederhergestellt`);
+  return true;
+}
+addEventListener('beforeunload', () => { restoring = false; saveSession(true); });
 
 /* ===== Start ===== */
 async function start() {
   initCursor();
   initButtons();
   buildHome();
-  initPanels({ newTab: () => newTab(), overview: () => ov.open(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
+  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),
@@ -515,7 +639,8 @@ async function start() {
   weather(); setInterval(weather, 15 * 60 * 1000);
 
   body.classList.add('intro');
-  await newTab(null, { focus: false, intro: false });
+  api.adblock(settings.adblock).then(s => { adblockState = s; updateToolbar(); });
+  if (!(await restoreSession())) await newTab(null, { focus: false, intro: false });
   if (!booted()) await runBoot();
   body.classList.remove('preboot');
   if (anim() !== 'aus') $('#app').classList.add('app-in');

@@ -186,3 +186,44 @@ body.loading #btnReload .ic-stop{display:block}
 .wipe-txt{position:absolute;left:50%;top:calc(50% + 74px);transform:translateX(-50%);font-size:10px;letter-spacing:.3em;color:var(--muted);white-space:nowrap}
 .wipe-txt::after{content:"_";animation:blink 1s steps(2) infinite;color:var(--pink)}
 @keyframes blink{50%{opacity:0}}
+
+/* ---------- Omnibox-Chips: Zoom, Werbeblocker, Passwörter ---------- */
+.omni-chip{position:relative;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:7px;flex-shrink:0;border:1px solid var(--line);background:rgba(255,255,255,.03);
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);overflow:hidden;animation:chipIn .6s var(--elastic);transition:color .2s,border-color .2s,box-shadow .3s}
+.omni-chip:hover{color:#fff;border-color:rgba(var(--mag-rgb),.5);box-shadow:var(--glow-sm)}
+.omni-chip svg{width:13px;height:13px}
+.shield-chip{color:var(--ok);border-color:rgba(61,220,151,.25)}
+.shield-chip b{font-weight:600}
+.shield-chip.bump{animation:bump .5s var(--elastic)}
+.shield-chip.off{color:var(--dim);border-color:var(--line)}
+@keyframes bump{30%{transform:scale(1.18);box-shadow:0 0 16px rgba(61,220,151,.6)}}
+.key-btn{color:var(--pink)}
+.key-btn.filled svg{filter:drop-shadow(0 0 6px var(--pink));animation:keyturn .9s var(--elastic)}
+@keyframes keyturn{from{transform:rotate(-200deg) scale(.4)}}
+
+/* Passwort speichern? – wächst aus der Omnibox, verdeckt nie die Seite */
+.pw-offer{position:absolute;right:4px;top:3px;bottom:3px;z-index:6;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;border-radius:9px;
+  background:linear-gradient(90deg,rgba(20,15,31,.97),rgba(40,16,48,.97));border:1px solid rgba(var(--pink-rgb),.55);box-shadow:var(--glow);transform-origin:100% 50%;animation:offerIn .8s var(--elastic)}
+@keyframes offerIn{from{transform:scaleX(.05);opacity:0}}
+.pw-offer.out{animation:offerOut .35s var(--ease-io) forwards}
+@keyframes offerOut{to{transform:scaleX(.05);opacity:0}}
+.pw-offer-ico svg{width:16px;height:16px;color:var(--pink);animation:keyturn .9s var(--elastic)}
+.pw-offer-t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+.pw-offer-t b{color:#fff}
+.pw-b{position:relative;height:26px;padding:0 12px;border-radius:7px;border:1px solid var(--line-2);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;overflow:hidden;isolation:isolate;transition:background .2s,color .2s}
+.pw-b:hover{background:rgba(var(--mag-rgb),.15);color:#fff}
+.pw-save{background:var(--grad);border-color:transparent;color:#fff;box-shadow:var(--glow-sm)}
+
+/* ---------- Suchen auf der Seite ---------- */
+.findbar{height:0;overflow:hidden;display:flex;justify-content:flex-end;padding:0 10px;transition:height .55s var(--spring)}
+body.find-open{--chrome-h:calc(var(--title-h) + var(--tool-h) + 46px)}
+body.find-open .findbar{height:44px}
+.find-in{position:relative;display:flex;align-items:center;gap:6px;width:min(460px,100%);height:36px;margin-top:2px;padding:0 4px 0 12px;border-radius:11px;background:rgba(7,6,11,.85);border:1px solid rgba(var(--mag-rgb),.45);box-shadow:0 0 30px -8px rgba(var(--mag-rgb),.7);
+  transform:translateY(-30px) scale(.9);opacity:0;filter:blur(6px);transition:transform .6s var(--spring),opacity .3s,filter .4s}
+body.find-open .find-in{transform:none;opacity:1;filter:none}
+.find-in>svg{width:15px;height:15px;color:var(--pink)}
+.find-in input{flex:1;min-width:0;height:100%;background:none;border:0;outline:none;font-size:13.5px}
+.find-n{font-size:10.5px;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
+.find-n.none{color:var(--bad)}
+.find-in.miss{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}

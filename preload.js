@@ -8,11 +8,17 @@ contextBridge.exposeInMainWorld('dulidan', {
   tab: {
     create: call('tab:create'), close: call('tab:close'),
     navigate: call('tab:navigate'), back: call('tab:back'), forward: call('tab:forward'),
-    reload: call('tab:reload'), stop: call('tab:stop')
+    reload: call('tab:reload'), stop: call('tab:stop'),
+    find: call('tab:find'), stopFind: call('tab:stopFind'), zoom: call('tab:zoom')
   },
   view: { bounds: call('view:bounds'), show: call('view:show'), hide: call('view:hide'), capture: call('view:capture') },
   win: { min: call('win:min'), max: call('win:max'), close: call('win:close'), fullscreen: call('win:fullscreen'), state: call('win:state') },
   thumbs: call('tabs:thumbs'),
+  pw: {
+    list: call('pw:list'), reveal: call('pw:reveal'), copy: call('pw:copy'), remove: call('pw:remove'),
+    config: call('pw:config'), never: call('pw:never'), unnever: call('pw:unnever'), respond: call('pw:respond'), backend: call('pw:backend')
+  },
+  adblock: call('adblock:set'),
   suggest: call('suggest'),
   weather: call('weather'),
   downloads: { open: call('dl:open'), show: call('dl:show'), cancel: call('dl:cancel') },

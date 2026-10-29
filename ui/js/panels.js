@@ -7,6 +7,8 @@ import { sfx } from './sound.js';
 
 const scrim = $('#scrim');
 let current = null, ctx = null;
+const builders = {};
+export const registerPanel = (id, fn) => { builders[id] = fn; };
 
 /* ===== Mechanik ===== */
 function stagger(p) { for (const g of $$('.stg', p)) [...g.children].forEach((c, i) => c.style.setProperty('--i', i)); }
@@ -22,6 +24,7 @@ export async function openPanel(id, anchor) {
   if (id === 'settings') buildSettings();
   if (id === 'downloads') renderDownloads();
   if (id === 'menu') buildMenu();
+  if (builders[id]) builders[id]();
   if (anchor) {
     const r = anchor.getBoundingClientRect();
     p.style.right = Math.max(10, innerWidth - r.right - 4) + 'px';
@@ -84,6 +87,9 @@ function buildSettings() {
       h('div', { class: 'set-d' }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 'Dein System wünscht reduzierte Bewegung, Standard ist darum „Aus“.' : '„Episch“ ist volle Kraft. „Aus“ schaltet alle Bewegungen ab.')),
     section('color', 'Akzentfarbe', h('div', { class: 'swatches' }, ...sw, cBox)),
     section('sound', 'Mikro-Sounds', h('div', { class: 'row' }, h('span', { class: 'set-d', style: 'margin:0' }, 'Klicks, Whooshes und Zerfall hörbar machen'), toggleEl('sound', () => sfx('click')))),
+    section('shield', 'Werbeblocker', h('div', { class: 'row' }, h('span', { class: 'set-d', style: 'margin:0' }, 'Blockiert Werbung und Tracker auf allen Seiten'), toggleEl('adblock'))),
+    section('tab', 'Beim Start', h('div', { class: 'row' }, h('span', { class: 'set-d', style: 'margin:0' }, 'Offene Tabs wiederherstellen'), toggleEl('restore'))),
+    section('key', 'Passwörter', h('button', { class: 'btn fx', onclick: () => { closePanel(); setTimeout(() => ctx.passwords(), 120); } }, icon('key'), 'Passwörter verwalten')),
     section('power', 'System',
       h('div', { class: 'row', style: 'flex-wrap:wrap;justify-content:flex-start' },
         h('button', { class: 'btn fx', onclick: () => { closePanel(); ctx.replayBoot(); } }, icon('bolt'), 'Boot abspielen'),
@@ -138,6 +144,7 @@ function buildMenu() {
     mi('orbit', 'Tab-Übersicht (3D)', 'Strg E', () => ctx.overview()),
     h('li', { class: 'sep' }),
     mi('star', 'Lesezeichen', '', () => ctx.palette('')),
+    mi('key', 'Passwörter', '', () => ctx.passwords()),
     mi('history', 'Verlauf', '', () => ctx.palette('')),
     mi('dl', 'Downloads', 'Strg J', () => ctx.downloads()),
     h('li', { class: 'sep' }),

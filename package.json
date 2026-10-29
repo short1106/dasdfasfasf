@@ -9,6 +9,9 @@
   },
   "author": "Dulidan Studios",
   "license": "UNLICENSED",
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.3"
+  },
   "devDependencies": {
     "electron": "^45.1.0",
     "electron-builder": "^26.18.0"
@@ -21,6 +24,7 @@
       "preload.js",
       "tab-preload.js",
       "package.json",
+      "main/**/*",
       "ui/**/*",
       "assets/**/*"
     ],
