@@ -227,3 +227,17 @@ body.find-open .find-in{transform:none;opacity:1;filter:none}
 .find-n.none{color:var(--bad)}
 .find-in.miss{animation:shake .4s}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+/* Update-Knopf in der Titelleiste: lädt (Ring füllt sich) → bereit (pulsiert) */
+.upd{-webkit-app-region:no-drag;align-self:center;position:relative;display:flex;align-items:center;gap:7px;height:30px;margin-right:8px;padding:0 13px 0 10px;border-radius:10px;
+  font:700 10.5px var(--mono);letter-spacing:.12em;color:var(--muted);background:rgba(var(--mag-rgb),.1);border:1px solid rgba(var(--pink-rgb),.25);overflow:hidden;
+  animation:updin .8s var(--elastic, cubic-bezier(.2,.8,.2,1))}
+.upd svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.upd-ring{position:absolute;left:0;bottom:0;height:2px;width:calc(var(--p,0) * 1%);background:var(--grad-x, linear-gradient(90deg,#8122b5,#ff7ae6));transition:width .4s}
+.upd.ready{color:#fff;background:linear-gradient(135deg,var(--vio, #8122b5),var(--mag, #c020b8));border-color:transparent;cursor:pointer;animation:updin .8s var(--elastic, ease),updpulse 2.4s ease-in-out infinite .8s}
+.upd.ready .upd-ring{display:none}
+.upd.ready:hover{transform:scale(1.05)}
+.upd.ready svg{animation:updbob 1.6s ease-in-out infinite}
+@keyframes updin{from{opacity:0;transform:translateY(-10px) scale(.7)}}
+@keyframes updpulse{50%{box-shadow:0 0 22px rgba(var(--pink-rgb),.75)}}
+@keyframes updbob{50%{transform:translateY(2px)}}

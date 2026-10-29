@@ -75,6 +75,8 @@ class MainActivity : Activity() {
     private lateinit var menu: MenuSheet
     private lateinit var calc: CalcPanel
     private lateinit var toaster: Toaster
+    private lateinit var updPill: UpdatePill
+    private lateinit var updater: Updater
     private val ui = Handler(Looper.getMainLooper())
 
     private val tabs = ArrayList<Tab>()
@@ -140,6 +142,8 @@ class MainActivity : Activity() {
         root.addView(calc, FrameLayout.LayoutParams(mp, mp))
         root.addView(topFx, FrameLayout.LayoutParams(mp, mp))
         toaster = Toaster(root)
+        updPill = UpdatePill(root)
+        updater = Updater(this) { onUpdate(it) }
         setContentView(root)
         morphFx.isClickable = false; topFx.isClickable = false
 
@@ -156,6 +160,7 @@ class MainActivity : Activity() {
         handleIntent(intent)
 
         if (!store.booted) playBoot()
+        ui.postDelayed({ updater.check() }, 6000)
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
                 if (!handleBack()) moveTaskToBack(true)
@@ -197,6 +202,7 @@ class MainActivity : Activity() {
             menu.bottomInset = bottom
             calc.topInset = insetTop
             toaster.bottom = barH
+            updPill.top = insetTop
             pushHome()
         }
     }
@@ -614,6 +620,7 @@ class MainActivity : Activity() {
             "widget" -> if (!SearchWidget.pin(this)) toast("Startbildschirm lange drücken → Widgets → Dulidan Suche")
             "fwd" -> t?.web?.let { if (it.canGoForward()) it.goForward() }
             "copy" -> if (t != null && !t.home) { Calc.copy(this, t.url); toast("Link kopiert") }
+            "update" -> { toast("Suche nach Updates …"); updater.check(force = true) }
             "engine" -> toast("Suchmaschine: ${Search.engineName(store.engine)}")
             "accent" -> { bar.pill.resetShader(); bar.invalidate(); homeThumbCache = null; pushHome() }
             "anim" -> { pushHome(); toast("Animationen: ${Dw.anim.uppercase()}") }
@@ -622,6 +629,23 @@ class MainActivity : Activity() {
     }
 
     private fun toast(msg: String) = toaster.show(msg)
+
+    /* ===================== Updates ===================== */
+    private fun onUpdate(s: Updater.State) {
+        when (s) {
+            is Updater.State.Available ->
+                if (s.sameKey) updPill.show("✦ UPDATE ${s.name} · INSTALLIEREN") { updater.download() }
+                /* Alter Einmal-Schlüssel: Android nimmt das Update nicht an, also ehrlich sagen und Download anbieten */
+                else updPill.show("✦ NEUE VERSION ${s.name} · EINMAL NEU INSTALLIEREN") {
+                    updPill.hide()
+                    toast("Alte App deinstallieren, dann die neue APK öffnen – danach gehen Updates automatisch")
+                    newTab("https://github.com/short1106/dasdfasfasf/releases/download/android-latest/DulidanWeb.apk")
+                }
+            is Updater.State.Loading -> updPill.show("LÄDT UPDATE ${s.percent}%") {}
+            Updater.State.Ready -> updPill.show("✦ JETZT INSTALLIEREN") { updater.install() }
+            is Updater.State.Failed -> { updPill.hide(); toast(s.msg) }
+        }
+    }
 
     /* ===================== System ===================== */
     private fun handleIntent(i: Intent?) {

@@ -11,8 +11,10 @@ android {
         applicationId = "com.dulidanstudios.web"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1"
+        /* Im GitHub-Build zählt die Nummer mit jedem Lauf hoch (Updates über die alte Version) */
+        val code = System.getenv("DW_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionCode = code
+        versionName = "0.2.$code"
     }
 
     /* Signierschlüssel kommt ausschließlich aus der Umgebung (GitHub-Secret oder im Build erzeugt) – nie aus dem Repo */

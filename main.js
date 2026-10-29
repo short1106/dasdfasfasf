@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const vault = require('./main/passwords.js');
 const wallet = require('./main/wallet.js');
 const adblock = require('./main/adblock.js');
+const updater = require('./main/updater.js');
 const { pageMenu } = require('./main/contextmenu.js');
 
 const ROOT = __dirname;
@@ -505,6 +506,8 @@ function ipc() {
     return false;
   });
   h('adblock:set', on => adblock.setEnabled(!!on));
+  h('update:state', () => ({ ...updater.current(), current: app.getVersion() }));
+  h('update:install', () => updater.install());
   h('wallet:list', () => wallet.list());
   h('wallet:remove', id => wallet.remove(String(id)));
   h('wallet:config', c => (c ? wallet.setConfig(c) : wallet.config()));
@@ -607,6 +610,7 @@ app.whenReady().then(() => {
     changed: state => ui('adblock', { state })
   });
   createWindow();
+  updater.init(app, s => ui('update', s));
   app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
 });
 

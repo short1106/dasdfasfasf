@@ -5,12 +5,13 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win portable"
+    "dist": "electron-builder --win nsis"
   },
   "author": "Dulidan Studios",
   "license": "UNLICENSED",
   "dependencies": {
-    "@ghostery/adblocker-electron": "^2.20.3"
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
     "electron": "^45.1.0",
@@ -35,17 +36,32 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
         }
       ],
       "signExecutable": false,
-      "icon": "assets/img/icon-256.png"
+      "icon": "assets/img/icon.ico"
     },
-    "portable": {
-      "artifactName": "DulidanWeb.exe"
-    }
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "DulidanWeb-Setup.exe",
+      "shortcutName": "Dulidan Web",
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "assets/img/icon.ico",
+      "uninstallerIcon": "assets/img/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/short1106/dasdfasfasf/releases/download/latest-build"
+      }
+    ]
   }
 }

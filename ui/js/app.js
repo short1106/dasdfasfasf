@@ -137,6 +137,20 @@ function go(t, url) {
   }, url);
 }
 
+/* ===== Auto-Update: Knopf in der Titelleiste ===== */
+function showUpdate(u) {
+  const b = $('#updBtn');
+  if (!u || (u.state !== 'downloading' && u.state !== 'ready')) { b.hidden = true; return; }
+  const ready = u.state === 'ready', wasReady = b.classList.contains('ready');
+  b.hidden = false;
+  b.classList.toggle('ready', ready);
+  b.style.setProperty('--p', u.percent || 0);
+  $('#updTxt').textContent = ready ? `UPDATE ${u.version || ''} · NEU STARTEN` : `LÄDT UPDATE ${u.percent || 0}%`;
+  if (ready && !wasReady) { toast(`✦ Dulidan Web ${u.version} ist bereit – Klick oben auf „Neu starten“`); sfx('fire'); }
+}
+$('#updBtn').addEventListener('click', () => { if ($('#updBtn').classList.contains('ready')) { saveSession(true); api.update.install(); } });
+api.update.state().then(showUpdate).catch(() => {});
+
 /* Suchbegriff, wenn der Tab die eigene Ergebnisseite zeigt */
 function searchQuery(url) {
   if (!url || !url.startsWith(SEARCH_PAGE)) return null;
@@ -544,6 +558,7 @@ api.on(e => {
     case 'pw-filled': if (t) { t.pw = Math.max(1, t.pw || 0); if (t === active) updateToolbar(); } pwUi.onFilled(e); break;
     case 'blocked': if (t) { t.blocked = e.n; if (t === active) { $('#shieldN').textContent = e.n; if (e.n) bumpShield(); } } break;
     case 'adblock': adblockState = e.state; updateToolbar(); break;
+    case 'update': showUpdate(e); break;
     case 'found': if (t === active && findOpen) onFound(e); break;
     case 'zoom': if (t) { t.zoom = e.f; if (t === active) { updateToolbar(); toast('Zoom ' + Math.round(e.f * 100) + '%'); } } break;
     case 'shortcut': ACTIONS[e.name] && ACTIONS[e.name](); break;

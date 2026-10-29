@@ -125,7 +125,7 @@ class MenuSheet(ctx: Context, private val store: Store, private val act: (String
         sheet.addView(context.label("Dulidan Web", 22f, Dw.TEXT, bold = true).apply { letterSpacing = -0.02f })
         /* Aktionen als Kacheln */
         val acts = listOf("＋" to "Neuer Tab" to "new", "▤" to "Tabs" to "tabs", "↻" to "Neu laden" to "reload", "→" to "Vorwärts" to "fwd",
-            "÷" to "Rechner" to "calc", "▦" to "Widget" to "widget", "⇪" to "Teilen" to "share", "⧉" to "Link" to "copy",
+            "÷" to "Rechner" to "calc", "▦" to "Widget" to "widget", "⇪" to "Teilen" to "share", "⟳" to "Update" to "update",
             "▭" to "Desktop" to "desktop", "⌂" to "Start" to "home", "⚡" to "Boot" to "boot", "⨯" to "Tab zu" to "close")
         var row: LinearLayout? = null
         acts.forEachIndexed { i, (pair, key) ->
@@ -277,4 +277,32 @@ class BootView(ctx: Context, private val done: () -> Unit) : FrameLayout(ctx) {
         Haptic.play("boom")
         animate().alpha(0f).scaleX(1.35f).scaleY(1.35f).setDuration(if (Dw.on) 650 else 1).withEndAction { done() }.start()
     }
+}
+
+/* ===================== Update-Pille (fällt oben ein) ===================== */
+class UpdatePill(private val host: FrameLayout) {
+    private val v = host.context.label("", 12.5f, Color.WHITE, mono = true, bold = true).apply {
+        setPadding(dp(18).toInt(), dp(11).toInt(), dp(18).toInt(), dp(11).toInt())
+        background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(Dw.vio, Dw.mag)).apply { cornerRadius = dp(22) }
+        elevation = dp(18); letterSpacing = 0.06f; visibility = View.GONE
+    }
+    private var onTap: () -> Unit = {}
+    var top = 0
+    init {
+        host.addView(v, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        v.pressable(0.92f) { onTap() }
+    }
+    fun show(text: String, tap: () -> Unit) {
+        onTap = tap
+        val was = v.visibility == View.VISIBLE
+        v.text = text; v.bringToFront()
+        (v.layoutParams as FrameLayout.LayoutParams).topMargin = top + v.dp(10).toInt(); v.requestLayout()
+        v.visibility = View.VISIBLE
+        if (!was && Dw.on) {
+            v.translationY = -v.dp(80); v.scaleX = 0.7f; v.scaleY = 0.7f
+            v.animate().translationY(0f).scaleX(1f).scaleY(1f).setDuration(700).setInterpolator(Spring(5f, 11f)).start()
+            Haptic.play("shock")
+        }
+    }
+    fun hide() { if (v.visibility == View.VISIBLE) v.animate().translationY(-v.dp(80)).setDuration(260).withEndAction { v.visibility = View.GONE; v.translationY = 0f }.start() }
 }

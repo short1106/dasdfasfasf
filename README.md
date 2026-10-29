@@ -4,13 +4,26 @@ Ein Desktop-Browser von **Dulidan Studios**, gebaut mit Electron. Version 0.1 ko
 
 > Dream. Design. Develop. Dominate.
 
-## Windows: einfach die exe
+## Windows: Installer mit Auto-Update
 
-`DulidanWeb.exe` herunterladen und doppelklicken. Eine Installation, Node.js oder sonst etwas ist nicht nötig. Die exe findest du unter **Releases → „Dulidan Web (neuester Build)"**. Der Workflow `.github/workflows/build-exe.yml` baut sie bei jedem Push neu.
+Lade `DulidanWeb-Setup.exe` unter **Releases → „Dulidan Web für Windows (neuester Build)"** herunter und doppelklicke darauf. Dulidan Web installiert sich in Sekunden für deinen Benutzer, ohne Admin-Rechte. Es legt Verknüpfungen auf dem Desktop und im Startmenü an und startet danach direkt.
 
-Beim ersten Start zeigt Windows eventuell „Der Computer wurde durch Windows geschützt", weil die exe nicht kostenpflichtig signiert ist. Dann auf **Weitere Informationen → Trotzdem ausführen** klicken.
+**Updates kommen von selbst:**
+- Beim Start und danach alle 3 Stunden schaut die App, ob es eine neue Version gibt, und lädt sie im Hintergrund.
+- Oben in der Titelleiste erscheint dann **„Update · Neu starten“**. Ein Klick, und die neue Version läuft.
+- Klickst du nicht, wird das Update beim nächsten Beenden still installiert.
 
-Selbst bauen: `npm install` und dann `npm run dist`. Die exe landet in `dist/`.
+Passwörter, Lesezeichen und Einstellungen bleiben dabei erhalten. Sie liegen in `%APPDATA%\dulidan-web`.
+
+**Umstieg von der alten portablen `DulidanWeb.exe`:**
+1. Installiere einmal die Setup-Datei.
+2. Lösche danach die alte exe und alte Verknüpfungen.
+
+Die alte Version entpackte sich bei jedem Start in einen temporären Ordner. Deshalb zeigten angeheftete Verknüpfungen „Verknüpfungsproblem“.
+
+Beim ersten Start zeigt Windows eventuell „Der Computer wurde durch Windows geschützt“, weil das Setup nicht kostenpflichtig signiert ist. Klicke dann auf **Weitere Informationen → Trotzdem ausführen**.
+
+Gebaut wird das Setup vom Workflow `.github/workflows/build-exe.yml`. Jeder Build zählt die Version hoch (0.2.x) und lädt `latest.yml` mit hoch, das ist die Datei, die der Updater liest. Selbst bauen geht unter Windows mit `npm install` und dann `npm run dist`.
 
 ## Android: die APK
 
@@ -37,7 +50,14 @@ Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ord
   - Der Rechner-Knopf öffnet sofort den Rechner.
   - Dulidan Web lässt sich als Standard-Browser wählen.
 
-Gebaut wird die APK vom Workflow `.github/workflows/build-apk.yml`. **Signierschlüssel:** Ohne Secret erzeugt jeder Build einen neuen Schlüssel. Dann muss man vor einem Update die alte Version deinstallieren. Für nahtlose Updates legt man einmalig die Repository-Secrets `DW_KEYSTORE` (Keystore als Base64) und `DW_KEYSTORE_PASS` an. Der Schlüssel gehört nie ins Repo.
+**Updates:** Die App schaut höchstens alle 6 Stunden nach einer neuen Version, außerdem über Menü → „Update“. Gibt es eine, fliegt oben „Update · Installieren“ ein.
+- Ein Tipp lädt die APK und öffnet den Android-Installer.
+- Beim ersten Mal fragt Android, ob Dulidan Web Apps installieren darf.
+
+Gebaut wird die APK vom Workflow `.github/workflows/build-apk.yml`. Jeder Build zählt die Version hoch und legt `android-version.json` ins Release, mit Version und Fingerabdruck des Signierschlüssels.
+
+**Signierschlüssel:** Updates über die alte Version gehen nur mit immer demselben Schlüssel. Dafür legt man einmalig die Repository-Secrets `DW_KEYSTORE` (Keystore als Base64) und `DW_KEYSTORE_PASS` an. Der Schlüssel gehört nie ins Repo.
+- Ohne Secret erzeugt jeder Build einen neuen Schlüssel. Dann erkennt die App das und sagt ehrlich, dass dieses eine Mal neu installiert werden muss.
 
 ## Starten (Entwicklung)
 

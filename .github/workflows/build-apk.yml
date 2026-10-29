@@ -13,6 +13,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_KS: ${{ secrets.DW_KEYSTORE != '' }}
+      # Jeder Build zählt hoch, damit Android das Update annimmt und die App es erkennt
+      DW_VERSION_CODE: ${{ github.run_number }}
     defaults:
       run:
         working-directory: android
@@ -46,6 +50,12 @@ jobs:
       - run: chmod +x gradlew
       - run: ./gradlew assembleRelease --no-daemon --stacktrace
       - run: cp app/build/outputs/apk/release/app-release.apk DulidanWeb.apk
+      # Versionsinfo für den Update-Check der App, samt Fingerabdruck des Signierschlüssels
+      - name: android-version.json
+        run: |
+          SHA=$(keytool -list -v -keystore "$DW_KEYSTORE_FILE" -storepass "$DW_KEYSTORE_PASS" -alias "${DW_KEY_ALIAS:-dulidan}" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//; s/://g' | tr 'A-F' 'a-f')
+          printf '{"versionCode":%s,"versionName":"0.2.%s","cert":"%s","stableKey":%s}\n' "$DW_VERSION_CODE" "$DW_VERSION_CODE" "$SHA" "$HAS_KS" > android-version.json
+          cat android-version.json
       - uses: actions/upload-artifact@v4
         with:
           name: DulidanWeb-apk
@@ -59,4 +69,6 @@ jobs:
           body: |
             DulidanWeb.apk auf dem Handy herunterladen und öffnen.
             Beim ersten Mal fragt Android, ob Installationen aus dieser Quelle erlaubt sind – einmal erlauben.
-          files: android/DulidanWeb.apk
+          files: |
+            android/DulidanWeb.apk
+            android/android-version.json
