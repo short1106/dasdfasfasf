@@ -163,13 +163,23 @@ function capture() {
   ipcRenderer.send('pw:capture', { username, password: pw.value });
 }
 
-document.addEventListener('submit', capture, true);
+/* Schritt 1 eines zweistufigen Logins: eingetippten Benutzernamen an den Main-Prozess melden */
+function noteUser() {
+  if (document.querySelector('input[type=password]')) return;
+  const uf = [...document.querySelectorAll('input[autocomplete~="username"],input[type=email]')].find(i => shown(i) && i.value.trim());
+  if (uf) ipcRenderer.send('pw:user', uf.value.trim());
+}
+document.addEventListener('submit', () => { noteUser(); capture(); }, true);
 document.addEventListener('click', e => {
   const b = e.target && e.target.closest && e.target.closest('button,input[type=submit],[role=button],a');
-  if (b && document.querySelector('input[type=password]')) setTimeout(capture, 0);
+  if (!b) return;
+  noteUser();
+  if (document.querySelector('input[type=password]')) setTimeout(capture, 0);
 }, true);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target instanceof HTMLInputElement && document.querySelector('input[type=password]')) capture();
+  if (e.key !== 'Enter' || !(e.target instanceof HTMLInputElement)) return;
+  noteUser();
+  if (document.querySelector('input[type=password]')) capture();
 }, true);
 
 addEventListener('DOMContentLoaded', () => {

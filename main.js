@@ -255,9 +255,16 @@ function wirePasswords(t, wc) {
     if (info.auto) t.autoAt[info.stage === 'user' ? origin + '#user' : origin] = Date.now();
     ui('pw-filled', { id: t.id, origin, username: String(info.username || ''), auto: !!info.auto });
   });
+  /* Zweistufige Logins: Benutzername aus Schritt 1 merken, weil Schritt 2 ihn oft nicht mehr als Feld zeigt */
+  wc.ipc.on('pw:user', (e, u) => {
+    const origin = originOfEvent(e), username = str(u, 300);
+    if (origin && username && username.trim()) t.lastUser = { origin, username: username.trim(), at: Date.now() };
+  });
   wc.ipc.on('pw:capture', (e, c = {}) => {
     const origin = originOfEvent(e);
-    const username = str(c.username, 300) ?? '', password = str(c.password, 1000);
+    let username = str(c.username, 300) ?? '';
+    const password = str(c.password, 1000);
+    if (!username && t.lastUser && t.lastUser.origin === origin && Date.now() - t.lastUser.at < 15 * 60000) username = t.lastUser.username;
     if (!origin || !password || !vault.config().offer || vault.isNever(origin)) return;
     const kind = vault.compare(origin, username, password);
     if (kind === 'same') return;
@@ -458,6 +465,10 @@ app.whenReady().then(() => {
   ipc();
   /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */
   webSes = session.fromPartition('persist:web');
+  /* Als normales Chrome auftreten: Google & Co. blockieren Anmeldungen, sobald "Electron" in der Kennung steht */
+  const ua = webSes.getUserAgent().replace(/ dulidan-web\/\S+/i, '').replace(/ Electron\/\S+/i, '');
+  webSes.setUserAgent(ua);
+  app.userAgentFallback = ua;
   for (const s of [session.defaultSession, webSes]) {
     s.setPermissionRequestHandler((_, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
   }

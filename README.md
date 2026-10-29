@@ -74,6 +74,7 @@ Mit Rücktaste in der leeren Leiste entfernst du den Chip wieder.
 - **Musik-Reaktion:** Läuft in einem Tab Ton (etwa YouTube), pulsieren Logo-Partikel, Nebel, Energiestrahl und Glow zum Bass. Starke Kicks lassen das D beben, und der Tab zeigt einen Mini-Equalizer. Das funktioniert auch, während du auf einem anderen Tab bist.
 - **Passwort-Manager:** Nach dem Anmelden fragt die Adressleiste „Passwort speichern?“. Beim nächsten Besuch füllt Dulidan Web Benutzername und Passwort ein und meldet dich automatisch an.
   - Auch zweistufige Logins wie bei Google oder Microsoft gehen: erst die E-Mail, dann das Passwort.
+  - Für YouTube und Google meldet sich Dulidan Web als normales Chrome. Mit „Electron“ in der Browser-Kennung würde Google die Anmeldung blockieren („Dieser Browser ist möglicherweise nicht sicher“).
   - Verwalten kannst du alles über den Schlüssel in der Adressleiste, im Menü oder in der Palette: suchen, anzeigen, kopieren (die Zwischenablage wird nach 30 s geleert) und löschen.
   - Ist ein gespeichertes Passwort falsch, gibt es höchstens einen automatischen Versuch pro Minute, also keine Endlosschleife.
 - **Werbeblocker:** Ghostery-Engine mit Werbe- und Tracker-Listen. Das Schild in der Adressleiste zählt, was auf der Seite blockiert wurde. Abschalten kannst du ihn in den Einstellungen.
