@@ -5,24 +5,37 @@ import { burst } from './fx.js';
 import { sfx } from './sound.js';
 import { registerPanel } from './panels.js';
 
-let ctx = null, offerTab = null, offerT = 0, filter = '', armed = null;
-const pending = new Map();      // tabId -> Angebot, falls der Tab gerade nicht aktiv ist
+let ctx = null, offerTab = null, offerNow = null, offerT = 0, filter = '', armed = null;
+const pending = new Map();      // tabId -> Warteschlange von Angeboten (Passwort, Adresse, Karte)
 const offerEl = $('#pwOffer');
 
 const hostName = origin => hostOf(origin) || origin;
 function fx(el) { const r = el.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, { n: 50, speed: 6, life: 50 }); }
 
-/* ===== Speichern anbieten ===== */
-export function onOffer(e) {
-  pending.set(e.id, e);
-  if (ctx.activeId() === e.id) showOffer(e);
+/* ===== Speichern anbieten (Passwort, Adresse, Karte) – gespeichert wird nur nach "Speichern" ===== */
+function queueOffer(o) {
+  const q = (pending.get(o.id) || []).filter(x => x.kind !== o.kind);
+  q.push(o);
+  pending.set(o.id, q);
+  if (ctx.activeId() === o.id && !offerNow) showOffer(q[0]);
 }
-function showOffer(e) {
-  offerTab = e.id;
-  const user = e.username ? [' als ', h('b', {}, e.username)] : [];
-  $('#pwOfferT').replaceChildren(e.update ? 'Passwort für ' : 'Passwort für ', h('b', {}, hostName(e.origin)), ...user, e.update ? ' aktualisieren?' : ' speichern?');
+export const onOffer = e => queueOffer({ ...e, kind: 'pw' });
+export const onWalletOffer = e => queueOffer(e);
+
+function showOffer(o) {
+  offerTab = o.id; offerNow = o;
+  const t = $('#pwOfferT');
+  if (o.kind === 'pw') {
+    const user = o.username ? [' als ', h('b', {}, o.username)] : [];
+    t.replaceChildren('Passwort für ', h('b', {}, hostName(o.origin)), ...user, o.update ? ' aktualisieren?' : ' speichern?');
+  } else if (o.kind === 'card') {
+    t.replaceChildren(o.update ? 'Karte ' : 'Karte ', h('b', {}, o.title), ` (${o.sub}) `, o.update ? 'aktualisieren?' : 'speichern? Ohne Prüfnummer.');
+  } else {
+    t.replaceChildren('Adresse ', h('b', {}, o.title), ` · ${o.sub} `, o.update ? 'aktualisieren?' : 'speichern?');
+  }
+  $('.pw-offer-ico use', offerEl).setAttribute('href', o.kind === 'pw' ? '#i-key' : o.kind === 'card' ? '#i-card' : '#i-home');
   offerEl.classList.remove('out');
-  offerEl.hidden = false;
+  offerEl.hidden = true; void offerEl.offsetWidth; offerEl.hidden = false;
   sfx('open');
   clearTimeout(offerT);
   offerT = setTimeout(() => respond('dismiss'), 30000);
@@ -34,19 +47,25 @@ function hideOffer() {
 }
 async function respond(action) {
   clearTimeout(offerT);
-  const id = offerTab;
-  offerTab = null;
-  pending.delete(id);
-  if (id == null) return hideOffer();
-  const r = await api.pw.respond(id, action);
-  if (action === 'save' && r) { fx($('.pw-save', offerEl)); toast('🔑 Passwort sicher gespeichert'); ctx.refreshTab(id); }
+  const o = offerNow, id = offerTab;
+  offerNow = null; offerTab = null;
+  if (!o) return hideOffer();
+  const q = (pending.get(id) || []).filter(x => x !== o);
+  if (q.length) pending.set(id, q); else pending.delete(id);
+  const r = o.kind === 'pw' ? await api.pw.respond(id, action) : await api.wallet.respond(id, o.kind, action);
+  if (action === 'save' && r) {
+    fx($('.pw-save', offerEl));
+    toast(o.kind === 'pw' ? '🔑 Passwort sicher gespeichert' : o.kind === 'card' ? '💳 Karte verschlüsselt gespeichert' : '🏠 Adresse gespeichert');
+    if (o.kind === 'pw') ctx.refreshTab(id);
+  }
   if (action === 'never') toast('Für diese Seite wird nie gefragt');
   hideOffer();
+  if (q.length && ctx.activeId() === id) setTimeout(() => showOffer(q[0]), 420);
 }
 /* Beim Tabwechsel: Angebot des neuen Tabs zeigen oder ausblenden */
 export function onTabSwitch(id) {
-  const e = pending.get(id);
-  if (e) showOffer(e); else { offerTab = null; hideOffer(); }
+  const q = pending.get(id);
+  if (q && q.length) showOffer(q[0]); else { offerTab = null; offerNow = null; hideOffer(); }
 }
 
 /* ===== Nach dem Ausfüllen ===== */

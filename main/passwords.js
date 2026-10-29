@@ -68,7 +68,7 @@ function originOf(url) {
 const pub = e => ({ id: e.id, origin: e.origin, username: e.username, created: e.created, used: e.used });
 
 module.exports = {
-  originOf,
+  originOf, seal, open,
   config: () => ({ ...load().config }),
   setConfig(c) { load(); for (const k of ['offer', 'auto']) if (typeof c[k] === 'boolean') data.config[k] = c[k]; persist(); return { ...data.config }; },
   isNever: origin => load().never.includes(origin),

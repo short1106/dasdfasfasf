@@ -7,6 +7,7 @@ const { app, BrowserWindow, WebContentsView, ipcMain, protocol, net, session, sh
 const path = require('node:path');
 const fs = require('node:fs');
 const vault = require('./main/passwords.js');
+const wallet = require('./main/wallet.js');
 const adblock = require('./main/adblock.js');
 const { pageMenu } = require('./main/contextmenu.js');
 
@@ -80,10 +81,11 @@ function ensureView(t) {
     webPreferences: {
       preload: path.join(ROOT, 'tab-preload.js'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true,
-      backgroundThrottling: false, session: webSes
+      backgroundThrottling: false, session: webSes,
+      nodeIntegrationInSubFrames: true /* nur damit das (sandboxed) Preload auch in Bezahl-iframes läuft */
     }
   });
-  view.setBackgroundColor('#07060b');
+  view.setBackgroundColor('#ffffff'); /* Seiten ohne eigenen Hintergrund erwarten Weiß */
   view.setBounds(bounds);
   view.setVisible(false);
   win.contentView.addChildView(view);
@@ -144,6 +146,7 @@ function wire(t, wc) {
     if (m) m.popup({ window: win });
   });
   wirePasswords(t, wc);
+  wireAutofill(t, wc);
   wc.ipc.on('scroll', (_, p) => { if (t.id === activeId) ui('scroll', { id: t.id, p: Number(p) || 0 }); });
   wc.ipc.on('audio', (_, a) => {
     if (!Array.isArray(a) || a.length !== 4) return;
@@ -273,6 +276,75 @@ function wirePasswords(t, wc) {
   });
 }
 
+/* ===== Adressen & Karten: nur Vorschläge, ausgefüllt wird erst nach Klick, abgeschickt wird nie =====
+   Gilt für jeden Rahmen (auch Bezahl-iframes); Herkunft immer aus senderFrame. */
+const AF_KINDS = new Set(['name', 'given', 'family', 'org', 'street', 'house', 'line2', 'zip', 'city', 'country', 'tel', 'email', 'ccName', 'ccNumber', 'ccExp', 'ccMonth', 'ccYear']);
+function wireAutofill(t, wc) {
+  const originOf = e => (e.senderFrame ? vault.originOf(e.senderFrame.url) : null);
+  t.afFields = new Map();
+  t.afOffers = new Map();
+  wc.ipc.handle('af:suggest', (e, type) => {
+    if (!originOf(e) || (type !== 'address' && type !== 'card')) return [];
+    return wallet.list(type).slice(0, 6);
+  });
+  wc.ipc.handle('af:fill', (e, id) => {
+    const from = e.senderFrame;
+    if (!originOf(e) || typeof id !== 'string') return null;
+    const item = wallet.get(id);
+    if (!item) return null;
+    /* Geteilte Kartenformulare (z. B. Nummer und Ablauf in getrennten Stripe-iframes): nur gleiche Herkunft */
+    if (item.type === 'card') {
+      for (const f of wc.mainFrame.framesInSubtree) if (f !== from && f.origin === from.origin) { try { f.send('af:fill', item); } catch {} }
+    }
+    return item;
+  });
+  /* Feld in einem iframe: Menü im obersten Rahmen zeigen, Auswahl per Einmal-Token zurück an genau diesen iframe */
+  wc.ipc.on('af:remote-open', (e, type, rect) => {
+    if (!originOf(e) || e.senderFrame === wc.mainFrame || (type !== 'address' && type !== 'card') || !rect) return;
+    const items = wallet.list(type).slice(0, 6);
+    if (!items.length) return;
+    const token = require('node:crypto').randomUUID();
+    t.afRemote = { token, frame: e.senderFrame, at: Date.now() };
+    const num = v => (Number.isFinite(+v) ? +v : 0);
+    wc.mainFrame.send('af:remote-show', { token, type, items, name: e.senderFrame.name, url: e.senderFrame.url,
+      rect: { left: num(rect.left), top: num(rect.top), bottom: num(rect.bottom), width: num(rect.width) } });
+  });
+  wc.ipc.on('af:remote-key', (e, k) => {
+    if (e.senderFrame === wc.mainFrame || !t.afRemote || t.afRemote.frame !== e.senderFrame) return;
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'close'].includes(k)) wc.mainFrame.send('af:remote-key', k === 'Escape' ? 'close' : k);
+  });
+  wc.ipc.on('af:remote-pick', (e, token, id) => {
+    const r = t.afRemote;
+    if (e.senderFrame !== wc.mainFrame || !r || r.token !== token || Date.now() - r.at > 5 * 60000 || typeof id !== 'string') return;
+    t.afRemote = null;
+    const item = wallet.get(id);
+    if (!item || r.frame.isDestroyed()) return;
+    const origin = r.frame.origin;
+    for (const f of wc.mainFrame.framesInSubtree) if (f.origin === origin && f !== wc.mainFrame) { try { f.send('af:fill', item); } catch {} }
+  });
+  wc.ipc.on('af:field', (e, kind, value) => {
+    const origin = originOf(e);
+    if (!origin || !AF_KINDS.has(kind) || typeof value !== 'string') return;
+    t.afFields.set(kind, { value: value.slice(0, 200), at: Date.now() });
+  });
+  wc.ipc.on('af:submit', e => {
+    const origin = originOf(e);
+    if (!origin || !wallet.config().offer || wallet.isNever(new URL(wc.getURL()).origin)) { t.afFields.clear(); return; }
+    const f = {};
+    for (const [k, v] of t.afFields) if (Date.now() - v.at < 10 * 60000) f[k] = v.value;
+    t.afFields.clear();
+    const site = vault.originOf(wc.getURL()) || origin;
+    for (const [type, d] of [['address', wallet.toAddress(f)], ['card', wallet.toCard(f)]]) {
+      if (!d) continue;
+      const kind = wallet.compare(type, d);
+      if (kind === 'same') continue;
+      t.afOffers.set(type, { d, at: Date.now(), site });
+      const p = wallet.preview(type, d);
+      ui('af-offer', { id: t.id, kind: type, title: p.title, sub: p.sub, update: kind === 'update', origin: site });
+    }
+  });
+}
+
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
 const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords']);
 function keyName(i) {
@@ -392,6 +464,19 @@ function ipc() {
     return false;
   });
   h('adblock:set', on => adblock.setEnabled(!!on));
+  h('wallet:list', () => wallet.list());
+  h('wallet:remove', id => wallet.remove(String(id)));
+  h('wallet:config', c => (c ? wallet.setConfig(c) : wallet.config()));
+  h('wallet:respond', (id, type, action) => {
+    const t = tab(id);
+    const o = t && t.afOffers && t.afOffers.get(type);
+    if (!o) return null;
+    t.afOffers.delete(type);
+    if (Date.now() - o.at > 10 * 60000) return null;
+    if (action === 'save') return wallet.save(type, o.d);
+    if (action === 'never') wallet.never(o.site);
+    return false;
+  });
 
   h('view:bounds', r => {
     if (!r) return;

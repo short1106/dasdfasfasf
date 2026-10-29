@@ -77,6 +77,11 @@ Mit Rücktaste in der leeren Leiste entfernst du den Chip wieder.
   - Für YouTube und Google meldet sich Dulidan Web als normales Chrome. Mit „Electron“ in der Browser-Kennung würde Google die Anmeldung blockieren („Dieser Browser ist möglicherweise nicht sicher“).
   - Verwalten kannst du alles über den Schlüssel in der Adressleiste, im Menü oder in der Palette: suchen, anzeigen, kopieren (die Zwischenablage wird nach 30 s geleert) und löschen.
   - Ist ein gespeichertes Passwort falsch, gibt es höchstens einen automatischen Versuch pro Minute, also keine Endlosschleife.
+- **Adressen & Karten:** Nach dem Absenden eines Formulars fragt Dulidan Web „Adresse speichern?“ bzw. „Karte •••• 4242 speichern?“.
+  - Beim nächsten Mal erscheint direkt am Feld ein Vorschlag. Ausgefüllt wird erst nach deinem Klick, **abgeschickt wird nie automatisch**. „Bestellen“ oder „Bezahlen“ drückst du immer selbst.
+  - Die Prüfnummer (CVC) wird nie gespeichert.
+  - Es funktioniert auch mit Bezahlfeldern in iframes (Stripe, Adyen …). Kartendaten gehen dabei nur an Rahmen derselben Herkunft wie das angeklickte Feld, nie in fremde iframes.
+  - Verwalten kannst du alles unter Menü → „Adressen & Karten“.
 - **Werbeblocker:** Ghostery-Engine mit Werbe- und Tracker-Listen. Das Schild in der Adressleiste zählt, was auf der Seite blockiert wurde. Abschalten kannst du ihn in den Einstellungen.
 - **Tabs wiederherstellen:** Beim Start sind deine Tabs wieder da. Abschalten kannst du das in den Einstellungen.
 - **Rechtsklick-Menü:** Link oder Bild in neuem Tab öffnen, speichern und kopieren, markierten Text im Web suchen, Rechtschreibvorschläge, Untersuchen.
@@ -89,12 +94,12 @@ Ohne WebGL (etwa ohne GPU) erscheint automatisch das statische Logo.
 
 ```
 main.js          Main-Prozess: Fenster (frameless), Tabs als WebContentsView, Protokoll dulidan://, IPC, Downloads
-main/            passwords.js (Tresor) · adblock.js (Werbeblocker) · contextmenu.js (Rechtsklick)
+main/            passwords.js (Tresor) · wallet.js (Adressen & Karten) · adblock.js (Werbeblocker) · contextmenu.js (Rechtsklick)
 preload.js       Schmale IPC-Brücke für die Oberfläche (contextBridge)
 tab-preload.js   Läuft isoliert in Webseiten und meldet nur den Scroll-Fortschritt
 ui/              Oberfläche: Vanilla HTML/CSS/JS, ES-Module, kein Build-Schritt
   css/           tokens · chrome · home · overlays · error
-  js/            app · tabs · omnibox · view · morph · overview · audio · passwords · gl · fx · palette · panels · boot · settings · data · sound · util
+  js/            app · tabs · omnibox · view · morph · overview · audio · passwords · wallet · gl · fx · palette · panels · boot · settings · data · sound · util
 assets/          Logo und Schriften (Space Grotesk, JetBrains Mono, OFL)
 ```
 
@@ -108,7 +113,7 @@ Eine `WebContentsView` liegt immer über der HTML-Oberfläche. Bevor ein Dropdow
 
 ### Wo die Passwörter liegen
 
-Alles bleibt lokal in `vault.json` im App-Datenordner (Windows: `%APPDATA%\dulidan-web`). Jedes Passwort ist einzeln mit Electrons `safeStorage` verschlüsselt, unter Windows ist das **DPAPI**. Nur dein Windows-Benutzerkonto auf diesem PC kann es entschlüsseln. Gibt es keinen System-Schlüsselbund (manche Linux-Systeme), verschlüsselt Dulidan Web mit AES-256-GCM und einem zufälligen lokalen Schlüssel.
+Alles bleibt lokal in `vault.json` (Passwörter) und `wallet.json` (Adressen & Karten) im App-Datenordner (Windows: `%APPDATA%\dulidan-web`). Jedes Passwort ist einzeln mit Electrons `safeStorage` verschlüsselt, unter Windows ist das **DPAPI**. Nur dein Windows-Benutzerkonto auf diesem PC kann es entschlüsseln. Gibt es keinen System-Schlüsselbund (manche Linux-Systeme), verschlüsselt Dulidan Web mit AES-256-GCM und einem zufälligen lokalen Schlüssel.
 
 - Welche Zugangsdaten eine Seite bekommt, entscheidet der Main-Prozess anhand der echten Frame-URL, nie die Webseite selbst. Ausgefüllt wird nur im Hauptframe und nur auf `https` (plus `localhost` zum Entwickeln).
 - Beim Speichern bekommt die Oberfläche das Passwort nie zu sehen. Sie sagt dem Main-Prozess nur „speichern“ oder „nie“.

@@ -6,6 +6,7 @@ import { initCursor, initButtons, shockwave, burst } from './fx.js';
 import { createLogo, createNebula } from './gl.js';
 import { Suggest, engineName, resolve } from './omnibox.js';
 import * as pwUi from './passwords.js';
+import { initWallet } from './wallet.js';
 import { TabStrip } from './tabs.js';
 import * as view from './view.js';
 import * as pal from './palette.js';
@@ -384,7 +385,8 @@ const ACTIONS = {
   'zoom-in': () => zoom(1),
   'zoom-out': () => zoom(-1),
   'zoom-reset': () => zoom(0),
-  passwords: () => openPanel('passwords', $('#btnKey').hidden ? $('#btnMenu') : $('#btnKey'))
+  passwords: () => openPanel('passwords', $('#btnKey').hidden ? $('#btnMenu') : $('#btnKey')),
+  wallet: () => openPanel('wallet', $('#btnMenu'))
 };
 
 const COMMANDS = () => [
@@ -406,6 +408,7 @@ const COMMANDS = () => [
   { icon: 'orbit', name: 'Tab-Übersicht (Orbit 3D)', key: 'Strg E', run: () => ov.open() },
   { icon: 'search', name: 'Auf der Seite suchen', key: 'Strg F', run: () => openFind() },
   { icon: 'key', name: 'Passwörter verwalten', run: () => ACTIONS.passwords() },
+  { icon: 'card', name: 'Adressen & Karten', run: () => ACTIONS.wallet() },
   { icon: 'shield', name: settings.adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten', run: () => { setSetting('adblock', !settings.adblock); toast('Werbeblocker: ' + (settings.adblock ? 'AN' : 'AUS')); } },
   { icon: 'plus', name: 'Zoom: größer', key: 'Strg +', run: () => zoom(1) },
   { icon: 'x', name: 'Zoom zurücksetzen', key: 'Strg 0', run: () => zoom(0) },
@@ -513,6 +516,7 @@ api.on(e => {
     case 'open-tab': newTab(e.url, { background: !!e.background }); if (e.background) toast('Im Hintergrund geöffnet'); break;
     case 'search': { const r = resolve(e.text); if (r) newTab(r.url); break; }
     case 'pw-offer': pwUi.onOffer(e); break;
+    case 'af-offer': pwUi.onWalletOffer(e); break;
     case 'pw-filled': if (t) { t.pw = Math.max(1, t.pw || 0); if (t === active) updateToolbar(); } pwUi.onFilled(e); break;
     case 'blocked': if (t) { t.blocked = e.n; if (t === active) { $('#shieldN').textContent = e.n; if (e.n) bumpShield(); } } break;
     case 'adblock': adblockState = e.state; updateToolbar(); break;
@@ -623,7 +627,8 @@ async function start() {
   initButtons();
   buildHome();
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
-  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initWallet();
+  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),
