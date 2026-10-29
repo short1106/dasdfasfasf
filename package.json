@@ -26,6 +26,7 @@
       "package.json",
       "main/**/*",
       "ui/**/*",
+      "shared/**/*",
       "assets/**/*"
     ],
     "directories": {

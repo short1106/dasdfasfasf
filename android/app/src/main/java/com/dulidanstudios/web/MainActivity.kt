@@ -284,6 +284,7 @@ class MainActivity : Activity() {
             setSupportMultipleWindows(false)
             /* Wie normales Chrome auftreten: mit "; wv" blockiert Google die Anmeldung */
             userAgentString = userAgentString.replace("; wv", "").replace(Regex(" Version/\\d+(\\.\\d+)*"), "")
+            SearchProxy.ua = userAgentString
         }
         if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
             WebSettingsCompat.setRequestedWithHeaderOriginAllowList(w.settings, emptySet())
@@ -330,6 +331,7 @@ class MainActivity : Activity() {
         }
         override fun doUpdateVisitedHistory(v: WebView, url: String, reload: Boolean) { t.url = url; if (t == active) updateBar() }
         override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? {
+            SearchProxy.handle(this@MainActivity, r)?.let { return it }
             if (!adblockOn || r.isForMainFrame || !AdBlock.blocked(r.url.host)) return null
             val n = t.blocked.incrementAndGet()
             ui.post { if (t == active) updateShield(n) }
@@ -549,7 +551,8 @@ class MainActivity : Activity() {
     private fun updateBar() {
         val t = active ?: return
         if (!bar.pill.input.hasFocus()) {
-            val shown = if (t.home) "" else (Uri.parse(t.url).host?.removePrefix("www.") ?: t.url)
+            val sq = SearchProxy.queryOf(t.url)
+            val shown = if (t.home) "" else sq ?: (Uri.parse(t.url).host?.removePrefix("www.") ?: t.url)
             bar.pill.input.setText(shown)
         }
         bar.home.lit = t.home

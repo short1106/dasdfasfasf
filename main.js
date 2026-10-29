@@ -24,12 +24,52 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'dulidan', privileges: { standard: true, secure: true, supportFetchAPI: true } }
 ]);
 
-/* ===== Protokoll: liefert nur /ui und /assets aus ===== */
-function serveApp() {
-  const allowed = [path.join(ROOT, 'ui') + path.sep, path.join(ROOT, 'assets') + path.sep];
-  protocol.handle('dulidan', async req => {
+/* ===== Protokoll: liefert nur /ui, /assets und /shared aus, dazu den Such-Proxy ===== */
+/* Die eigene Ergebnisseite holt Treffer über den Main-Prozess, aber nur von diesen Quellen */
+const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org']);
+let proxySes = null;
+async function searchProxy(req, u) {
+  /* Eigener Header: fremde Seiten könnten ihn nur mit CORS-Vorabanfrage senden, und die beantworten wir nie */
+  if (req.headers.get('x-dw') !== '1') return new Response('Forbidden', { status: 403 });
+  let target;
+  try { target = new URL(u.searchParams.get('u') || ''); } catch { return new Response('Bad request', { status: 400 }); }
+  if (target.protocol !== 'https:' || !PROXY_HOSTS.has(target.hostname)) return new Response('Forbidden', { status: 403 });
+  const post = u.searchParams.get('post');
+  /* Nur für Tests: Anfragen an einen lokalen Nachbau der Quellen umleiten */
+  const href = process.env.DW_PROXY_BASE ? process.env.DW_PROXY_BASE + '/' + target.hostname + target.pathname + target.search : target.href;
+  try {
+    /* Eigene Session im Speicher: kein Werbeblocker dazwischen, keine Cookies der Webseiten */
+    if (!proxySes) {
+      proxySes = session.fromPartition('dw-proxy');
+      /* DuckDuckGo liefert Bilder/Videos/News nur mit eigenem Referer; als fetch-Header verbietet Chromium ihn */
+      proxySes.webRequest.onBeforeSendHeaders((d, cb) => {
+        const h = d.requestHeaders;
+        if (/duckduckgo\.com/.test(d.url)) h.Referer = 'https://duckduckgo.com/';
+        cb({ requestHeaders: h });
+      });
+    }
+    const r = await proxySes.fetch(href, {
+      method: post != null ? 'POST' : 'GET',
+      body: post != null ? post : undefined,
+      headers: {
+        'user-agent': app.userAgentFallback, 'accept-language': 'de-DE,de;q=0.9,en;q=0.6',
+        ...(post != null ? { 'content-type': 'application/x-www-form-urlencoded' } : {})
+      },
+      signal: AbortSignal.timeout(9000)
+    });
+    const body = (await r.text()).slice(0, 4 * 1024 * 1024);
+    return Response.json({ status: r.status, body });
+  } catch (e) {
+    if (process.env.DW_DEBUG) console.log('[proxy]', href, e.message);
+    return Response.json({ status: 599, body: '' });
+  }
+}
+function serveApp(ses) {
+  const allowed = [path.join(ROOT, 'ui') + path.sep, path.join(ROOT, 'assets') + path.sep, path.join(ROOT, 'shared') + path.sep];
+  ses.protocol.handle('dulidan', async req => {
     const u = new URL(req.url);
     if (u.host !== 'app') return new Response('Not found', { status: 404 });
+    if (u.pathname === '/api/fetch') return searchProxy(req, u);
     const file = path.normalize(path.join(ROOT, decodeURIComponent(u.pathname)));
     if (!allowed.some(a => file.startsWith(a))) return new Response('Forbidden', { status: 403 });
     try {
@@ -547,10 +587,11 @@ app.on('web-contents-created', (_, wc) => {
 });
 
 app.whenReady().then(() => {
-  serveApp();
+  serveApp(session.defaultSession);
   ipc();
   /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */
   webSes = session.fromPartition('persist:web');
+  serveApp(webSes);   /* Fehlerseite und eigene Ergebnisseite laufen in Tabs */
   /* Als normales Chrome auftreten: Google & Co. blockieren Anmeldungen, sobald "Electron" in der Kennung steht */
   const ua = webSes.getUserAgent().replace(/ dulidan-web\/\S+/i, '').replace(/ Electron\/\S+/i, '');
   webSes.setUserAgent(ua);

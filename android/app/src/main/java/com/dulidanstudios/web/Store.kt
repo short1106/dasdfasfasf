@@ -16,7 +16,14 @@ class Store(ctx: Context) {
     } catch (_: Exception) { false }
 
     var engine: String
-        get() = p.getString("engine", "duckduckgo") ?: "duckduckgo"
+        get() {
+            /* Einmalig: alter Standard DuckDuckGo wird zur eigenen Ergebnisseite */
+            if (!p.getBoolean("engineV2", false)) {
+                val old = p.getString("engine", null)
+                p.edit().putBoolean("engineV2", true).apply { if (old == null || old == "duckduckgo") putString("engine", "dulidan") }.apply()
+            }
+            return p.getString("engine", "dulidan") ?: "dulidan"
+        }
         set(v) = p.edit().putString("engine", v).apply()
     var accent: String
         get() = p.getString("accent", "dulidan") ?: "dulidan"

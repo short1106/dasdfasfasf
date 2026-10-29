@@ -1,7 +1,10 @@
 /* Dulidan Web · settings.js – Suchmaschinen, Shortcuts, Akzente, Animationsstufe */
 import { store, hexToRgb, rgbToHex, mixRgb } from './util.js';
 
+/* "Dulidan" = eigene Ergebnisseite im Dulidan-Look (Treffer kommen über den App-Proxy, nie die weiße Seite der Suchmaschine) */
+export const SEARCH_PAGE = 'dulidan://app/shared/search/index.html';
 export const ENGINES = {
+  dulidan: { name: 'Dulidan', url: SEARCH_PAGE + '?q=%s' },
   duckduckgo: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
   google: { name: 'Google', url: 'https://www.google.com/search?q=%s' },
   bing: { name: 'Bing', url: 'https://www.bing.com/search?q=%s' },
@@ -34,11 +37,13 @@ export function deriveAccent(hex) {
 }
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const DEFAULTS = { engine: 'duckduckgo', anim: reduced ? 'aus' : 'episch', accent: 'dulidan', custom: '#c020b8', sound: false, adblock: true, restore: true };
+const DEFAULTS = { engine: 'dulidan', anim: reduced ? 'aus' : 'episch', accent: 'dulidan', custom: '#c020b8', sound: false, adblock: true, restore: true };
 
 const subs = new Set();
 export const settings = { ...DEFAULTS, ...store.get('dw_settings', {}) };
 if (!ENGINES[settings.engine]) settings.engine = DEFAULTS.engine;
+/* Einmalig: wer noch auf dem alten Standard DuckDuckGo stand, bekommt die eigene Ergebnisseite */
+if (!settings.engineV2) { if (settings.engine === 'duckduckgo') settings.engine = 'dulidan'; settings.engineV2 = true; store.set('dw_settings', settings); }
 
 export function setSetting(k, v) {
   settings[k] = v;

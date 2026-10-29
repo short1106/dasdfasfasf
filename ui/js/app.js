@@ -1,7 +1,7 @@
 /* Dulidan Web · app.js – verdrahtet alles
    Aufbau: Module · Tabs · Navigation · Toolbar/Ladebalken · Startseite (HUD, Karten, Bänder) · Shortcuts · Events · Start */
 import { $, $$, h, icon, api, sleep, scramble, toast, hostOf, anim, amp, store } from './util.js';
-import { settings, setSetting, onSettings, SHORTCUTS, ACCENTS } from './settings.js';
+import { settings, setSetting, onSettings, SHORTCUTS, ACCENTS, SEARCH_PAGE } from './settings.js';
 import { initCursor, initButtons, shockwave, burst } from './fx.js';
 import { createLogo, createNebula } from './gl.js';
 import { Suggest, engineName, resolve } from './omnibox.js';
@@ -137,6 +137,12 @@ function go(t, url) {
   }, url);
 }
 
+/* Suchbegriff, wenn der Tab die eigene Ergebnisseite zeigt */
+function searchQuery(url) {
+  if (!url || !url.startsWith(SEARCH_PAGE)) return null;
+  try { return new URL(url).searchParams.get('q') || ''; } catch { return null; }
+}
+
 function submit(target, form) {
   if (target.kind === 'calc') {
     navigator.clipboard.writeText(target.value).catch(() => {});
@@ -200,10 +206,16 @@ function updateToolbar() {
   const star = $('#btnStar');
   star.disabled = t.home;
   star.classList.toggle('on', !t.home && isBookmarked(t.url));
-  const ico = $('#omniIco'), secure = !t.home && /^https:/i.test(t.url);
+  const sq = searchQuery(t.url), secure = !t.home && !sq && /^https:/i.test(t.url);
+  const ico = $('#omniIco');
   ico.classList.toggle('secure', secure);
-  ico.firstElementChild.firstElementChild.setAttribute('href', t.home ? '#i-search' : secure ? '#i-lock' : '#i-globe');
-  if (document.activeElement !== omniInput) {
+  ico.firstElementChild.firstElementChild.setAttribute('href', t.home || sq != null ? '#i-search' : secure ? '#i-lock' : '#i-globe');
+  if (document.activeElement !== omniInput && sq != null) {
+    /* Eigene Ergebnisseite: Suchbegriff statt interner Adresse */
+    omni.reset(sq);
+    $('#omniPretty').replaceChildren(h('b', {}, 'Dulidan'), ' · ' + sq);
+    omniForm.classList.add('show-pretty');
+  } else if (document.activeElement !== omniInput) {
     omni.reset(t.home ? '' : t.url);
     const pretty = $('#omniPretty');
     let host = '', rest = '';

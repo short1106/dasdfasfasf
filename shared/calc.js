@@ -1,4 +1,4 @@
-/* Dulidan Web · calc.js – sicherer Rechen-Parser (kein eval) + Rechner-Panel
+/* Dulidan Web · calc.js – sicherer Rechen-Parser (kein eval), geteilt von Oberfläche und Ergebnisseite
    Kann: + − × ÷ % ^ ( ), Komma oder Punkt, √ sqrt, sin cos tan (Grad), log ln, π pi, e */
 
 const FUN = {

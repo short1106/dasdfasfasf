@@ -1,6 +1,6 @@
 /* Dulidan Web · calcpanel.js – Rechner-Panel oben rechts (Tastatur und Maus) */
 import { $, h, toast, anim } from './util.js';
-import { evaluate, format } from './calc.js';
+import { evaluate, format } from '../../shared/calc.js';
 import { registerPanel, panelOpen } from './panels.js';
 import { burst } from './fx.js';
 import { sfx } from './sound.js';

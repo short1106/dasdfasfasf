@@ -8,7 +8,9 @@ import java.net.URLEncoder
 import org.json.JSONArray
 
 object Search {
+    /* "Dulidan" = eigene Ergebnisseite im Dulidan-Look statt der weißen Seite einer Suchmaschine */
     val ENGINES = linkedMapOf(
+        "dulidan" to Pair("Dulidan", SearchProxy.PAGE + "?q=%s"),
         "duckduckgo" to Pair("DuckDuckGo", "https://duckduckgo.com/?q=%s"),
         "google" to Pair("Google", "https://www.google.com/search?q=%s"),
         "bing" to Pair("Bing", "https://www.bing.com/search?q=%s"),
@@ -47,10 +49,10 @@ object Search {
             if (LOCAL.matches(q)) return "http://$q"
             if (HOSTLIKE.matches(q) && !Regex("^\\d+(\\.\\d+)+$").matches(q)) return "https://$q"
         }
-        return (ENGINES[engine] ?: ENGINES.getValue("duckduckgo")).second.replace("%s", enc(q))
+        return (ENGINES[engine] ?: ENGINES.getValue("dulidan")).second.replace("%s", enc(q))
     }
 
-    fun engineName(engine: String) = (ENGINES[engine] ?: ENGINES.getValue("duckduckgo")).first
+    fun engineName(engine: String) = (ENGINES[engine] ?: ENGINES.getValue("dulidan")).first
 
     /* DuckDuckGo-Vorschläge (blockierend – nur im Hintergrund-Thread aufrufen) */
     fun suggest(q: String): List<String> = try {

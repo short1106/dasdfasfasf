@@ -3,7 +3,7 @@
 import { $, h, icon, api, anim, amp, Highlighter, hostOf } from './util.js';
 import { settings, ENGINES, SHORTCUTS } from './settings.js';
 import { searchLocal } from './data.js';
-import { tryCalc, format } from './calc.js';
+import { tryCalc, format } from '../../shared/calc.js';
 import { sfx } from './sound.js';
 
 const fill = (tpl, q) => tpl.replace('%s', encodeURIComponent(q));

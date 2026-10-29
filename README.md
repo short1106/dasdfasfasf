@@ -75,7 +75,22 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 
 ## Suche
 
-Eine einzige Leiste für Adressen und Suche. Eingaben ohne Domain werden gesucht, standardmäßig mit DuckDuckGo (in den Einstellungen änderbar: Google, Bing, Brave, Ecosia, Startpage).
+Eine einzige Leiste für Adressen und Suche. Eingaben ohne Domain landen auf der **eigenen Ergebnisseite „Dulidan Suche“** und nicht auf der weißen Seite einer Suchmaschine. Das gilt am PC und auf dem Handy.
+
+- **Ergebnisse im Dulidan-Look:**
+  - Karten mit Favicon, Pfad und hervorgehobenen Suchbegriffen. Anzeigen werden herausgefiltert.
+  - Beim Scrollen lädt die Seite endlos nach.
+  - Zurück springt ohne neues Laden an dieselbe Stelle.
+- **Tabs:**
+  - Alle
+  - Bilder als Mosaik mit Lightbox
+  - Videos mit Vorschaubild, Dauer und Aufrufen
+  - News mit Quelle und „vor 3 Std.“
+- **Sofortantworten:** eine Wikipedia-Karte zum Begriff. Bei Rechnungen wie `200*15%` erscheint eine Rechner-Karte mit dem Ergebnis.
+- **Woher die Treffer kommen:** Die App holt sie im Hintergrund von DuckDuckGo, also ohne Tracking und ohne API-Schlüssel, dazu Wikipedia. Angezeigt wird alles nur in der eigenen Seite.
+  - Der Abruf läuft über einen kleinen Proxy in der App. Er spricht ausschließlich diese festen Quellen an und ist nur für die Ergebnisseite selbst nutzbar, fremde Webseiten kommen nicht an ihn heran.
+- **Andere Suchmaschine:** Wer doch eine möchte, kann sie in den Einstellungen wählen (DuckDuckGo, Google, Bing, Brave, Ecosia, Startpage).
+- **Gemeinsamer Code:** Die Seite liegt in `shared/search/`. Desktop und Android benutzen dieselben Dateien.
 
 Such-Shortcuts: Wenn du ein Kürzel und ein Leerzeichen tippst, wird daraus ein Chip.
 

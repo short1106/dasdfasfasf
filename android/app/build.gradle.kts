@@ -33,6 +33,9 @@ android {
         }
     }
 
+    /* Eigene Ergebnisseite + Rechner-Parser teilen sich Desktop und Android: ../../shared → assets/search, assets/calc.js */
+    sourceSets["main"].assets.srcDir("../../shared")
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
