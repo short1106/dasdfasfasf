@@ -1,16 +1,18 @@
-/* Dulidan Web · audio.js – Pegel aus den Tabs glätten, Kicks erkennen, CSS-Variablen --au/--bass setzen */
+/* Dulidan Web · audio.js – Spuren aus den Tabs (Bass, Melodie, Stimme, Gesamt, Kick) glätten, CSS-Variablen --au/--bass setzen.
+   Pegel sind schon im Tab selbstregelnd normalisiert; Kicks kommen aus der Energiesprung-Erkennung im Tab. */
 import { anim } from './util.js';
 
 export const audio = { bass: 0, mid: 0, high: 0, level: 0, tabId: null, active: false };
 const raw = new Map();           // tabId -> { b, m, h, l, t }
 const subs = new Set(), kicks = new Set();
-let run = false, avgBass = 0, lastKick = 0;
+let run = false, lastKick = 0;
 
 export const onAudio = f => subs.add(f);
 export const onKick = f => kicks.add(f);
 
 export function feed(e) {
   raw.set(e.id, { b: e.b, m: e.m, h: e.h, l: e.l, t: performance.now() });
+  if (e.k > 0 && anim() !== 'aus') { const now = performance.now(); if (now - lastKick > 150) { lastKick = now; kicks.forEach(f => f(e.k)); } }
   if (!run) { run = true; requestAnimationFrame(loop); }
 }
 export function forgetTab(id) { raw.delete(id); }
@@ -31,8 +33,6 @@ function loop(now) {
   audio.tabId = t.l > 0.02 ? t.id : audio.level > 0.02 ? audio.tabId : null;
   audio.active = audio.level > 0.015;
 
-  avgBass = avgBass * 0.96 + audio.bass * 0.04;
-  if (audio.bass > 0.42 && audio.bass > avgBass * 1.35 && now - lastKick > 260) { lastKick = now; kicks.forEach(f => f(audio.bass)); }
 
   const r = document.documentElement.style;
   r.setProperty('--au', audio.level.toFixed(3));

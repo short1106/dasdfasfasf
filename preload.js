@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('dulidan', {
   },
   adblock: call('adblock:set'),
   update: { state: call('update:state'), install: call('update:install') },
+  disco: { start: call('disco:start'), stop: call('disco:stop') },
   wallet: { list: call('wallet:list'), remove: call('wallet:remove'), config: call('wallet:config'), respond: call('wallet:respond') },
   suggest: call('suggest'),
   weather: call('weather'),

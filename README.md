@@ -88,6 +88,7 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | `Strg+J` | Downloads |
 | `Strg+,` | Einstellungen |
 | `Strg+Umschalt+R` | Taschenrechner |
+| `Strg+Umschalt+M` | Disko-Modus (wenn im Tab Musik läuft) |
 | `F5` / `Strg+R` | Neu laden |
 | `Alt+←` / `Alt+→` | Zurück / Vor |
 | `Alt+Pos1` | Startseite |
@@ -140,7 +141,30 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Klick oder Enter zoomt in eine Karte hinein, bis sie exakt die Seite füllt. Erst dann erscheint die echte Seite.
   - `Entf` schließt einen Tab, `Esc` zoomt zurück in den aktiven Tab.
 - **Partikel-Übergang:** Beim Seitenwechsel zerfällt das Foto der alten Seite in rund 26 000 Partikel, die zum Dulidan-D zusammenfliegen. Ist die neue Seite geladen, wird sie unsichtbar fotografiert. Dann explodiert das D, und die neue Seite erscheint in einem wachsenden Kreis mit Schockwellen-Ring. Ohne WebGL läuft weiter der Logo-Wipe.
-- **Musik-Reaktion:** Läuft in einem Tab Ton (etwa YouTube), pulsieren Logo-Partikel, Nebel, Energiestrahl und Glow zum Bass. Starke Kicks lassen das D beben, und der Tab zeigt einen Mini-Equalizer. Das funktioniert auch, während du auf einem anderen Tab bist.
+- **Musik-Reaktion:** Läuft in einem Tab Ton (etwa YouTube), reagieren Logo, Nebel, Energiestrahl und Glow darauf, auch wenn du gerade auf einem anderen Tab bist.
+  - Die Analyse trennt Stereo in Mitte und Seiten. Daraus entstehen drei Spuren:
+    - **Bass:** alles unter 150 Hz
+    - **Stimme:** liegt in der Mitte und klingt tonal
+    - **Melodie:** Seiten und Höhen
+  - Jede Spur regelt ihren Pegel selbst nach. So übersteuert auch bei lauten Songs nichts, nur was heraussticht, schlägt aus.
+  - Kicks kommen aus echten Energiesprüngen im Bass. Drops erkennt die Analyse am ersten kräftigen Einsatz nach einer Bass-Pause.
+- **Disko-Modus** (der Knopf „DISKO“ erscheint, sobald im Tab Musik läuft, oder `Strg+Umschalt+M`): Er macht aus jedem Video oder Song live eine Vollbild-Show.
+  - **Mit Video:**
+    - Das echte Video läuft in der Mitte.
+    - Bei Kicks zoomt es, stößt und verschiebt die Farben.
+    - Beim Drop zerfällt es in Glitch-Streifen.
+    - Dazu kommen Lichtfächer, Tunnel, eine Spiegelung und Partikelstürme.
+  - **Ohne Video:** Ein Spektrum-Ring pulsiert um einen leuchtenden Kern, dazu ein eigener Ring für die Stimme.
+  - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.). Synchronisierte Texte kommen von [LRCLIB](https://lrclib.net).
+    - Die Wörter ploppen nacheinander rein, große Wörter wackeln, die Zeile springt auf den Beat und blendet dann aus.
+    - Musikvideos mit Intro werden automatisch angeglichen. Feinjustieren kannst du mit `+`/`−`.
+  - **Steuerung:**
+    - `Esc` beendet, Leertaste pausiert, `←`/`→` spult 5 s.
+    - `1`/`2`/`3` wechselt zwischen Chill, Party und Eskalation.
+    - `L` schaltet die Lyrics ein und aus.
+  - **Grenzen:**
+    - Kopiergeschützte Inhalte (DRM, etwa Netflix oder Spotify Web) lassen sich nicht abgreifen.
+    - Für Nischen-Songs gibt es manchmal keine Lyrics. Dann laufen nur die Effekte.
 - **Passwort-Manager:** Nach dem Anmelden fragt die Adressleiste „Passwort speichern?“. Beim nächsten Besuch füllt Dulidan Web Benutzername und Passwort ein und meldet dich automatisch an.
   - Auch zweistufige Logins wie bei Google oder Microsoft gehen: erst die E-Mail, dann das Passwort.
   - Für YouTube und Google meldet sich Dulidan Web als normales Chrome. Mit „Electron“ in der Browser-Kennung würde Google die Anmeldung blockieren („Dieser Browser ist möglicherweise nicht sicher“).

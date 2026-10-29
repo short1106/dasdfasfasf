@@ -51,6 +51,22 @@ onAudio(a => {
     if (on) [a.bass, a.mid, a.high].forEach((v, i) => { t.elEq.children[i].style.transform = `scaleY(${Math.max(0.15, Math.min(1, v * 1.6))})`; });
   }
 });
+/* Disko-Knopf: erscheint, sobald im aktiven Tab Musik läuft, und tanzt mit */
+const discoBtn = $('#btnDisco');
+onAudio(a => {
+  const show = !!active && !active.home && a.active && a.tabId === active.id;
+  if (show !== !discoBtn.hidden) discoBtn.hidden = !show;
+  if (show) [a.bass, a.mid, a.high].forEach((v, i) => { discoBtn.querySelector('.eq').children[i].style.transform = `scaleY(${Math.max(0.2, Math.min(1, v * 1.4))})`; });
+  discoBtn.style.setProperty('--bass', a.bass.toFixed(3));
+});
+async function startDisco() {
+  if (!active || active.home) return toast('Spiel erst Musik oder ein Video in einem Tab ab');
+  shockwave(discoBtn);
+  const ok = await api.disco.start(active.id);
+  if (!ok) toast('Disko-Modus braucht einen Tab mit Musik oder Video');
+}
+discoBtn.addEventListener('click', () => startDisco());
+
 let lastShock = 0;
 onKick(b => {
   if (!active || !active.home || anim() === 'aus') return;
@@ -421,7 +437,8 @@ const ACTIONS = {
   'zoom-reset': () => zoom(0),
   passwords: () => openPanel('passwords', $('#btnKey').hidden ? $('#btnMenu') : $('#btnKey')),
   wallet: () => openPanel('wallet', $('#btnMenu')),
-  calc: () => openPanel('calc', $('#btnCalc'))
+  calc: () => openPanel('calc', $('#btnCalc')),
+  disco: () => startDisco()
 };
 
 const COMMANDS = () => [
@@ -445,6 +462,7 @@ const COMMANDS = () => [
   { icon: 'key', name: 'Passwörter verwalten', run: () => ACTIONS.passwords() },
   { icon: 'card', name: 'Adressen & Karten', run: () => ACTIONS.wallet() },
   { icon: 'calc', name: 'Taschenrechner', key: 'Strg ⇧ R', run: () => ACTIONS.calc() },
+  { icon: 'disco', name: 'Disko-Modus (Musik im Vollbild)', key: 'Strg ⇧ M', run: () => ACTIONS.disco() },
   { icon: 'shield', name: settings.adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten', run: () => { setSetting('adblock', !settings.adblock); toast('Werbeblocker: ' + (settings.adblock ? 'AN' : 'AUS')); } },
   { icon: 'plus', name: 'Zoom: größer', key: 'Strg +', run: () => zoom(1) },
   { icon: 'x', name: 'Zoom zurücksetzen', key: 'Strg 0', run: () => zoom(0) },
@@ -506,6 +524,7 @@ addEventListener('resize', () => { omni.close(); big.close(); });
 function keyName(e) {
   const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
   if (c && e.shiftKey && k === 'r') return 'calc';
+  if (c && e.shiftKey && k === 'm') return 'disco';
   if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
@@ -569,6 +588,7 @@ api.on(e => {
       body.classList.toggle('win-blur', !e.focused);
       break;
     case 'html-full': body.classList.toggle('html-full', !!e.on); setTimeout(view.sendBounds, 50); break;
+    case 'disco': body.classList.toggle('disco-on', !!e.on); break;
     case 'crash': toast('Tab abgestürzt – F5 lädt neu'); break;
     case 'audio': feedAudio(e); break;
   }

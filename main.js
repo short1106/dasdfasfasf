@@ -10,6 +10,7 @@ const vault = require('./main/passwords.js');
 const wallet = require('./main/wallet.js');
 const adblock = require('./main/adblock.js');
 const updater = require('./main/updater.js');
+const lyrics = require('./main/lyrics.js');
 const { pageMenu } = require('./main/contextmenu.js');
 
 const ROOT = __dirname;
@@ -85,7 +86,7 @@ function serveApp(ses) {
 /* ===== Zustand ===== */
 let win = null, webSes = null;
 const tabs = new Map();
-let nextId = 1, activeId = null, viewVisible = false, htmlFull = false;
+let nextId = 1, activeId = null, viewVisible = false, htmlFull = false, discoId = null;
 let bounds = { x: 0, y: 100, width: 800, height: 600 };
 
 const ui = (type, data = {}) => { if (win && !win.isDestroyed()) win.webContents.send('evt', { type, ...data }); };
@@ -105,6 +106,7 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
   const state = () => ui('win', { maximized: win.isMaximized(), fullscreen: win.isFullScreen(), focused: win.isFocused() });
   ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'focus', 'blur'].forEach(e => win.on(e, state));
+  win.on('leave-full-screen', () => { if (discoId != null && !htmlFull) discoStop(); });
   win.webContents.on('will-navigate', e => e.preventDefault());
   win.webContents.on('before-input-event', (e, i) => shortcut(e, i));
   win.webContents.on('context-menu', (_, p) => {
@@ -190,10 +192,47 @@ function wire(t, wc) {
   wireAutofill(t, wc);
   wc.ipc.on('scroll', (_, p) => { if (t.id === activeId) ui('scroll', { id: t.id, p: Number(p) || 0 }); });
   wc.ipc.on('audio', (_, a) => {
-    if (!Array.isArray(a) || a.length !== 4) return;
-    const [b, m, hi, l] = a.map(v => Math.min(1, Math.max(0, Number(v) || 0)));
-    ui('audio', { id: t.id, b, m, h: hi, l });
+    if (!Array.isArray(a) || a.length < 4 || a.length > 5) return;
+    const [b, m, hi, l, k = 0] = a.map(v => Math.min(1, Math.max(0, Number(v) || 0)));
+    ui('audio', { id: t.id, b, m, h: hi, l, k });
   });
+  /* Disko-Modus: Lyrics holt der Main-Prozess (nur Titel/Künstler/Länge kommen aus der Seite) */
+  wc.ipc.handle('lyrics', (e, info) => {
+    if (e.senderFrame !== wc.mainFrame || discoId !== t.id || !info || typeof info !== 'object') return { lines: [] };
+    return lyrics.find({ title: String(info.title || '').slice(0, 300), artist: String(info.artist || '').slice(0, 200), duration: Number(info.duration) || 0 });
+  });
+  wc.ipc.on('disco:exit', e => { if (e.senderFrame === wc.mainFrame && discoId === t.id) discoStop(); });
+  wc.on('did-navigate', () => { if (discoId === t.id) discoStop(); });
+}
+
+/* ===== Disko-Modus: eigene Render-Ebene in einer isolierten Welt des Tabs, Fenster im Vollbild ===== */
+const DISCO_WORLD = 1337;
+let discoCode = null, discoWasFull = false;
+async function discoStart(id) {
+  const t = tabs.get(id);
+  if (!t || !t.view || id !== activeId || discoId === id) return false;
+  if (discoId != null) discoStop();
+  discoCode = discoCode || await fs.promises.readFile(path.join(ROOT, 'main/disco-page.js'), 'utf8');
+  discoId = id;
+  const wc = t.view.webContents;
+  wc.send('disco', true);
+  await wc.executeJavaScriptInIsolatedWorld(DISCO_WORLD, [{ code: discoCode }], true).catch(e => console.warn('[disco]', e.message));
+  discoWasFull = win.isFullScreen();
+  if (!discoWasFull) win.setFullScreen(true);
+  ui('html-full', { on: true }); ui('disco', { on: true, id });
+  layout();
+  wc.focus();
+  return true;
+}
+function discoStop() {
+  const t = tabs.get(discoId);
+  discoId = null;
+  if (t && t.view && !t.view.webContents.isDestroyed()) t.view.webContents.send('disco', false);
+  if (win && !win.isDestroyed()) {
+    if (!discoWasFull && !htmlFull) win.setFullScreen(false);
+    ui('html-full', { on: htmlFull }); ui('disco', { on: false });
+    layout();
+  }
 }
 
 function layout() {
@@ -202,12 +241,13 @@ function layout() {
   for (const t of tabs.values()) {
     if (!t.view) continue;
     const show = t.id === activeId && viewVisible;
-    t.view.setBounds(show && htmlFull ? { x: 0, y: 0, width: full.width, height: full.height } : bounds);
+    t.view.setBounds(show && (htmlFull || discoId === t.id) ? { x: 0, y: 0, width: full.width, height: full.height } : bounds);
     t.view.setVisible(show);
   }
 }
 
 function closeTab(id) {
+  if (discoId === id) discoStop();
   const t = tabs.get(id);
   if (!t) return;
   tabs.delete(id);
@@ -253,6 +293,7 @@ function revealScript(mode, accent) {
 }
 
 async function showView(id, mode, focus, accent) {
+  if (discoId != null && id !== discoId) discoStop();
   const t = tabs.get(id);
   if (!t || !t.view) return false;
   activeId = id;
@@ -387,7 +428,7 @@ function wireAutofill(t, wc) {
 }
 
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);
+const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
@@ -397,6 +438,7 @@ function keyName(i) {
     if (k === 'k') return 'palette';
     if (k === 'tab') return i.shift ? 'prev-tab' : 'next-tab';
     if (k === 'r' && i.shift) return 'calc';
+    if (k === 'm' && i.shift) return 'disco';
     if (k === 'r') return 'reload';
     if (k === ',') return 'settings';
     if (k === 'j') return 'downloads';
@@ -508,6 +550,8 @@ function ipc() {
   h('adblock:set', on => adblock.setEnabled(!!on));
   h('update:state', () => ({ ...updater.current(), current: app.getVersion() }));
   h('update:install', () => updater.install());
+  h('disco:start', id => discoStart(Number(id)));
+  h('disco:stop', () => discoStop());
   h('wallet:list', () => wallet.list());
   h('wallet:remove', id => wallet.remove(String(id)));
   h('wallet:config', c => (c ? wallet.setConfig(c) : wallet.config()));
