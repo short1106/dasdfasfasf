@@ -36,7 +36,8 @@ export function resolve(raw, sc = null) {
 
 /* ===== Energiestrahl: Winkel rast beim Tippen um die Leiste ===== */
 export class Beam {
-  constructor(el) { this.el = el; this.a = Math.random() * 360; this.v = 0; this.on = false; this.run = false; this.typeT = 0; }
+  constructor(el) { this.el = el; this.a = Math.random() * 360; this.v = 0; this.on = false; this.run = false; this.typeT = 0; this.au = 0; }
+  audio(level) { this.au = level; if (level > 0.02) this.loop(); }
   focus(v) { this.on = v; if (v) { this.v += 300; this.loop(); } }
   kick() {
     this.v = Math.min(this.v + 420 * Math.max(0.4, amp()), 2600);
@@ -51,10 +52,10 @@ export class Beam {
     const f = now => {
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       this.v *= Math.pow(0.12, dt);
-      this.a = (this.a + (this.on ? 70 : 0) * dt + this.v * dt) % 360;
+      this.a = (this.a + (this.on ? 70 : 0) * dt + this.v * dt + this.au * 1100 * dt) % 360;
       this.el.style.setProperty('--beam', this.a + 'deg');
       if (now - this.typeT > 450) this.el.classList.remove('typing');
-      if (this.on || this.v > 2) requestAnimationFrame(f); else this.run = false;
+      if (this.on || this.v > 2 || this.au > 0.01) requestAnimationFrame(f); else this.run = false;
     };
     requestAnimationFrame(f);
   }

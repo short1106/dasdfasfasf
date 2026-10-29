@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('dulidan', {
   },
   view: { bounds: call('view:bounds'), show: call('view:show'), hide: call('view:hide'), capture: call('view:capture') },
   win: { min: call('win:min'), max: call('win:max'), close: call('win:close'), fullscreen: call('win:fullscreen'), state: call('win:state') },
+  thumbs: call('tabs:thumbs'),
   suggest: call('suggest'),
   weather: call('weather'),
   downloads: { open: call('dl:open'), show: call('dl:show'), cancel: call('dl:cancel') },

@@ -18,13 +18,14 @@ export class TabStrip {
     const fav = h('span', { class: 'fav' }, h('i', { class: 'spin' }));
     const title = h('span', { class: 't' }, h('span', {}, 'Neuer Tab'));
     const x = h('button', { class: 'x', 'aria-label': 'Tab schließen', 'data-cursor': 'SCHLIESSEN' }, icon('x'));
-    const el = h('div', { class: 'tab' + (animate && anim() !== 'aus' ? ' enter' : ''), role: 'tab', dataset: { id: t.id } }, fav, title, x);
+    const eq = h('span', { class: 'eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
+    const el = h('div', { class: 'tab' + (animate && anim() !== 'aus' ? ' enter' : ''), role: 'tab', dataset: { id: t.id } }, fav, title, eq, x);
     el.addEventListener('animationend', e => { if (e.animationName === 'tabIn') el.classList.remove('enter'); });
     x.addEventListener('pointerdown', e => e.stopPropagation());
     x.addEventListener('click', e => { e.stopPropagation(); this.onClose(t); });
     el.addEventListener('pointerdown', e => this.down(e, t));
     el.addEventListener('auxclick', e => { if (e.button === 1) { e.preventDefault(); this.onClose(t); } });
-    t.el = el; t.elFav = fav; t.elTitle = title;
+    t.el = el; t.elFav = fav; t.elTitle = title; t.elEq = eq;
     this.wrap.appendChild(el);
     this.update(t);
     this.narrow();

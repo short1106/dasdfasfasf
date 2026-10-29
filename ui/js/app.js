@@ -12,6 +12,8 @@ import { initPanels, openPanel, closePanel, onDownload } from './panels.js';
 import { runBoot, booted } from './boot.js';
 import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark } from './data.js';
 import { sfx } from './sound.js';
+import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
+import { createOverview } from './overview.js';
 
 const body = document.body, homeEl = $('#home');
 const omniInput = $('#omniInput'), bigInput = $('#bigInput'), omniForm = $('#omni'), bigForm = $('#bigbar');
@@ -19,7 +21,7 @@ const tabs = new Map();
 let active = null;
 
 /* ===== Module ===== */
-const strip = new TabStrip({ onActivate: t => activate(t), onClose: t => closeTab(t), onReorder: () => {} });
+const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: () => {} });
 view.bindActive(() => active);
 const logo = createLogo($('#logoGL'), $('#logoStage'), homeEl);
 const nebula = createNebula($('#nebula'), homeEl);
@@ -31,6 +33,27 @@ const omni = new Suggest({
   onEscape: () => { omniInput.blur(); updateToolbar(); }
 });
 const big = new Suggest({ input: bigInput, form: bigForm, chip: $('#bigChip'), offset: 14, onGo: t => submit(t, bigForm) });
+const ov = createOverview({
+  tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
+  activate: t => activate(t), closeTab: t => closeTab(t), newTab: () => newTab(), fallback: () => pal.open()
+});
+
+/* Musik aus den Tabs: Strahl, Equalizer im Tab, Kicks lassen das D beben */
+onAudio(a => {
+  omni.beam.audio(a.level); big.beam.audio(a.level);
+  for (const t of tabs.values()) {
+    if (!t.el) continue;
+    const on = a.active && a.tabId === t.id;
+    t.el.classList.toggle('audible', on);
+    if (on) [a.bass, a.mid, a.high].forEach((v, i) => { t.elEq.children[i].style.transform = `scaleY(${Math.max(0.15, Math.min(1, v * 1.6))})`; });
+  }
+});
+let lastShock = 0;
+onKick(b => {
+  if (!active || !active.home || anim() === 'aus') return;
+  const now = performance.now();
+  if (b > 0.6 && now - lastShock > 700) { lastShock = now; logo.shock(); }
+});
 omniInput.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== omniInput) updateToolbar(); }, 150));
 
 /* ===== Tabs ===== */
@@ -74,6 +97,7 @@ async function closeTab(t) {
   }
   await api.tab.close(t.id);
   view.forget(t.id);
+  forgetTab(t.id);
   updateCount();
 }
 
@@ -215,7 +239,7 @@ function updateHome(fresh = false) {
     homeEl.classList.remove('gone');
     requestAnimationFrame(() => homeEl.classList.remove('away'));
     logo.setActive(true); nebula.setActive(true);
-    if (fresh) playHomeIntro();
+    if (fresh) { big.reset(''); playHomeIntro(); }
   } else {
     homeEl.classList.add('away');
     homeHideT = setTimeout(() => { homeEl.classList.add('gone'); logo.setActive(false); nebula.setActive(false); }, 600);
@@ -332,7 +356,8 @@ const ACTIONS = {
   fullscreen: () => api.win.fullscreen(),
   back: () => back(active),
   forward: () => forward(active),
-  home: () => goHome(active)
+  home: () => goHome(active),
+  overview: () => ov.toggle()
 };
 
 const COMMANDS = () => [
@@ -351,6 +376,7 @@ const COMMANDS = () => [
   { icon: 'bolt', name: 'Animationen: Aus', run: () => setAnim('aus') },
   { icon: 'color', name: 'Akzentfarbe wechseln', run: nextAccent },
   { icon: 'sound', name: settings.sound ? 'Mikro-Sounds aus' : 'Mikro-Sounds an', run: () => { setSetting('sound', !settings.sound); toast('Mikro-Sounds: ' + (settings.sound ? 'AN' : 'AUS')); } },
+  { icon: 'orbit', name: 'Tab-Übersicht (Orbit 3D)', key: 'Strg E', run: () => ov.open() },
   { icon: 'power', name: 'Boot-Sequenz abspielen', run: replayBoot },
   { icon: 'trash', name: 'Verlauf löschen', run: () => { clearHistory(); toast('Verlauf gelöscht'); } },
   { icon: 'power', name: 'Dulidan Web beenden', run: quit }
@@ -391,6 +417,7 @@ $('#winctl').addEventListener('click', async e => {
 
 /* ===== Buttons ===== */
 $('#newTab').addEventListener('click', () => newTab());
+$('#btnOverview').addEventListener('click', () => ov.toggle());
 $('#btnBack').addEventListener('click', () => back(active));
 $('#btnFwd').addEventListener('click', () => forward(active));
 $('#btnReload').addEventListener('click', () => reload(active));
@@ -406,7 +433,7 @@ addEventListener('resize', () => { omni.close(); big.close(); });
 /* Fallback: Tasten, die nicht über before-input-event im Main-Prozess laufen (z. B. synthetische Eingaben) */
 function keyName(e) {
   const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-  if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
+  if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
   if (e.altKey && !c) return ({ arrowleft: 'back', arrowright: 'forward', home: 'home' })[k];
@@ -458,6 +485,7 @@ api.on(e => {
       break;
     case 'html-full': body.classList.toggle('html-full', !!e.on); setTimeout(view.sendBounds, 50); break;
     case 'crash': toast('Tab abgestürzt – F5 lädt neu'); break;
+    case 'audio': feedAudio(e); break;
   }
 });
 
@@ -471,7 +499,7 @@ async function start() {
   initCursor();
   initButtons();
   buildHome();
-  initPanels({ newTab: () => newTab(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), overview: () => ov.open(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

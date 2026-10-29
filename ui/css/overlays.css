@@ -169,3 +169,42 @@ body.preboot #app{opacity:0}
 @keyframes sdline{0%{opacity:0;transform:scaleX(1)}35%{opacity:1;transform:scaleX(1)}80%{opacity:1;transform:scaleX(.02) scaleY(2)}100%{opacity:0;transform:scaleX(0)}}
 body.closing #app{animation:crt .45s var(--ease-io) forwards}
 @keyframes crt{to{transform:scaleY(.004) scaleX(1.02);filter:brightness(3)}}
+
+/* ---------- Partikel-Morph (Seitenwechsel) ---------- */
+.morph{position:absolute;inset:0;width:100%;height:100%;z-index:22;pointer-events:none}
+.morph-txt{position:absolute;left:50%;top:calc(50% + 26vh);z-index:23;transform:translate(-50%,10px);font-size:10px;letter-spacing:.32em;color:var(--muted);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .4s,transform .6s var(--spring)}
+.morph-txt.on{opacity:1;transform:translate(-50%,0)}
+.morph-txt::after{content:"_";color:var(--pink);animation:blink 1s steps(2) infinite}
+
+/* ---------- Orbit: 3D-Tab-Übersicht ---------- */
+.ov{position:absolute;inset:0;width:100%;height:100%;z-index:30;transition:opacity .25s}
+.ov.out{opacity:0}
+.ov-hud{position:absolute;inset:0;z-index:31;pointer-events:none;font-family:var(--mono);opacity:0;transition:opacity .4s}
+.ov-hud.on{opacity:1}
+.ov-top{position:absolute;left:28px;right:28px;top:22px;display:flex;justify-content:space-between;font-size:10px;letter-spacing:.24em;color:var(--muted)}
+.ov-title{position:absolute;left:28px;bottom:86px;max-width:60%;font-family:var(--sans);font-size:clamp(26px,3.4vw,46px);font-weight:700;letter-spacing:-.04em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 30px rgba(var(--mag-rgb),.7)}
+.ov-host{position:absolute;left:30px;bottom:62px;font-size:11px;letter-spacing:.2em;color:var(--pink)}
+.ov-keys{position:absolute;left:28px;right:28px;bottom:22px;display:flex;flex-wrap:wrap;gap:18px;font-size:10px;letter-spacing:.08em;color:var(--dim)}
+.ov-hud.on .ov-title{animation:sgItem .7s var(--spring)}
+.ov-btn{margin:0 0 3px 2px;width:32px;height:32px;flex-shrink:0}
+.ov-btn:hover svg{transform:perspective(60px) rotateY(calc(180deg * var(--amp)))}
+body.orbit .tab-glow{opacity:.3!important}
+
+/* ---------- Musik: Glow pulsiert mit dem Ton aus den Tabs ---------- */
+:root{--au:0;--bass:0}
+.brand img{filter:drop-shadow(0 0 calc(8px + var(--bass) * 26px) rgba(var(--mag-rgb),calc(.6 + var(--bass) * .4)))}
+.tab-glow{box-shadow:0 0 calc(10px + var(--bass) * 22px) var(--pink),0 0 calc(24px + var(--au) * 50px) var(--mag),0 -6px 20px rgba(var(--mag-rgb),.5)}
+#chrome::after{opacity:calc(.6 + var(--au) * .4);filter:brightness(calc(1 + var(--bass) * 2))}
+.bigbar::before{transform:scale(calc(1 + var(--bass) * .05))}
+.beam{opacity:min(1, calc(var(--au) * 2.2))}
+.focus>.beam{opacity:1}
+.omni{box-shadow:0 0 calc(var(--au) * 40px) -6px rgba(var(--mag-rgb),calc(var(--au) * 1.2))}
+.omni.focus{box-shadow:0 0 0 4px rgba(var(--mag-rgb),.12),0 0 calc(40px + var(--au) * 40px) -8px rgba(var(--mag-rgb),.7)}
+.status-dot{box-shadow:0 0 calc(8px + var(--bass) * 20px) var(--ok)}
+.corner{border-color:rgba(var(--mag-rgb),calc(.55 + var(--bass) * .45))}
+
+/* Mini-Equalizer im Tab, der gerade Ton abspielt */
+.tab .eq{display:none;align-items:flex-end;gap:2px;height:12px;flex-shrink:0}
+.tab .eq i{width:2px;height:100%;border-radius:1px;background:var(--pink);box-shadow:0 0 6px var(--mag);transform-origin:bottom;transform:scaleY(.15);transition:transform .08s linear}
+.tab.audible .eq{display:flex}
+.tab.audible .fav{filter:drop-shadow(0 0 calc(var(--bass) * 10px) var(--pink))}

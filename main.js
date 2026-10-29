@@ -70,10 +70,12 @@ function ensureView(t) {
   const view = new WebContentsView({
     webPreferences: {
       preload: path.join(ROOT, 'tab-preload.js'),
-      contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true
+      contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true,
+      backgroundThrottling: false
     }
   });
   view.setBackgroundColor('#07060b');
+  view.setBounds(bounds);
   view.setVisible(false);
   win.contentView.addChildView(view);
   t.view = view;
@@ -118,6 +120,11 @@ function wire(t, wc) {
   });
   wc.on('will-attach-webview', e => e.preventDefault());
   wc.ipc.on('scroll', (_, p) => { if (t.id === activeId) ui('scroll', { id: t.id, p: Number(p) || 0 }); });
+  wc.ipc.on('audio', (_, a) => {
+    if (!Array.isArray(a) || a.length !== 4) return;
+    const [b, m, hi, l] = a.map(v => Math.min(1, Math.max(0, Number(v) || 0)));
+    ui('audio', { id: t.id, b, m, h: hi, l });
+  });
 }
 
 function layout() {
@@ -126,7 +133,7 @@ function layout() {
   for (const t of tabs.values()) {
     if (!t.view) continue;
     const show = t.id === activeId && viewVisible;
-    if (show) t.view.setBounds(htmlFull ? { x: 0, y: 0, width: full.width, height: full.height } : bounds);
+    t.view.setBounds(show && htmlFull ? { x: 0, y: 0, width: full.width, height: full.height } : bounds);
     t.view.setVisible(show);
   }
 }
@@ -191,7 +198,7 @@ async function showView(id, mode, focus, accent) {
 }
 
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads']);
+const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview']);
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
@@ -204,6 +211,7 @@ function keyName(i) {
     if (k === ',') return 'settings';
     if (k === 'j') return 'downloads';
     if (k === 'd') return 'bookmark';
+    if (k === 'e') return 'overview';
   }
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
@@ -278,13 +286,26 @@ function ipc() {
   });
   h('view:show', (id, mode, focus, accent) => showView(Number(id), mode, !!focus, accent));
   h('view:hide', () => { viewVisible = false; layout(); if (win) win.webContents.focus(); });
-  h('view:capture', async id => {
+  /* Foto einer Seite; hidden: auch wenn die View gerade versteckt ist (rendert dafür kurz unsichtbar) */
+  const snapshot = async (w, width, q = 84) => {
+    let img = await w.capturePage(undefined, { stayHidden: true });
+    if (img.isEmpty()) return null;
+    if (width && img.getSize().width > width) img = img.resize({ width, quality: 'good' });
+    return 'data:image/jpeg;base64,' + img.toJPEG(q).toString('base64');
+  };
+  h('view:capture', async (id, opts = {}) => {
     const w = wcOf(id);
-    if (!w || !viewVisible) return null;
-    try {
-      const img = await w.capturePage();
-      return img.isEmpty() ? null : 'data:image/jpeg;base64,' + img.toJPEG(84).toString('base64');
-    } catch { return null; }
+    if (!w || (!viewVisible && !opts.hidden)) return null;
+    try { return await snapshot(w, opts.width); } catch { return null; }
+  });
+  h('tabs:thumbs', async (ids, width = 720) => {
+    const out = {};
+    if (!Array.isArray(ids)) return out;
+    await Promise.all(ids.slice(0, 40).map(async id => {
+      const w = wcOf(id);
+      if (w && w.getURL()) { try { out[id] = await snapshot(w, Math.min(1280, Number(width) || 720), 78); } catch {} }
+    }));
+    return out;
   });
 
   h('win:min', () => win.minimize());

@@ -2,6 +2,7 @@
    Aufbau: GL-Helfer · Partikel-Logo (D aus Partikeln, Maus-Ausweichen, Schockwellen) · Nebel (Domain-Warp-FBM) */
 import { clamp, lerp, hexToRgb, anim, amp } from './util.js';
 import { accentColors } from './settings.js';
+import { audio } from './audio.js';
 
 function program(gl, vs, fs) {
   const sh = (t, src) => {
@@ -23,7 +24,7 @@ const accentVec = () => accentColors().map(c => hexToRgb(c).map(v => v / 255));
 /* ===================== Partikel-Logo ===================== */
 const LOGO_VS = `
 attribute vec2 aP; attribute vec4 aR; attribute float aL; attribute float aK;
-uniform float uT, uIntro, uS, uAsp, uPx, uAmp, uMF;
+uniform float uT, uIntro, uS, uAsp, uPx, uAmp, uMF, uAu, uBass;
 uniform vec2 uC, uM;
 uniform vec3 uSh[4];
 uniform vec3 uC1, uC2, uC3;
@@ -48,6 +49,10 @@ void main(){
   float f = exp(-dist*dist*12.0) * uMF;
   p += normalize(d + 1e-4) * f * 0.3 * uAmp;
   glow += f*1.3;
+  /* Musik: Bass pumpt das D auf, Höhen lassen es flirren */
+  p *= 1.0 + uBass*(0.05 + aR.z*0.09)*uAmp;
+  p += vec2(sin(uT*9.0 + aR.y*60.0), cos(uT*8.0 + aR.x*50.0)) * uAu * 0.012 * uAmp;
+  glow += uBass*0.9 + uAu*0.4;
   for (int i = 0; i < 4; i++) {
     vec3 s = uSh[i];
     if (s.z < 0.0 || s.z > 3.5) continue;
@@ -76,7 +81,7 @@ export function createLogo(cv, stage, home) {
   if (!gl) return api;
   let pr;
   try { pr = program(gl, LOGO_VS, LOGO_FS); } catch (e) { console.warn('Logo-Shader', e); return api; }
-  const U = uniforms(gl, pr, ['uT', 'uIntro', 'uS', 'uAsp', 'uPx', 'uAmp', 'uMF', 'uC', 'uM', 'uSh', 'uC1', 'uC2', 'uC3']);
+  const U = uniforms(gl, pr, ['uT', 'uIntro', 'uS', 'uAsp', 'uPx', 'uAmp', 'uMF', 'uAu', 'uBass', 'uC', 'uM', 'uSh', 'uC1', 'uC2', 'uC3']);
   let N = 0, run = false, active = true, t0 = 0, introT = 0, DPR = 1, asp = 1;
   const st = { cx: 0, cy: 0, s: 0.5, mx: 9, my: 9, tmx: 9, tmy: 9, mf: 0, tmf: 0 };
   const shocks = [];
@@ -156,6 +161,7 @@ export function createLogo(cv, stage, home) {
     gl.uniform1f(U.uS, st.s); gl.uniform1f(U.uAsp, asp);
     gl.uniform2f(U.uC, st.cx, st.cy); gl.uniform2f(U.uM, st.mx, st.my); gl.uniform1f(U.uMF, st.mf);
     gl.uniform3fv(U.uSh, sh);
+    gl.uniform1f(U.uAu, audio.level); gl.uniform1f(U.uBass, audio.bass);
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.POINTS, 0, N);
     requestAnimationFrame(frame);
@@ -184,7 +190,7 @@ export function createLogo(cv, stage, home) {
 /* ===================== Nebel-Hintergrund ===================== */
 const NEB_VS = `attribute vec2 aV; void main(){ gl_Position = vec4(aV, 0.0, 1.0); }`;
 const NEB_FS = `precision highp float;
-uniform vec2 uR, uM; uniform float uT, uAmp; uniform vec3 uC1, uC2, uC3;
+uniform vec2 uR, uM; uniform float uT, uAmp, uAu, uBass; uniform vec3 uC1, uC2, uC3;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0 - 2.0*f);
   return mix(mix(hash(i), hash(i + vec2(1,0)), f.x), mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y); }
@@ -205,6 +211,8 @@ void main(){
   col = mix(col, uC2*0.55, smoothstep(0.5, 1.0, n*r.x*1.45));
   col += uC3 * 0.16 * pow(smoothstep(0.55, 1.1, n*q.y*1.7), 2.0);
   col += uC2 * exp(-md*3.0) * 0.22 * uAmp;
+  col *= 1.0 + uBass*1.1 + uAu*0.5;
+  col += uC3 * exp(-length(p)*2.2) * uBass * 0.35;
   vec2 g = floor(gl_FragCoord.xy / 2.0); float s = hash(g);
   col += vec3(step(0.9972, s) * (0.5 + 0.5*sin(uT*2.5 + s*80.0)));
   col *= smoothstep(1.25, 0.15, length(uv - 0.5)*1.5);
@@ -217,7 +225,7 @@ export function createNebula(cv, home) {
   if (!gl) return api;
   let pr;
   try { pr = program(gl, NEB_VS, NEB_FS); } catch (e) { console.warn('Nebel-Shader', e); return api; }
-  const U = uniforms(gl, pr, ['uR', 'uM', 'uT', 'uAmp', 'uC1', 'uC2', 'uC3']);
+  const U = uniforms(gl, pr, ['uR', 'uM', 'uT', 'uAmp', 'uAu', 'uBass', 'uC1', 'uC2', 'uC3']);
   const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const l = gl.getAttribLocation(pr, 'aV'); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 2, gl.FLOAT, false, 0, 0);
@@ -239,6 +247,7 @@ export function createNebula(cv, home) {
     const still = anim() === 'aus';
     mx = lerp(mx, tmx, 0.05); my = lerp(my, tmy, 0.05);
     gl.uniform2f(U.uM, mx, my);
+    gl.uniform1f(U.uAu, audio.level); gl.uniform1f(U.uBass, audio.bass);
     gl.uniform1f(U.uT, still ? frozen : (now - t0) / 1000);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }

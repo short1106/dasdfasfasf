@@ -1,13 +1,16 @@
 /* Dulidan Web · view.js
    WebContentsViews liegen immer über der Oberfläche. Damit Overlays und Übergänge trotzdem darüber erscheinen,
    wird die Seite fotografiert, das Foto unter die Oberfläche gelegt und die echte View versteckt.
-   Aufbau: Bounds · Holds (Overlays) · Sync-Queue · Seitenwechsel mit Logo-Wipe */
+   Aufbau: Bounds · Holds (Overlays) · Sync-Queue · Seitenwechsel (Partikel-Morph, sonst Logo-Wipe) */
 import { $, api, sleep, anim, nextFrame, hostOf } from './util.js';
 import { accentColors } from './settings.js';
+import { createMorph } from './morph.js';
 
 const vp = $('#viewport'), snap = $('#snap'), wipe = $('#wipe'), wipeTxt = $('#wipeTxt'), home = $('#home');
 const holds = new Map();
 let shownId = null, queue = Promise.resolve(), getActive = () => null;
+const morph = createMorph();
+let morphRun = null;
 
 export const bindActive = fn => { getActive = fn; };
 export const isShown = id => shownId === id;
@@ -97,11 +100,38 @@ function uncoverWipe() {
 
 export function domReady(t) { if (t.readyWait) { t.readyWait(); t.readyWait = null; } }
 
-/* Navigation mit Übergang: Foto → Wipe deckt ab → Seite lädt → Enthüllung in der Seite */
+const loadImg = src => new Promise(r => { if (!src) return r(null); const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
+
+/* Partikel-Übergang: Foto zerfällt → Partikel sammeln sich zum D → Seite lädt → versteckt fotografiert → D explodiert hinein */
+async function morphTransition(t, doNav, url, gen) {
+  t.transitioning = true;
+  const ready = new Promise(r => { t.readyWait = r; });
+  await sync();
+  const src = snap.classList.contains('on') ? snap : null;
+  const m = morph.begin(src, 'VERBINDE ' + (hostOf(url) || 'DULIDAN').toUpperCase());
+  morphRun = { t, m };
+  clearSnap();
+  await doNav();
+  await Promise.race([Promise.all([m.gathered, ready]), sleep(4500)]);
+  if (gen !== t.navGen) return m.finish();
+  await sleep(anim() === 'normal' ? 220 : 480);
+  const shot = t === getActive() ? await loadImg(await api.view.capture(t.id, { hidden: true })) : null;
+  if (gen !== t.navGen) return m.finish();
+  await m.explode(shot);
+  if (gen !== t.navGen) return m.finish();
+  t.transitioning = false;
+  t.reveal = shot ? null : 'nav'; t.focusNext = true;
+  await sync();
+  await nextFrame();
+  m.finish();
+}
+
+/* Navigation mit Übergang */
 export async function transition(t, doNav, url) {
   const animate = anim() !== 'aus' && t === getActive();
   const gen = (t.navGen = (t.navGen || 0) + 1);
   if (!animate) { await doNav(); return sync(); }
+  if (morph.ok) return morphTransition(t, doNav, url, gen);
   t.transitioning = true;
   const ready = new Promise(r => { t.readyWait = r; });
   await sync();
@@ -117,4 +147,7 @@ export async function transition(t, doNav, url) {
 }
 
 /* Für Tabwechsel, falls keine View gezeigt werden kann: Wipe sauber zurücknehmen */
-export function settleWipe() { if (wipe.classList.contains('on')) uncoverWipe(); }
+export function settleWipe() {
+  if (wipe.classList.contains('on')) uncoverWipe();
+  if (morphRun && morphRun.t !== getActive()) { morphRun.m.finish(); morphRun = null; }
+}

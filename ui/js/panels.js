@@ -135,6 +135,7 @@ function buildMenu() {
   $('#menuList').replaceChildren(
     mi('plus', 'Neuer Tab', 'Strg T', () => ctx.newTab()),
     mi('cmd', 'Command Palette', 'Strg K', () => ctx.palette()),
+    mi('orbit', 'Tab-Übersicht (3D)', 'Strg E', () => ctx.overview()),
     h('li', { class: 'sep' }),
     mi('star', 'Lesezeichen', '', () => ctx.palette('')),
     mi('history', 'Verlauf', '', () => ctx.palette('')),

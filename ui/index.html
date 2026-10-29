@@ -52,6 +52,8 @@
   <symbol id="i-close" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-orbit" viewBox="0 0 24 24"><rect x="8" y="8" width="8" height="8" rx="1.5"/><path d="M3 9.5v5M21 9.5v5"/><path d="M5.5 7.5v9M18.5 7.5v9"/></symbol>
+  <symbol id="i-eq" viewBox="0 0 24 24"><path d="M6 16v-4M10 16V8M14 16v-6M18 16v-9"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/></symbol>
 </svg>
 
@@ -66,6 +68,7 @@
       <div class="tabstrip" id="tabstrip">
         <div class="tabs" id="tabs" role="tablist"></div>
         <div class="tab-glow" id="tabGlow"><i></i></div>
+        <button class="icon-btn fx mag ov-btn" id="btnOverview" data-cursor="ORBIT · STRG E" aria-label="Tab-Übersicht"><svg><use href="#i-orbit"/></svg></button>
         <button class="icon-btn fx mag new-tab" id="newTab" data-cursor="NEUER TAB" data-snd="click" aria-label="Neuer Tab"><svg><use href="#i-plus"/></svg></button>
       </div>
       <div class="drag-fill"></div>
@@ -160,6 +163,15 @@
       <div class="wipe-logo"><img src="../assets/img/logo-mark.webp" alt=""></div>
       <div class="wipe-line"></div>
       <div class="wipe-txt mono" id="wipeTxt">LADE</div>
+    </div>
+    <canvas id="morph" class="morph" hidden></canvas>
+    <div class="morph-txt mono" id="morphTxt"></div>
+    <canvas id="ov" class="ov" hidden></canvas>
+    <div class="ov-hud" id="ovHud" hidden>
+      <div class="ov-top"><span class="grad-text">DULIDAN://ORBIT</span><span id="ovCount">0 TABS</span></div>
+      <div class="ov-title" id="ovTitle"></div>
+      <div class="ov-host mono" id="ovHost"></div>
+      <div class="ov-keys"><span><kbd>MAUS</kbd> fliegen</span><span><kbd>RAD</kbd> / <kbd>← →</kbd> durch die Tabs</span><span><kbd>KLICK</kbd> / <kbd>↵</kbd> hineinzoomen</span><span><kbd>ENTF</kbd> schließen</span><span><kbd>ESC</kbd> zurück</span></div>
     </div>
   </main>
 </div>
