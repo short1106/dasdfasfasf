@@ -12,6 +12,26 @@ Beim ersten Start zeigt Windows eventuell „Der Computer wurde durch Windows ge
 
 Selbst bauen: `npm install` und dann `npm run dist`. Die exe landet in `dist/`.
 
+## Android: die APK
+
+`DulidanWeb.apk` aufs Handy laden und öffnen. Sie liegt unter **Releases → „Dulidan Web für Android (neuester Build)“**. Beim ersten Mal fragt Android, ob Installationen aus dieser Quelle erlaubt sind; das einmal erlauben.
+
+Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ordner `android/`:
+
+- **Startseite:**
+  - Das Partikel-D weicht dem Finger aus, Tippen löst eine Schockwelle mit Vibration aus.
+  - Nebel und Logo kippen mit dem Gyroskop mit.
+  - Dazu eine Riesen-Suchleiste mit Energiestrahl, Shortcut-Chips, Schnellzugriff, Uhr und Slogan-Bänder.
+- **Untere Leiste für den Daumen:** Adressleiste mit rotierendem Energiestrahl, Ladelinie und Werbeblocker-Zähler.
+- **Seitenwechsel als Partikel-Morph:** Die alte Seite zerfällt, fliegt zum D und explodiert in die neue Seite.
+- **Tab-Übersicht als 3D-Karten-Stapel:** Wischen lässt eine Karte in Partikel zerfallen, Antippen zoomt hinein.
+- **Funktionen:**
+  - Live-Vorschläge, Werbeblocker (Hosts-Liste), Tabs wiederherstellen, Vollbild-Videos, Downloads, Datei-Upload.
+  - Teilen, Desktop-Version, Boot-Sequenz.
+  - Dulidan Web lässt sich als Standard-Browser wählen.
+
+Gebaut wird die APK vom Workflow `.github/workflows/build-apk.yml`. **Signierschlüssel:** Ohne Secret erzeugt jeder Build einen neuen Schlüssel. Dann muss man vor einem Update die alte Version deinstallieren. Für nahtlose Updates legt man einmalig die Repository-Secrets `DW_KEYSTORE` (Keystore als Base64) und `DW_KEYSTORE_PASS` an. Der Schlüssel gehört nie ins Repo.
+
 ## Starten (Entwicklung)
 
 Voraussetzung: [Node.js](https://nodejs.org) 20 oder neuer.
