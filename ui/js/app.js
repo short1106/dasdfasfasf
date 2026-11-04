@@ -1,7 +1,7 @@
 /* Dulidan Web · app.js – verdrahtet alles
    Aufbau: Module · Tabs · Navigation · Toolbar/Ladebalken · Startseite (HUD, Karten, Bänder) · Shortcuts · Events · Start */
 import { $, $$, h, icon, api, sleep, scramble, toast, hostOf, anim, amp, store } from './util.js';
-import { settings, setSetting, onSettings, SHORTCUTS, ACCENTS, SEARCH_PAGE } from './settings.js';
+import { settings, setSetting, onSettings, SHORTCUTS, ACCENTS, SEARCH_PAGE, TRANSLATE_PAGE } from './settings.js';
 import { initCursor, initButtons, shockwave, burst } from './fx.js';
 import { createLogo, createNebula } from './gl.js';
 import { Suggest, engineName, resolve } from './omnibox.js';
@@ -181,9 +181,11 @@ api.update.state().then(showUpdate).catch(() => {});
 
 /* Suchbegriff, wenn der Tab die eigene Ergebnisseite zeigt */
 function searchQuery(url) {
-  if (!url || !url.startsWith(SEARCH_PAGE)) return null;
+  if (!url || !(url.startsWith(SEARCH_PAGE) || url.startsWith(TRANSLATE_PAGE))) return null;
   try { return new URL(url).searchParams.get('q') || ''; } catch { return null; }
 }
+/* Name der eigenen Seite für die Adressleiste */
+const ownPage = url => (url && url.startsWith(TRANSLATE_PAGE) ? 'Übersetzer' : 'Dulidan');
 
 function submit(target, form) {
   if (target.kind === 'calc') {
@@ -255,7 +257,7 @@ function updateToolbar() {
   if (document.activeElement !== omniInput && sq != null) {
     /* Eigene Ergebnisseite: Suchbegriff statt interner Adresse */
     omni.reset(sq);
-    $('#omniPretty').replaceChildren(h('b', {}, 'Dulidan'), ' · ' + sq);
+    $('#omniPretty').replaceChildren(h('b', {}, ownPage(t.url)), sq ? ' · ' + sq : '');
     omniForm.classList.add('show-pretty');
   } else if (document.activeElement !== omniInput) {
     omni.reset(t.home ? '' : t.url);
@@ -450,7 +452,8 @@ const ACTIONS = {
   passwords: () => openPanel('passwords', $('#btnKey').hidden ? $('#btnMenu') : $('#btnKey')),
   wallet: () => openPanel('wallet', $('#btnMenu')),
   calc: () => openPanel('calc', $('#btnCalc')),
-  disco: () => startDisco()
+  disco: () => startDisco(),
+  translate: (text = '') => newTab(TRANSLATE_PAGE + (text ? '?q=' + encodeURIComponent(text) : ''))
 };
 
 const COMMANDS = () => [
@@ -474,6 +477,7 @@ const COMMANDS = () => [
   { icon: 'key', name: 'Passwörter verwalten', run: () => ACTIONS.passwords() },
   { icon: 'card', name: 'Adressen & Karten', run: () => ACTIONS.wallet() },
   { icon: 'calc', name: 'Taschenrechner', key: 'Strg ⇧ R', run: () => ACTIONS.calc() },
+  { icon: 'translate', name: 'Übersetzer', key: 'tr …', run: () => ACTIONS.translate() },
   ...((window.DW_SHAPES && window.DW_SHAPES.list) || []).map(s => ({ icon: 'd', name: 'Objekt in der Mitte: ' + s.name, run: () => { setSetting('center', s.key); if (active && !active.home) goHome(active); } })),
   { icon: 'disco', name: 'Disko-Modus (Musik im Vollbild)', key: 'Strg ⇧ M', run: () => ACTIONS.disco() },
   { icon: 'shield', name: settings.adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten', run: () => { setSetting('adblock', !settings.adblock); toast('Werbeblocker: ' + (settings.adblock ? 'AN' : 'AUS')); } },
@@ -585,6 +589,7 @@ api.on(e => {
     case 'dom-ready': if (t) view.domReady(t); break;
     case 'open-tab': newTab(e.url, { background: !!e.background }); if (e.background) toast('Im Hintergrund geöffnet'); break;
     case 'search': { const r = resolve(e.text); if (r) newTab(r.url); break; }
+    case 'translate': ACTIONS.translate(String(e.text || '')); break;
     case 'pw-offer': pwUi.onOffer(e); break;
     case 'af-offer': pwUi.onWalletOffer(e); break;
     case 'pw-filled': if (t) { t.pw = Math.max(1, t.pw || 0); if (t === active) updateToolbar(); } pwUi.onFilled(e); break;
@@ -722,7 +727,7 @@ async function start() {
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
   initCalc();
-  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

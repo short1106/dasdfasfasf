@@ -13,7 +13,7 @@ const LOCAL = /^(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[\da-f:]+\])(?::\d{1,5})?
 export const engineName = () => ENGINES[settings.engine].name;
 
 export function splitShortcut(text) {
-  const m = /^(yt|gh|wiki|maps|mc)\s(.*)$/is.exec(text);
+  const m = /^(yt|gh|wiki|maps|mc|tr)\s(.*)$/is.exec(text);
   return m ? { key: m[1].toLowerCase(), rest: m[2] } : null;
 }
 

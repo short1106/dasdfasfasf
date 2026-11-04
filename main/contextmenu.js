@@ -38,6 +38,7 @@ function pageMenu(wc, p, actions) {
   } else if (p.selectionText.trim()) {
     T.push({ label: 'Kopieren', role: 'copy' });
     if (actions.search) T.push({ label: `Im Web suchen: „${short(p.selectionText.trim())}“`, click: () => actions.search(p.selectionText.trim()) });
+    if (actions.translate) T.push({ label: 'Übersetzen', click: () => actions.translate(p.selectionText.trim()) });
     sep();
   }
   if (!p.isEditable && !p.linkURL && p.mediaType === 'none' && actions.nav) {

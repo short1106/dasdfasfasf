@@ -11,6 +11,7 @@ const wallet = require('./main/wallet.js');
 const adblock = require('./main/adblock.js');
 const updater = require('./main/updater.js');
 const lyrics = require('./main/lyrics.js');
+const translateModels = require('./main/translate-models.js');
 const { pageMenu } = require('./main/contextmenu.js');
 
 const ROOT = __dirname;
@@ -19,8 +20,11 @@ const ERROR_URL = 'dulidan://app/ui/error.html';
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp',
-  '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8'
+  '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8',
+  '.wasm': 'application/wasm'
 };
+/* Lokaler Übersetzer: die Bergamot-Engine wird unter /vendor/bergamot/ ausgeliefert */
+const VENDOR = { '/vendor/bergamot/': path.join(ROOT, 'node_modules', '@browsermt', 'bergamot-translator') + path.sep };
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'dulidan', privileges: { standard: true, secure: true, supportFetchAPI: true } }
@@ -28,8 +32,33 @@ protocol.registerSchemesAsPrivileged([
 
 /* ===== Protokoll: liefert nur /ui, /assets und /shared aus, dazu den Such-Proxy ===== */
 /* Die eigene Ergebnisseite holt Treffer über den Main-Prozess, aber nur von diesen Quellen */
-const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org']);
+const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org', 'api.mymemory.translated.net']);
 let proxySes = null;
+/* Eigene Session im Speicher: kein Werbeblocker dazwischen, keine Cookies der Webseiten */
+function proxySession() {
+  if (!proxySes) {
+    proxySes = session.fromPartition('dw-proxy');
+    /* DuckDuckGo liefert Bilder/Videos/News nur mit eigenem Referer; als fetch-Header verbietet Chromium ihn */
+    proxySes.webRequest.onBeforeSendHeaders((d, cb) => {
+      const h = d.requestHeaders;
+      if (/duckduckgo\.com/.test(d.url)) h.Referer = 'https://duckduckgo.com/';
+      cb({ requestHeaders: h });
+    });
+  }
+  return proxySes;
+}
+/* Sprachpakete für den Übersetzer: einmal laden, geprüft zwischenspeichern, danach offline */
+async function modelRoute(req, u) {
+  if (req.headers.get('x-dw') !== '1') return new Response('Forbidden', { status: 403 });
+  if (u.searchParams.get('f') === '__installed') return Response.json(translateModels.installed());
+  try {
+    const buf = await translateModels.get(String(u.searchParams.get('f') || ''));
+    return new Response(buf, { headers: { 'content-type': 'application/octet-stream' } });
+  } catch (e) {
+    if (process.env.DW_DEBUG) console.log('[modell]', u.searchParams.get('f'), e.message);
+    return new Response(e.message, { status: 502 });
+  }
+}
 async function searchProxy(req, u) {
   /* Eigener Header: fremde Seiten könnten ihn nur mit CORS-Vorabanfrage senden, und die beantworten wir nie */
   if (req.headers.get('x-dw') !== '1') return new Response('Forbidden', { status: 403 });
@@ -40,17 +69,7 @@ async function searchProxy(req, u) {
   /* Nur für Tests: Anfragen an einen lokalen Nachbau der Quellen umleiten */
   const href = process.env.DW_PROXY_BASE ? process.env.DW_PROXY_BASE + '/' + target.hostname + target.pathname + target.search : target.href;
   try {
-    /* Eigene Session im Speicher: kein Werbeblocker dazwischen, keine Cookies der Webseiten */
-    if (!proxySes) {
-      proxySes = session.fromPartition('dw-proxy');
-      /* DuckDuckGo liefert Bilder/Videos/News nur mit eigenem Referer; als fetch-Header verbietet Chromium ihn */
-      proxySes.webRequest.onBeforeSendHeaders((d, cb) => {
-        const h = d.requestHeaders;
-        if (/duckduckgo\.com/.test(d.url)) h.Referer = 'https://duckduckgo.com/';
-        cb({ requestHeaders: h });
-      });
-    }
-    const r = await proxySes.fetch(href, {
+    const r = await proxySession().fetch(href, {
       method: post != null ? 'POST' : 'GET',
       body: post != null ? post : undefined,
       headers: {
@@ -72,8 +91,12 @@ function serveApp(ses) {
     const u = new URL(req.url);
     if (u.host !== 'app') return new Response('Not found', { status: 404 });
     if (u.pathname === '/api/fetch') return searchProxy(req, u);
-    const file = path.normalize(path.join(ROOT, decodeURIComponent(u.pathname)));
-    if (!allowed.some(a => file.startsWith(a))) return new Response('Forbidden', { status: 403 });
+    if (u.pathname === '/api/model') return modelRoute(req, u);
+    const pre = Object.keys(VENDOR).find(p => u.pathname.startsWith(p));
+    const file = pre
+      ? path.normalize(path.join(VENDOR[pre], decodeURIComponent(u.pathname.slice(pre.length))))
+      : path.normalize(path.join(ROOT, decodeURIComponent(u.pathname)));
+    if (pre ? !file.startsWith(VENDOR[pre]) : !allowed.some(a => file.startsWith(a))) return new Response('Forbidden', { status: 403 });
     try {
       const data = await fs.promises.readFile(file);
       return new Response(data, { headers: { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' } });
@@ -192,6 +215,7 @@ function wire(t, wc) {
     const m = pageMenu(wc, p, {
       openTab: url => { if (/^https?:/i.test(url)) ui('open-tab', { url, background: true }); },
       search: text => ui('search', { text: text.slice(0, 500) }),
+      translate: text => ui('translate', { text: text.slice(0, 3000) }),
       passwords: () => { win.webContents.focus(); ui('shortcut', { name: 'passwords' }); },
       nav: true, inspect: true
     });
@@ -651,6 +675,7 @@ app.on('web-contents-created', (_, wc) => {
 
 app.whenReady().then(() => {
   serveApp(session.defaultSession);
+  translateModels.init(app.getPath('userData'), url => proxySession().fetch(url, { signal: AbortSignal.timeout(180000) }));
   ipc();
   /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */
   webSes = session.fromPartition('persist:web');

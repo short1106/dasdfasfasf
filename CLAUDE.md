@@ -178,6 +178,30 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
     - Es werden synchronisierte LRC genommen, beim Treffer mit der passendsten Länge.
   - Anzeige Wort für Wort (Pop, Blur, große Wörter mit Verlauf, die Zeile springt auf Kicks, Glühen nach Stimme).
 
+### 3.8 Übersetzer `shared/translate/` (Desktop)
+- **Aufruf:**
+  - `tr text` in der Adressleiste (Shortcut in `settings.js`)
+  - Palette und Menü „Übersetzer“
+  - Rechtsklick auf markierten Text → „Übersetzen“
+- **Seite:** `dulidan://app/shared/translate/index.html?q=&from=&to=`. Die Adressleiste zeigt „Übersetzer · text“.
+- **Sprachen:** Auto (Erkennung über Schrift, Sonderzeichen und Stoppwörter), DE, EN, JA, ES, FR, TR.
+- **Lokal (privat, offline):** Mozilla Bergamot (`@browsermt/bergamot-translator`).
+  - Die Engine läuft als Worker **in der Seite**. Main liefert das Paket unter `/vendor/bergamot/` aus.
+  - Der Node-Modus des Pakets ist in 0.4.9 kaputt: der Worker nutzt `require`, das Paket ist aber `type: module`.
+- **Sprachpakete:** `main/translate-models.js` lädt sie aus `storage.googleapis.com/bergamot-models-sandbox/0.3.3` (Registry plus `<paar>/<datei>`).
+  - Prüft die SHA-256-Summe und legt sie in `userData/translate-models/` ab.
+  - Abruf über `/api/model?f=` mit `x-dw: 1`. `f=__installed` listet die geladenen Paare.
+  - Lokal gibt es u. a. de/en/es/fr. Alles, was nicht direkt geht, läuft über Englisch als Zwischensprache.
+- **Online:** **Kein lokales Modell für Japanisch und Türkisch.** Diese gehen über MyMemory (`api.mymemory.translated.net`, in der Proxy-Whitelist).
+  - Gestückelt auf 450 Zeichen, mit Tageslimit-Meldung.
+  - Schlägt lokal etwas fehl (kein Netz beim ersten Laden o. Ä.), wird ebenfalls online versucht.
+- **Animation:**
+  1. Die Ausgabe zeigt zuerst die Wörter der Eingabe.
+  2. Dann scrambelt jedes Wort in einer Welle von links nach rechts zum Ziel. Bei Japanisch mit Katakana-Glyphen, sonst Latin.
+  3. Gleiche Wörter flackern nur kurz, beim Landen gibt es Pop und Funken.
+- **Weitere Funktionen:** Tauschen-Knopf, Kopieren, Vorlesen (`speechSynthesis`), Energiestrahl am Rand während der Arbeit.
+- **Test-Haken:** `DW_MODEL_BASE` (Modelle von einem lokalen Server) und `DW_PROXY_BASE` (MyMemory-Nachbau in `tests/fixtures/search-server.js`).
+
 ### 3.7 Objekt in der Mitte (Desktop und Android)
 - **`shared/shapes.js`** ist ein *klassisches* Skript, kein Modul, weil die Android-Startseite über `file://` läuft. Es setzt `window.DW_SHAPES`:
   - `list`
@@ -302,6 +326,9 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `tabstress.js`: viele Tabs, schnelles Umschalten, Navigieren im Übergang, Absturz, Neustart mit Lazy-Restore
   - `shapes.js`: alle Objekte am Desktop, mit Screenshots in `tests/out/shapes/`
   - `homeshapes.js`: Android-Startseite (Assets plus `shared/` wie in der APK), Objekte, Doppeltipp, Pause, Leistungsstufen
+  - `translate.js`: Übersetzer lokal und online.
+    - Braucht die Modelle `deen`, `ende`, `enes` plus `registry.json` auf `http://127.0.0.1:8797`. Holen mit curl aus dem Bergamot-Speicher (geht im Container), dann `python3 -m http.server 8797`.
+    - Ein fehlendes Paar (z. B. `enfr`) testet den Online-Ausweich.
 - **Test-Haken (nur über Umgebungsvariablen aktiv):**
   - `DW_PROXY_BASE=http://127.0.0.1:8799`: der Such-Proxy fragt den Nachbau
   - `DW_LYRICS_BASE=http://127.0.0.1:8798`: LRCLIB-Nachbau

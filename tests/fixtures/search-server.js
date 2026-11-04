@@ -22,6 +22,12 @@ http.createServer((req, rsp) => {
     const u = new URL(req.url, 'http://x');
     const send = (t, type = 'text/html') => { rsp.writeHead(200, { 'content-type': type }); rsp.end(t); };
     if (u.pathname === '/__log') return send(JSON.stringify(LOG), 'application/json');
+    /* MyMemory-Nachbau für den Übersetzer (Japanisch/Türkisch gehen online) */
+    if (u.pathname === '/api.mymemory.translated.net/get') {
+      const to = (u.searchParams.get('langpair') || '').split('|')[1];
+      const T = { ja: 'こんにちは世界！今日はお元気ですか？', tr: 'Merhaba dünya! Bugün nasılsın?' };
+      return send(JSON.stringify({ responseData: { translatedText: T[to] || '[' + to + '] ' + u.searchParams.get('q') }, responseStatus: 200 }), 'application/json');
+    }
     if (u.pathname === '/html.duckduckgo.com/html/') {
       const p = new URLSearchParams(body);
       const s = +(p.get('s') || 0);

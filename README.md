@@ -190,6 +190,11 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Die Partikel sprengen beim Wechsel auseinander und setzen sich neu zusammen.
   - Wählen kannst du in den Einstellungen oder per Doppelklick auf das Objekt, auf dem Handy per Doppeltipp und im Menü.
 - **Autostart:** Unter Einstellungen → „Beim Start“ → „Mit Windows starten“.
+- **Übersetzer:** Aufruf über `tr text` in der Adressleiste, über Menü und Palette oder per Rechtsklick auf markierten Text → „Übersetzen“.
+  - **Animation:** Die Ausgabe zeigt erst deinen Text, dann transkribiert er sich Wort für Wort in einer Welle zur Übersetzung, mit Glitch-Zeichen, Pop und Funken.
+  - **Lokal:** Deutsch, Englisch, Spanisch und Französisch übersetzt Dulidan Web direkt auf dem PC (Mozilla Bergamot). Das ist privat, und nach dem einmaligen Laden des Sprachpakets (ca. 20–40 MB) geht es offline.
+  - **Online:** Japanisch und Türkisch laufen über den kostenlosen Dienst MyMemory, mit Tageslimit.
+  - Dazu: Sprache automatisch erkennen, Tauschen, Kopieren, Vorlesen.
 - **Suchen auf der Seite und Zoom** pro Tab, mit Trefferzähler und Zoom-Anzeige.
 - **Einstellungen:** Suchmaschine, Animationen (Normal, Episch, Aus), Akzentfarbe (sechs Presets und eine freie Farbe), Mikro-Sounds (standardmäßig aus). `prefers-reduced-motion` wird respektiert: Ist es aktiv, steht der Standard auf „Aus".
 

@@ -3,6 +3,8 @@ import { store, hexToRgb, rgbToHex, mixRgb } from './util.js';
 
 /* "Dulidan" = eigene Ergebnisseite im Dulidan-Look (Treffer kommen über den App-Proxy, nie die weiße Seite der Suchmaschine) */
 export const SEARCH_PAGE = 'dulidan://app/shared/search/index.html';
+/* Eigener Übersetzer (lokal mit Bergamot, sonst online) */
+export const TRANSLATE_PAGE = 'dulidan://app/shared/translate/index.html';
 export const ENGINES = {
   dulidan: { name: 'Dulidan', url: SEARCH_PAGE + '?q=%s' },
   duckduckgo: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
@@ -18,7 +20,8 @@ export const SHORTCUTS = {
   gh: { name: 'GitHub', icon: 'gh', url: 'https://github.com/search?q=%s', home: 'https://github.com' },
   wiki: { name: 'Wikipedia', icon: 'wiki', url: 'https://de.wikipedia.org/w/index.php?search=%s', home: 'https://de.wikipedia.org' },
   maps: { name: 'Maps', icon: 'maps', url: 'https://www.google.com/maps/search/%s', home: 'https://www.google.com/maps' },
-  mc: { name: 'Minecraft Wiki', icon: 'mc', url: 'https://de.minecraft.wiki/?search=%s', home: 'https://de.minecraft.wiki' }
+  mc: { name: 'Minecraft Wiki', icon: 'mc', url: 'https://de.minecraft.wiki/?search=%s', home: 'https://de.minecraft.wiki' },
+  tr: { name: 'Übersetzer', icon: 'translate', url: TRANSLATE_PAGE + '?q=%s', home: TRANSLATE_PAGE }
 };
 
 export const ACCENTS = {
