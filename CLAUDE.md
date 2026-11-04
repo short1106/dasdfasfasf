@@ -178,6 +178,29 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
     - Es werden synchronisierte LRC genommen, beim Treffer mit der passendsten Länge.
   - Anzeige Wort für Wort (Pop, Blur, große Wörter mit Verlauf, die Zeile springt auf Kicks, Glühen nach Stimme).
 
+### 3.9 Dulidan Maps `shared/maps/` (Desktop)
+- **Aufruf:** `maps …` in der Adressleiste. Der Shortcut zeigt jetzt auf Dulidan Maps statt Google Maps, ebenso die Startseiten-Karte „Dulidan Maps“, Palette und Menü. Die Adressleiste zeigt „Maps · ort“.
+- **Karte:** MapLibre GL **5.24** (bewusst die 5er-Reihe, Version 6 ist neu). Main liefert sie unter `/vendor/maplibre/` aus.
+  - Vektorkacheln und Schriften kommen von **OpenFreeMap** (`tiles.openfreemap.org/planet`, OpenMapTiles-Schema, frei, ohne Schlüssel). Die Konfiguration holt die Seite über `/api/mapconfig`, für Tests per `DW_MAP_BASE` umgebogen.
+  - Die Attribution „© OpenStreetMap-Mitwirkende · OpenFreeMap“ ist Pflicht und muss bleiben.
+- **Stil `style.js`:** Nachtkarte im Dulidan-Look.
+  - Straßen leuchten nach Klasse (motorway pink, primary magenta …), Wasser violett.
+  - 3D-Gebäude (`fill-extrusion`, je höher, desto pinker), Ortsnamen auf Deutsch (`name:de`).
+  - Mit `@maplibre/maplibre-gl-style-spec` als gültig geprüft.
+- **Dienste über den App-Proxy (Whitelist, eigene App-Kennung als User-Agent):**
+  - Suche und Vorschläge beim Tippen: **Photon** (`photon.komoot.io`, erlaubt Autocomplete, anders als Nominatim)
+  - Rückwärtssuche: Photon `/reverse`
+  - Routen: **routing.openstreetmap.de** (`routed-car|bike|foot`, OSRM-Format, Schritte → deutsche Hinweise in `say()`)
+  - Standort ungefähr über IP: `get.geojs.io`. Electron hat ohne Google-Schlüssel kein GPS.
+- **Effekte:**
+  - Intro-Flug zum Standort mit Neigung.
+  - D-Pin fällt elastisch ein, der Standort pulsiert.
+  - Die Route zeichnet sich als Energielinie ein (`line-gradient` mit `line-progress`, Stützstellen streng aufsteigend), danach läuft ein Puls die Linie entlang.
+- **Bedienung:** Rechtsklick „Was ist hier? / Route hierher / Route von hier“, 3D an/aus, Kompass, `/` fokussiert die Suche.
+- **Grenzen:** kein Street View, keine Bewertungen, kein Live-Verkehr und keine ÖPNV-Fahrpläne. Diese Daten gehören Google.
+- **Test:** `tests/e2e/maps.js` gegen `tests/fixtures/maps/tileserver.py` (echte MVT-Kacheln prozedural, braucht `pip install mapbox-vector-tile shapely`, Port 8796) und den Photon/OSRM/geojs-Nachbau in `search-server.js`.
+- **Android:** noch nicht. Dort zeigt `maps` weiter auf Google Maps. Vorher fragen.
+
 ### 3.8 Übersetzer `shared/translate/` (Desktop)
 - **Aufruf:**
   - `tr text` in der Adressleiste (Shortcut in `settings.js`)

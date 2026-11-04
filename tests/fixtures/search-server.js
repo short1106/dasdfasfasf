@@ -22,6 +22,27 @@ http.createServer((req, rsp) => {
     const u = new URL(req.url, 'http://x');
     const send = (t, type = 'text/html') => { rsp.writeHead(200, { 'content-type': type }); rsp.end(t); };
     if (u.pathname === '/__log') return send(JSON.stringify(LOG), 'application/json');
+    /* Maps-Nachbau: Ortssuche (Photon), Rückwärtssuche, Routen (OSRM-Format), IP-Standort */
+    if (u.pathname === '/get.geojs.io/v1/ip/geo.json') return send(JSON.stringify({ latitude: '51.4344', longitude: '6.7623', city: 'Duisburg' }), 'application/json');
+    if (u.pathname === '/photon.komoot.io/api/') {
+      const q = (u.searchParams.get('q') || '').toLowerCase();
+      const all = [
+        { name: 'Duisburg Hauptbahnhof', osm_value: 'station', street: 'Portsmouthplatz', housenumber: '1', postcode: '47051', city: 'Duisburg', country: 'Deutschland', c: [6.7755, 51.4295] },
+        { name: 'Innenhafen Duisburg', osm_value: 'park', postcode: '47051', city: 'Duisburg', country: 'Deutschland', c: [6.7593, 51.4389] },
+        { name: 'Landschaftspark Duisburg-Nord', osm_value: 'park', postcode: '47137', city: 'Duisburg', country: 'Deutschland', c: [6.7837, 51.4806] }
+      ].filter(p => !q || p.name.toLowerCase().includes(q.split(' ')[0]) || q.includes('duis'));
+      return send(JSON.stringify({ type: 'FeatureCollection', features: all.map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: p.c }, properties: p })) }), 'application/json');
+    }
+    if (u.pathname === '/photon.komoot.io/reverse') return send(JSON.stringify({ features: [{ properties: { name: 'Königstraße 48', street: 'Königstraße', housenumber: '48', postcode: '47051', city: 'Duisburg', osm_value: 'house' } }] }), 'application/json');
+    if (u.pathname.startsWith('/routing.openstreetmap.de/')) {
+      const m = /driving\/([-\d.]+),([-\d.]+);([-\d.]+),([-\d.]+)/.exec(u.pathname);
+      const [a, b, c, d] = m.slice(1).map(Number);
+      const coords = []; for (let i = 0; i <= 30; i++) { const t = i / 30; coords.push([a + (c - a) * t + Math.sin(t * 9) * 0.002, b + (d - b) * t + (t < 0.5 ? 0.003 * t : 0.0015)]); }
+      const foot = u.pathname.includes('foot'), bike = u.pathname.includes('bike');
+      const steps = [{ name: 'Portsmouthplatz', distance: 120, maneuver: { type: 'depart', location: coords[0] } }, { name: 'Königstraße', distance: 900, maneuver: { type: 'turn', modifier: 'right', location: coords[8] } },
+        { name: 'Schwanentorbrücke', distance: 600, maneuver: { type: 'turn', modifier: 'slight left', location: coords[18] } }, { name: '', distance: 0, maneuver: { type: 'arrive', location: coords[30] } }];
+      return send(JSON.stringify({ code: 'Ok', routes: [{ distance: 1620, duration: foot ? 1250 : bike ? 420 : 300, geometry: { type: 'LineString', coordinates: coords }, legs: [{ steps }] }] }), 'application/json');
+    }
     /* MyMemory-Nachbau für den Übersetzer (Japanisch/Türkisch gehen online) */
     if (u.pathname === '/api.mymemory.translated.net/get') {
       const to = (u.searchParams.get('langpair') || '').split('|')[1];

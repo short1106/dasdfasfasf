@@ -190,6 +190,12 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Die Partikel sprengen beim Wechsel auseinander und setzen sich neu zusammen.
   - Wählen kannst du in den Einstellungen oder per Doppelklick auf das Objekt, auf dem Handy per Doppeltipp und im Menü.
 - **Autostart:** Unter Einstellungen → „Beim Start“ → „Mit Windows starten“.
+- **Dulidan Maps:** Aufruf über `maps Duisburg`, Menü, Palette oder die Karte auf der Startseite. Es ist eine eigene Karte im Dulidan-Look.
+  - Nachtkarte mit leuchtenden Straßen und lila 3D-Gebäuden, dazu Kamerafahrten.
+  - Ortssuche mit Vorschlägen beim Tippen.
+  - Routen für Auto, Rad und zu Fuß, die sich als Energielinie einzeichnen, mit Abbiege-Hinweisen auf Deutsch.
+  - Rechtsklick → „Was ist hier?“ und „Route hierher“.
+  - Die Daten kommen von OpenStreetMap über OpenFreeMap, Photon und routing.openstreetmap.de, alles frei und ohne Konto. Street View, Bewertungen und Live-Verkehr gibt es dort nicht.
 - **Übersetzer:** Aufruf über `tr text` in der Adressleiste, über Menü und Palette oder per Rechtsklick auf markierten Text → „Übersetzen“.
   - **Animation:** Die Ausgabe zeigt erst deinen Text, dann transkribiert er sich Wort für Wort in einer Welle zur Übersetzung, mit Glitch-Zeichen, Pop und Funken.
   - **Lokal:** Deutsch, Englisch, Spanisch und Französisch übersetzt Dulidan Web direkt auf dem PC (Mozilla Bergamot). Das ist privat, und nach dem einmaligen Laden des Sprachpakets (ca. 20–40 MB) geht es offline.

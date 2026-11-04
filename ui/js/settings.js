@@ -5,6 +5,8 @@ import { store, hexToRgb, rgbToHex, mixRgb } from './util.js';
 export const SEARCH_PAGE = 'dulidan://app/shared/search/index.html';
 /* Eigener Übersetzer (lokal mit Bergamot, sonst online) */
 export const TRANSLATE_PAGE = 'dulidan://app/shared/translate/index.html';
+/* Eigene Karte (OpenStreetMap-Daten über OpenFreeMap, Suche Photon, Routen OSRM) */
+export const MAPS_PAGE = 'dulidan://app/shared/maps/index.html';
 export const ENGINES = {
   dulidan: { name: 'Dulidan', url: SEARCH_PAGE + '?q=%s' },
   duckduckgo: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
@@ -19,7 +21,7 @@ export const SHORTCUTS = {
   yt: { name: 'YouTube', icon: 'yt', url: 'https://www.youtube.com/results?search_query=%s', home: 'https://www.youtube.com' },
   gh: { name: 'GitHub', icon: 'gh', url: 'https://github.com/search?q=%s', home: 'https://github.com' },
   wiki: { name: 'Wikipedia', icon: 'wiki', url: 'https://de.wikipedia.org/w/index.php?search=%s', home: 'https://de.wikipedia.org' },
-  maps: { name: 'Maps', icon: 'maps', url: 'https://www.google.com/maps/search/%s', home: 'https://www.google.com/maps' },
+  maps: { name: 'Dulidan Maps', icon: 'maps', url: MAPS_PAGE + '?q=%s', home: MAPS_PAGE },
   mc: { name: 'Minecraft Wiki', icon: 'mc', url: 'https://de.minecraft.wiki/?search=%s', home: 'https://de.minecraft.wiki' },
   tr: { name: 'Übersetzer', icon: 'translate', url: TRANSLATE_PAGE + '?q=%s', home: TRANSLATE_PAGE }
 };

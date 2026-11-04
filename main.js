@@ -24,7 +24,14 @@ const MIME = {
   '.wasm': 'application/wasm'
 };
 /* Lokaler Übersetzer: die Bergamot-Engine wird unter /vendor/bergamot/ ausgeliefert */
-const VENDOR = { '/vendor/bergamot/': path.join(ROOT, 'node_modules', '@browsermt', 'bergamot-translator') + path.sep };
+const VENDOR = {
+  '/vendor/bergamot/': path.join(ROOT, 'node_modules', '@browsermt', 'bergamot-translator') + path.sep,
+  '/vendor/maplibre/': path.join(ROOT, 'node_modules', 'maplibre-gl', 'dist') + path.sep   /* Dulidan Maps */
+};
+/* Dulidan Maps: Kartenkacheln + Schriften von OpenFreeMap (frei, ohne Schlüssel); DW_MAP_BASE nur für Tests */
+const MAP_CONFIG = process.env.DW_MAP_BASE
+  ? { tiles: process.env.DW_MAP_BASE + '/planet', glyphs: process.env.DW_MAP_BASE + '/fonts/{fontstack}/{range}.pbf' }
+  : { tiles: 'https://tiles.openfreemap.org/planet', glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf' };
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'dulidan', privileges: { standard: true, secure: true, supportFetchAPI: true } }
@@ -32,7 +39,9 @@ protocol.registerSchemesAsPrivileged([
 
 /* ===== Protokoll: liefert nur /ui, /assets und /shared aus, dazu den Such-Proxy ===== */
 /* Die eigene Ergebnisseite holt Treffer über den Main-Prozess, aber nur von diesen Quellen */
-const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org', 'api.mymemory.translated.net']);
+const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org', 'api.mymemory.translated.net',
+  'photon.komoot.io', 'routing.openstreetmap.de', 'get.geojs.io']);   /* Maps: Ortssuche, Routen, ungefährer Standort */
+const OSM_HOSTS = new Set(['photon.komoot.io', 'routing.openstreetmap.de']);
 let proxySes = null;
 /* Eigene Session im Speicher: kein Werbeblocker dazwischen, keine Cookies der Webseiten */
 function proxySession() {
@@ -73,7 +82,9 @@ async function searchProxy(req, u) {
       method: post != null ? 'POST' : 'GET',
       body: post != null ? post : undefined,
       headers: {
-        'user-agent': app.userAgentFallback, 'accept-language': 'de-DE,de;q=0.9,en;q=0.6',
+        /* Die freien OSM-Dienste wünschen eine erkennbare App-Kennung */
+        'user-agent': OSM_HOSTS.has(target.hostname) ? 'DulidanWeb/' + app.getVersion() + ' (+https://github.com/short1106/dasdfasfasf)' : app.userAgentFallback,
+        'accept-language': 'de-DE,de;q=0.9,en;q=0.6',
         ...(post != null ? { 'content-type': 'application/x-www-form-urlencoded' } : {})
       },
       signal: AbortSignal.timeout(9000)
@@ -92,6 +103,7 @@ function serveApp(ses) {
     if (u.host !== 'app') return new Response('Not found', { status: 404 });
     if (u.pathname === '/api/fetch') return searchProxy(req, u);
     if (u.pathname === '/api/model') return modelRoute(req, u);
+    if (u.pathname === '/api/mapconfig') return Response.json(MAP_CONFIG);
     const pre = Object.keys(VENDOR).find(p => u.pathname.startsWith(p));
     const file = pre
       ? path.normalize(path.join(VENDOR[pre], decodeURIComponent(u.pathname.slice(pre.length))))
