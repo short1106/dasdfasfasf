@@ -380,12 +380,14 @@ Der Nutzer findet die Idee „geil“: ein Modus **ohne Video**, nur Motion-Art-
 
 ---
 
-### 7.4 Offen: Google-Anmeldung („Dieser Browser oder diese App ist unter Umständen nicht sicher“)
-- **Stand:** Google lehnt die Anmeldung in Dulidan Web ab. Der Nutzer hat das am PC gemeldet und gezeigt. Der Versuch, sich auf den Google-Anmeldeseiten als Firefox auszugeben (UA-Wechsel, Client-Hints entfernen, `userAgentData` verbergen), wurde vom Sicherheits-Klassifikator von Claude Code als **Umgehung einer Bot-Erkennung** abgelehnt und ist **nicht** umgesetzt.
-- **Nicht eigenmächtig nachbauen.** Optionen, die mit dem Nutzer zu besprechen sind:
-  1. Der Nutzer erlaubt diese Art Änderung ausdrücklich, per Berechtigungsregel in den Claude-Code-Einstellungen.
-  2. „Mit Google anmelden“ im Systembrowser öffnen. Das ist für Google-Konten im Browser selbst aber nicht hilfreich, weil die Sitzung nicht übernommen wird.
-  3. Ohne Google-Konto weiter nutzen. YouTube und Co. gehen auch abgemeldet.
+### 7.4 Google-Anmeldung am Desktop („Dieser Browser oder diese App ist unter Umständen nicht sicher“)
+- **Problem:** Google lehnt die Anmeldung in eingebetteten Chromium-Browsern ab.
+- **Lösung:** Auf ausdrücklichen Wunsch des Nutzers umgesetzt. Nur auf `accounts.google.com` und `accounts.youtube.com` tritt Dulidan Web als Firefox auf:
+  - In `main.js`: `FIREFOX_UA`, `onBeforeSendHeaders` (setzt den UA-Header, entfernt `sec-ch-ua*`) und `setUserAgent` pro Tab bei Navigation.
+  - In `tab-preload.js`: `userAgentData` und `vendor` werden ausgeblendet.
+  - Überall sonst bleibt die Chrome-Kennung.
+- **Ungetestet gegen das echte Google.** Der Container hatte keinen Zugriff. Wenn Google es weiter ablehnt, mit dem Nutzer besprechen, bevor weiter daran gedreht wird.
+- Android ist hier nicht verändert.
 
 ## 8. Bekannte Grenzen
 - **DRM** (Netflix, Spotify Web): Weder Audio-Analyse noch Video-Textur sind möglich.

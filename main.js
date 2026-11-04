@@ -86,6 +86,10 @@ function serveApp(ses) {
 /* ===== Zustand ===== */
 let win = null, webSes = null;
 const tabs = new Map();
+/* Kennungen: normal Chrome (ohne „Electron“), auf Google-Anmeldeseiten Firefox (auf Wunsch des Nutzers, damit die Anmeldung geht) */
+const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0';
+const isGoogleLogin = u => /^https:\/\/accounts\.(google|youtube)\.com\//i.test(u || '');
+let chromeUA = '';
 let nextId = 1, activeId = null, viewVisible = false, htmlFull = false, discoId = null;
 let bounds = { x: 0, y: 100, width: 800, height: 600 };
 
@@ -157,6 +161,11 @@ function wire(t, wc) {
   wc.on('did-navigate-in-page', push);
   wc.on('page-favicon-updated', (_, icons) => ui('tab', { id: t.id, favicon: icons[0] || null }));
   wc.on('did-start-navigation', d => {
+    /* Auch navigator.userAgent der Anmeldeseite muss zur Firefox-Kennung passen */
+    if (d.isMainFrame && !d.isSameDocument && chromeUA) {
+      const g = isGoogleLogin(d.url);
+      if (g !== !!t.firefox) { t.firefox = g; wc.setUserAgent(g ? FIREFOX_UA : chromeUA); }
+    }
     if (d.isMainFrame && !d.isSameDocument && !d.url.startsWith(ERROR_URL)) {
       t.blocked = 0; ui('blocked', { id: t.id, n: 0 });
       ui('nav-start', { id: t.id, url: d.url });
@@ -648,8 +657,17 @@ app.whenReady().then(() => {
   serveApp(webSes);   /* Fehlerseite und eigene Ergebnisseite laufen in Tabs */
   /* Als normales Chrome auftreten: Google & Co. blockieren Anmeldungen, sobald "Electron" in der Kennung steht */
   const ua = webSes.getUserAgent().replace(/ dulidan-web\/\S+/i, '').replace(/ Electron\/\S+/i, '');
+  chromeUA = ua;
   webSes.setUserAgent(ua);
   app.userAgentFallback = ua;
+  /* Google-Anmeldung: Google lehnt eingebettete Chromium-Browser ab („Dieser Browser ist möglicherweise nicht sicher“).
+     Nur auf den Anmeldeseiten treten wir deshalb als Firefox auf, ohne Chromium-Client-Hints. */
+  webSes.webRequest.onBeforeSendHeaders({ urls: ['https://accounts.google.com/*', 'https://accounts.youtube.com/*'] }, (d, cb) => {
+    const h = d.requestHeaders;
+    h['User-Agent'] = FIREFOX_UA;
+    for (const k of Object.keys(h)) if (/^sec-ch-ua/i.test(k)) delete h[k];
+    cb({ requestHeaders: h });
+  });
   for (const s of [session.defaultSession, webSes]) {
     s.setPermissionRequestHandler((_, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
   }

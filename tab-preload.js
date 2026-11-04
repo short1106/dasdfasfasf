@@ -1,7 +1,12 @@
 'use strict';
 /* Läuft in jeder Webseite (isoliert). Stellt der Seite nichts bereit.
    Meldet Scroll-Fortschritt und – wenn Medien laufen – Audio-Spuren (Bass, Melodie, Stimme, Gesamt, Kick). */
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, webFrame } = require('electron');
+
+/* ===== Google-Anmeldung: Main setzt dort die Firefox-Kennung, passend dazu Chromium-Merkmale ausblenden ===== */
+if (/^accounts\.(google|youtube)\.com$/.test(location.hostname) && /Firefox\//.test(navigator.userAgent)) {
+  try { webFrame.executeJavaScript("(()=>{const d=(o,k,v)=>{try{Object.defineProperty(o,k,{get:()=>v,configurable:true})}catch(e){}};d(Navigator.prototype,'userAgentData',undefined);d(Navigator.prototype,'vendor','');})()"); } catch {}
+}
 
 /* ===== Scroll ===== */
 let last = -1, queued = false;
