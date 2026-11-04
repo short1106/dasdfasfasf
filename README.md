@@ -50,9 +50,12 @@ Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ord
   - Der Rechner-Knopf öffnet sofort den Rechner.
   - Dulidan Web lässt sich als Standard-Browser wählen.
 
-**Updates:** Die App schaut höchstens alle 6 Stunden nach einer neuen Version, außerdem über Menü → „Update“. Gibt es eine, fliegt oben „Update · Installieren“ ein.
-- Ein Tipp lädt die APK und öffnet den Android-Installer.
+**Updates kommen von selbst:** Die App schaut beim Start und beim Zurückkehren nach, höchstens alle 3 Stunden.
+- Im WLAN lädt sie neue Versionen automatisch und installiert sie.
+- Ab Android 12 läuft das nach dem ersten Mal ganz ohne Nachfrage.
+- Im Mobilfunknetz fragt sie vorher: oben „Update · Laden“.
 - Beim ersten Mal fragt Android, ob Dulidan Web Apps installieren darf.
+- Über Menü → „Update“ geht es auch sofort.
 
 Gebaut wird die APK vom Workflow `.github/workflows/build-apk.yml`. Jeder Build zählt die Version hoch und legt `android-version.json` ins Release, mit Version und Fingerabdruck des Signierschlüssels.
 

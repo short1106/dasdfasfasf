@@ -47,6 +47,9 @@
             </intent-filter>
         </activity>
 
+        <!-- Rückmeldung des Installers bei Selbst-Updates -->
+        <receiver android:name=".UpdateReceiver" android:exported="false" />
+
         <!-- Suchleisten-Widget für den Startbildschirm -->
         <receiver android:name=".SearchWidget" android:exported="false" android:label="Dulidan Suche">
             <intent-filter>

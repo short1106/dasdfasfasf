@@ -653,7 +653,7 @@ class MainActivity : Activity() {
     private fun onUpdate(s: Updater.State) {
         when (s) {
             is Updater.State.Available ->
-                if (s.sameKey) updPill.show("✦ UPDATE ${s.name} · INSTALLIEREN") { updater.download() }
+                if (s.sameKey) updPill.show("✦ UPDATE ${s.name} · LADEN") { updater.download() }   /* Mobilfunk: erst fragen */
                 /* Alter Einmal-Schlüssel: Android nimmt das Update nicht an, also ehrlich sagen und Download anbieten */
                 else updPill.show("✦ NEUE VERSION ${s.name} · EINMAL NEU INSTALLIEREN") {
                     updPill.hide()
@@ -661,10 +661,15 @@ class MainActivity : Activity() {
                     newTab("https://github.com/short1106/dasdfasfasf/releases/download/android-latest/DulidanWeb.apk")
                 }
             is Updater.State.Loading -> updPill.show("LÄDT UPDATE ${s.percent}%") {}
-            Updater.State.Ready -> updPill.show("✦ JETZT INSTALLIEREN") { updater.install() }
+            Updater.State.Installing -> { updPill.show("✦ INSTALLIERT UPDATE …") {}; ui.postDelayed({ updPill.hide() }, 30000) }
+            Updater.State.NeedsPermission -> updPill.show("✦ UPDATE BEREIT · EINMAL ERLAUBEN") {
+                toast("„Apps aus dieser Quelle zulassen“ einschalten, dann zurück – das Update lädt von selbst")
+                updater.askPermission()
+            }
             is Updater.State.Failed -> { updPill.hide(); toast(s.msg) }
         }
     }
+
 
     /* ===================== System ===================== */
     private fun handleIntent(i: Intent?) {
@@ -722,7 +727,11 @@ class MainActivity : Activity() {
     override fun onBackPressed() { if (!handleBack()) moveTaskToBack(true) }
 
     override fun onPause() { super.onPause(); saveSession(); CookieManager.getInstance().flush(); homeJs("dwPause(true)"); bar.running = false }
-    override fun onResume() { super.onResume(); bar.running = true; if (active?.home == true) homeJs("dwPause(false)") }
+    override fun onResume() {
+        super.onResume(); bar.running = true; if (active?.home == true) homeJs("dwPause(false)")
+        /* Beim Zurückkommen (z. B. nach dem Erlauben) wieder nach Updates schauen; intern höchstens alle 3 h */
+        if (::updater.isInitialized) ui.postDelayed({ updater.check() }, 2500)
+    }
     override fun onDestroy() { for (t in tabs) t.web?.destroy(); home.destroy(); super.onDestroy() }
 
     companion object { private const val REQ_FILE = 42; private const val REQ_VOICE = 43 }

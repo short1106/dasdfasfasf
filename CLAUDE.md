@@ -232,7 +232,12 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `Calc.kt`: derselbe Parser wie `shared/calc.js`, dazu das Rechner-Panel, das von oben einfällt
   - `SearchWidget.kt`: Startbildschirm-Widget (Suche, Sprachsuche, Rechner)
   - `SearchProxy.kt`: Ergebnisseite und Proxy unter `https://dulidan.search/`
-  - `Updater.kt`: liest `android-version.json`, lädt per DownloadManager, öffnet den Installer. Passt der Schlüssel nicht, sagt die App ehrlich „einmal neu installieren“.
+  - `Updater.kt`: Ablauf beim Start und bei `onResume`, höchstens alle 3 h:
+    1. Liest `android-version.json`.
+    2. Im WLAN lädt es neue Versionen **automatisch** in den Cache, im Mobilfunk fragt die Pille erst.
+    3. Installiert über `PackageInstaller` mit `USER_ACTION_NOT_REQUIRED` (API 31+) und `setRequestUpdateOwnership` (API 34+). Nach dem ersten Selbst-Update kommen die Updates damit ohne Nachfrage, sonst zeigt `UpdateReceiver` die Bestätigung.
+    4. Fehlt die Erlaubnis „Apps installieren“, führt die Pille in die Einstellungen.
+    5. Passt der Schlüssel nicht, sagt die App ehrlich „einmal neu installieren“.
 - **Assets:** `assets/home/` (Startseite, klassische Skripte, Logo als data-URL), `assets/fonts/`. Dazu `shared/` über `sourceSets["main"].assets.srcDir("../../shared")`, also `assets/search/…` und `assets/calc.js`.
 - **Leistung (gegen Ruckeln):**
   - Die Startseite wird pausiert, sobald ein Tab sie verdeckt: `home.onPause()` plus JS `dwPause`. Vorher lief sie unsichtbar weiter.
