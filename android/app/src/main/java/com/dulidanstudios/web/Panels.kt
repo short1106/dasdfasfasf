@@ -116,6 +116,7 @@ class MenuSheet(ctx: Context, private val store: Store, private val act: (String
         scrim.setOnClickListener { hide() }
     }
 
+    private fun hint(t: String) = context.label(t, 9f, Dw.DIM, mono = true).apply { letterSpacing = 0.14f; setPadding(dp(4).toInt(), dp(10).toInt(), 0, dp(6).toInt()) }
     private fun section(title: String) = context.label(title, 10f, Dw.pink, mono = true, bold = true).apply { letterSpacing = 0.2f; setPadding(dp(4).toInt(), dp(18).toInt(), 0, dp(10).toInt()) }
 
     private fun build() {
@@ -152,11 +153,39 @@ class MenuSheet(ctx: Context, private val store: Store, private val act: (String
             val v = View(context).apply {
                 background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(a.vio, a.mag)).apply { shape = GradientDrawable.OVAL; if (k == store.accent) setStroke(dp(3).toInt(), Color.WHITE) }
             }
-            v.pressable { store.accent = k; Dw.accent(k); act("accent"); build() }
+            v.pressable { store.accent = k; Dw.apply(k, store.customColor); act("accent"); build() }
             sw.addView(v, LinearLayout.LayoutParams(dp(40).toInt(), dp(40).toInt()).apply { if (i > 0) leftMargin = dp(12).toInt() })
             v.staggerIn(i)
         }
-        sheet.addView(sw)
+        /* Eigene Farbe: Regenbogen-Knopf, ausgewählt, wenn die Farbe aus dem Spektrum kommt */
+        val own = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL; gradientType = GradientDrawable.SWEEP_GRADIENT
+                colors = intArrayOf(Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA, Color.RED)
+                if (store.accent == "custom") setStroke(dp(3).toInt(), Color.WHITE)
+            }
+        }
+        own.pressable { store.accent = "custom"; Dw.apply("custom", store.customColor); act("accent"); build() }
+        sw.addView(own, LinearLayout.LayoutParams(dp(40).toInt(), dp(40).toInt()).apply { leftMargin = dp(12).toInt() })
+        own.staggerIn(Dw.ACCENTS.size)
+        sheet.addView(HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(sw) })
+        sheet.addView(hint("EIGENE FARBE – ÜBER DAS SPEKTRUM ZIEHEN"))
+        sheet.addView(SpectrumBar(context, if (store.accent == "custom") store.customColor else Dw.mag) { c, done ->
+            store.customColor = c; store.accent = "custom"; Dw.apply("custom", c)
+            act(if (done) "accent" else "accent-live")
+            if (done) build()
+        }, LinearLayout.LayoutParams(-1, dp(40).toInt()))
+        /* Objekt in der Mitte der Startseite */
+        sheet.addView(section("OBJEKT IN DER MITTE"))
+        sheet.addView(chips(SHAPES, store.center) { store.center = it; act("center") })
+        sheet.addView(hint("TIPP: DOPPELT AUF DAS OBJEKT TIPPEN WECHSELT AUCH"))
+        /* Widget-Farbe */
+        sheet.addView(section("WIDGET-FARBE"))
+        sheet.addView(chips(listOf("app" to "WIE APP") + Dw.ACCENTS.map { it.key to it.value.name.uppercase() } + listOf("custom" to "EIGENE"), store.widgetColor) { store.widgetColor = it; act("widget-color") })
+        sheet.addView(SpectrumBar(context, store.widgetCustom) { c, done ->
+            store.widgetCustom = c; store.widgetColor = "custom"
+            if (done) { act("widget-color"); build() }
+        }, LinearLayout.LayoutParams(-1, dp(40).toInt()).apply { topMargin = dp(8).toInt() })
         /* Animationen */
         sheet.addView(section("ANIMATIONEN"))
         sheet.addView(chips(listOf("episch" to "EPISCH", "normal" to "NORMAL", "aus" to "AUS"), store.anim) { store.anim = it; Dw.anim = it; act("anim") })
@@ -305,4 +334,40 @@ class UpdatePill(private val host: FrameLayout) {
         }
     }
     fun hide() { if (v.visibility == View.VISIBLE) v.animate().translationY(-v.dp(80)).setDuration(260).withEndAction { v.visibility = View.GONE; v.translationY = 0f }.start() }
+}
+
+/* Objekte für die Mitte der Startseite (gleiche Schlüssel wie shared/shapes.js) */
+private val SHAPES = listOf("d" to "DULIDAN-D", "japan" to "JAPAN-LOGO", "blume" to "BLUME", "galaxie" to "GALAXIE", "herz" to "HERZ",
+    "planet" to "PLANET", "atom" to "ATOM", "stern" to "STERN", "schmetterling" to "SCHMETTERLING")
+
+/* ===================== Farbspektrum zum Ziehen ===================== */
+/* Wählt live beim Ziehen einen Farbton; done = Finger losgelassen */
+class SpectrumBar(ctx: Context, initial: Int, private val onPick: (Int, Boolean) -> Unit) : View(ctx) {
+    private val bar = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val knob = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var hue: Float
+    init { val hsv = FloatArray(3); Color.colorToHSV(initial, hsv); hue = hsv[0] }
+    private fun color() = Color.HSVToColor(floatArrayOf(hue, 0.82f, 0.96f))
+    override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
+        bar.shader = LinearGradient(dp(14), 0f, w - dp(14), 0f, IntArray(13) { Color.HSVToColor(floatArrayOf(it * 30f, 0.82f, 0.96f)) }, null, Shader.TileMode.CLAMP)
+    }
+    override fun onDraw(c: Canvas) {
+        val cy = height / 2f; val l = dp(14); val r = width - dp(14)
+        c.drawRoundRect(l, cy - dp(7), r, cy + dp(7), dp(7), dp(7), bar)
+        val x = l + (r - l) * hue / 360f
+        knob.style = Paint.Style.FILL; knob.color = Dw.alpha(color(), 0.35f); c.drawCircle(x, cy, dp(16), knob)
+        knob.color = color(); c.drawCircle(x, cy, dp(11), knob)
+        knob.style = Paint.Style.STROKE; knob.strokeWidth = dp(3); knob.color = Color.WHITE; c.drawCircle(x, cy, dp(11), knob)
+    }
+    override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
+        val l = dp(14); val r = width - dp(14)
+        hue = ((e.x - l) / (r - l)).coerceIn(0f, 1f) * 360f
+        invalidate()
+        when (e.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> { parent.requestDisallowInterceptTouchEvent(true); Haptic.tick(this); onPick(color(), false) }
+            android.view.MotionEvent.ACTION_MOVE -> onPick(color(), false)
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> onPick(color(), true)
+        }
+        return true
+    }
 }

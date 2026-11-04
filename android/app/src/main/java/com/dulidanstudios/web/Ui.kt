@@ -66,6 +66,11 @@ object Dw {
         val a = ACCENTS[key] ?: ACCENTS.getValue("dulidan")
         vio = a.vio; mag = a.mag; pink = a.pink
     }
+    /* Eigene Farbe aus dem Spektrum: drei Töne ableiten wie am Desktop (dunkler, Original, heller) */
+    fun tones(c: Int) = Triple(mix(c or 0xFF000000.toInt(), 0xFF140028.toInt(), 0.4f), c or 0xFF000000.toInt(), mix(c or 0xFF000000.toInt(), Color.WHITE, 0.5f))
+    fun tonesOf(key: String, custom: Int): Triple<Int, Int, Int> =
+        if (key == "custom") tones(custom) else (ACCENTS[key] ?: ACCENTS.getValue("dulidan")).let { Triple(it.vio, it.mag, it.pink) }
+    fun apply(key: String, custom: Int) { val (a, b, c) = tonesOf(key, custom); vio = a; mag = b; pink = c }
 
     fun hex(c: Int) = String.format("#%06X", 0xFFFFFF and c)
     fun alpha(c: Int, a: Float) = Color.argb((a.coerceIn(0f, 1f) * 255).toInt(), Color.red(c), Color.green(c), Color.blue(c))

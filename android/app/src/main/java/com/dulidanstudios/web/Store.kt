@@ -28,6 +28,27 @@ class Store(ctx: Context) {
     var accent: String
         get() = p.getString("accent", "dulidan") ?: "dulidan"
         set(v) = p.edit().putString("accent", v).apply()
+    /* Eigene Akzentfarbe aus dem Spektrum (accent = "custom") */
+    var customColor: Int
+        get() = p.getInt("customColor", 0xFFC020B8.toInt())
+        set(v) = p.edit().putInt("customColor", v).apply()
+    /* Objekt in der Mitte der Startseite: d, japan, blume, galaxie … */
+    var center: String
+        get() = p.getString("center", "d") ?: "d"
+        set(v) = p.edit().putString("center", v).apply()
+    /* Widget-Farbe: "app" (wie die App), ein Akzent oder "custom" */
+    var widgetColor: String
+        get() = p.getString("widgetColor", "app") ?: "app"
+        set(v) = p.edit().putString("widgetColor", v).apply()
+    var widgetCustom: Int
+        get() = p.getInt("widgetCustom", 0xFF00B7FF.toInt())
+        set(v) = p.edit().putInt("widgetCustom", v).apply()
+    /* Drei Töne fürs Widget */
+    fun widgetTones(): Triple<Int, Int, Int> = when (widgetColor) {
+        "app" -> Dw.tonesOf(accent, customColor)
+        "custom" -> Dw.tones(widgetCustom)
+        else -> Dw.tonesOf(widgetColor, 0)
+    }
     var anim: String
         get() = p.getString("anim", if (systemNoAnim) "aus" else "episch") ?: "episch"
         set(v) = p.edit().putString("anim", v).apply()

@@ -1,7 +1,7 @@
 /* Dulidan Web · gl.js – eigene WebGL-Shader ohne Three.js
    Aufbau: GL-Helfer · Partikel-Logo (D aus Partikeln, Maus-Ausweichen, Schockwellen) · Nebel (Domain-Warp-FBM) */
 import { clamp, lerp, hexToRgb, anim, amp } from './util.js';
-import { accentColors } from './settings.js';
+import { accentColors, settings } from './settings.js';
 import { audio } from './audio.js';
 
 function program(gl, vs, fs) {
@@ -23,20 +23,30 @@ const accentVec = () => accentColors().map(c => hexToRgb(c).map(v => v / 255));
 
 /* ===================== Partikel-Logo ===================== */
 const LOGO_VS = `
-attribute vec2 aP; attribute vec4 aR; attribute float aL; attribute float aK;
-uniform float uT, uIntro, uS, uAsp, uPx, uAmp, uMF, uAu, uBass;
+attribute vec2 aP, aQ; attribute vec4 aR; attribute float aL, aM, aK;
+uniform float uT, uIntro, uS, uAsp, uPx, uAmp, uMF, uAu, uBass, uMorph, uSpinA, uSpinB, uDiffA, uDiffB;
 uniform vec2 uC, uM;
 uniform vec3 uSh[4];
 uniform vec3 uC1, uC2, uC3;
 varying vec3 vC; varying float vA;
 vec2 rot(vec2 v, float a){ float c = cos(a), s = sin(a); return vec2(c*v.x - s*v.y, s*v.x + c*v.y); }
+/* Eigenbewegung der Form: gleichmäßig drehen, oder innen schneller (Galaxie) */
+vec2 spin(vec2 p, float s, float d){ return s == 0.0 ? p : rot(p, uT*s*(d > 0.5 ? 0.3/(0.22 + length(p)) : 1.0)); }
 void main(){
-  vec2 p; float glow = 0.0;
+  vec2 p; float glow = 0.0, lum = aL;
+  vec2 tgt = aP;
   if (aK < 0.5) {
+    /* Formwechsel: Partikel sprengen auseinander, wirbeln und setzen sich zur neuen Form */
+    float m = smoothstep(0.0, 1.0, uMorph), boom = sin(m*3.14159);
+    vec2 pa = spin(aP, uSpinA, uDiffA), pb = spin(aQ, uSpinB, uDiffB);
+    tgt = rot(mix(pa, pb, m), boom*(aR.w - 0.5)*2.4);
+    tgt += normalize(pa + vec2(1e-3, 0.0))*boom*(0.3 + aR.z*0.9) + vec2(cos(aR.y*6.2831), sin(aR.y*6.2831))*boom*0.3;
+    glow += boom*1.3;
+    lum = mix(aL, aM, m);
     float k = clamp(uIntro*1.7 - aR.x*0.7, 0.0, 1.0); k = 1.0 - pow(1.0 - k, 4.0);
     float a = aR.y*6.2831 + (1.0 - k)*5.0;
     vec2 sc = vec2(cos(a), sin(a)) * (1.4 + aR.z*2.6);
-    p = mix(sc, aP, k);
+    p = mix(sc, tgt, k);
     glow += (1.0 - k)*0.7;
     p += vec2(sin(uT*1.3 + aR.x*40.0), cos(uT*1.1 + aR.y*33.0)) * 0.007 * uAmp;
   } else {
@@ -67,9 +77,9 @@ void main(){
   gl_Position = vec4(uC.x + p.x*uS/uAsp, uC.y + p.y*uS, 0.0, 1.0);
   float sz = aK < 0.5 ? (0.7 + aR.z*1.1) : (0.5 + aR.z*1.0);
   gl_PointSize = uPx * sz * (1.0 + glow*0.9);
-  float gx = clamp((aP.x - aP.y)*0.3 + 0.5, 0.0, 1.0);
-  vec3 base = aK < 0.5 ? mix(mix(uC1, uC2, gx), uC3, aL*0.5) : mix(uC2, uC3, aR.x);
-  vC = base*(0.8 + aL*0.6) + vec3(glow*0.5);
+  float gx = clamp((tgt.x - tgt.y)*0.3 + 0.5, 0.0, 1.0);
+  vec3 base = aK < 0.5 ? mix(mix(uC1, uC2, gx), uC3, lum*0.5) : mix(uC2, uC3, aR.x);
+  vC = base*(0.8 + lum*0.6) + vec3(glow*0.5);
   vA = aK < 0.5 ? 0.9 : 0.4*clamp(uIntro*2.0 - 0.8, 0.0, 1.0);
 }`;
 const LOGO_FS = `precision mediump float; varying vec3 vC; varying float vA;
@@ -81,7 +91,11 @@ export function createLogo(cv, stage, home) {
   if (!gl) return api;
   let pr;
   try { pr = program(gl, LOGO_VS, LOGO_FS); } catch (e) { console.warn('Logo-Shader', e); return api; }
-  const U = uniforms(gl, pr, ['uT', 'uIntro', 'uS', 'uAsp', 'uPx', 'uAmp', 'uMF', 'uAu', 'uBass', 'uC', 'uM', 'uSh', 'uC1', 'uC2', 'uC3']);
+  const U = uniforms(gl, pr, ['uT', 'uIntro', 'uS', 'uAsp', 'uPx', 'uAmp', 'uMF', 'uAu', 'uBass', 'uC', 'uM', 'uSh', 'uC1', 'uC2', 'uC3', 'uMorph', 'uSpinA', 'uSpinB', 'uDiffA', 'uDiffB']);
+  const SH = window.DW_SHAPES;
+  const NP = 6500, NG = 900;                 // Formpartikel + umkreisende Staubpartikel
+  let shape = SH && SH.has(settings.center) ? settings.center : 'd', morphT = -1, nextShape = null;
+  const bufs = {};
   let N = 0, run = false, active = true, t0 = 0, introT = 0, DPR = 1, asp = 1;
   const st = { cx: 0, cy: 0, s: 0.5, mx: 9, my: 9, tmx: 9, tmy: 9, mf: 0, tmf: 0 };
   const shocks = [];
@@ -107,29 +121,20 @@ export function createLogo(cv, stage, home) {
   const img = new Image();
   img.src = '../assets/img/logo-mark.webp';
   img.decode().then(() => {
-    const S = 250, step = 2;
-    const oc = document.createElement('canvas'); oc.width = oc.height = S;
-    const ox = oc.getContext('2d', { willReadFrequently: true });
-    ox.drawImage(img, 0, 0, S, S);
-    const px = ox.getImageData(0, 0, S, S).data;
-    const P = [], R = [], L = [], K = [];
-    for (let y = 0; y < S; y += step) for (let x = 0; x < S; x += step) {
-      const i = (y * S + x) * 4;
-      if (px[i + 3] < 140) continue;
-      const jx = (Math.random() - 0.5) * step, jy = (Math.random() - 0.5) * step;
-      P.push(((x + jx) / S - 0.5) * 2, -((y + jy) / S - 0.5) * 2);
-      R.push(Math.random(), Math.random(), Math.random(), Math.random());
-      L.push((px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11) / 255);
-      K.push(0);
-    }
-    for (let k = 0; k < 900; k++) { P.push(0, 0); R.push(Math.random(), Math.random(), Math.random(), Math.random()); L.push(0.5); K.push(1); }
-    N = K.length;
+    const first = SH ? SH.gen(shape, NP, img) : null;
+    if (!first) throw new Error('Formen fehlen');
+    const R = new Float32Array((NP + NG) * 4).map(Math.random), K = new Float32Array(NP + NG);
+    const P = new Float32Array((NP + NG) * 2), L = new Float32Array(NP + NG).fill(0.5);
+    P.set(first.P); L.set(first.L); K.fill(1, NP);
+    N = NP + NG;
     const buf = (name, arr, size) => {
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
       const l = gl.getAttribLocation(pr, name); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 0, 0);
+      bufs[name] = b;
     };
-    buf('aP', P, 2); buf('aR', R, 4); buf('aL', L, 1); buf('aK', K, 1);
+    buf('aP', P, 2); buf('aQ', P.slice(), 2); buf('aR', R, 4); buf('aL', L, 1); buf('aM', L.slice(), 1); buf('aK', K, 1);
+    setSpin('A', shape); setSpin('B', shape);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     api.ok = true;
     api.refresh();
@@ -147,9 +152,29 @@ export function createLogo(cv, stage, home) {
     if (can && !run) { run = true; requestAnimationFrame(frame); }
     if (!can) run = false;
   }
+  function setSpin(slot, key) { gl.useProgram(pr); gl.uniform1f(U['uSpin' + slot], SH.spin(key)); gl.uniform1f(U['uDiff' + slot], SH.diff(key) ? 1 : 0); }
+  const put = (name, arr) => { gl.bindBuffer(gl.ARRAY_BUFFER, bufs[name]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, arr); };
+  /* Neue Form: Ziel (aQ/aM) hochladen und 1,6 s lang hinmorphen; danach wird das Ziel zur Ausgangsform */
+  function beginMorph(key) {
+    const g = SH.gen(key, NP, img);
+    put('aQ', g.P); put('aM', g.L);
+    setSpin('B', key);
+    morphT = performance.now(); nextShape = { key, g };
+  }
+  function endMorph() {
+    put('aP', nextShape.g.P); put('aL', nextShape.g.L);
+    setSpin('A', nextShape.key);
+    shape = nextShape.key; nextShape = null; morphT = -1;
+    gl.uniform1f(U.uMorph, 0);
+  }
   function frame(now) {
     if (!run) return;
     const t = (now - t0) / 1000;
+    if (morphT >= 0) {
+      const m = Math.min(1, (now - morphT) / (anim() === 'normal' ? 1100 : 1600));
+      gl.uniform1f(U.uMorph, m);
+      if (m >= 1) endMorph();
+    }
     st.mx = lerp(st.mx, st.tmx, 0.18); st.my = lerp(st.my, st.tmy, 0.18); st.mf = lerp(st.mf, st.tmf, 0.06);
     const sh = new Float32Array(12);
     for (let i = 0; i < 4; i++) {
@@ -174,6 +199,14 @@ export function createLogo(cv, stage, home) {
     shocks.length = Math.min(shocks.length, 4);
   };
   api.intro = () => { introT = performance.now(); };
+  /* Objekt in der Mitte wechseln (D, Japan-Logo, Blume, Galaxie …) */
+  api.setShape = key => {
+    if (!api.ok || !SH || !SH.has(key)) return;
+    if (nextShape) endMorph();
+    if (key === shape) return;
+    if (!run || anim() === 'aus') { beginMorph(key); endMorph(); return; }
+    beginMorph(key);
+  };
   api.setActive = v => { active = v; if (v) layout(); start(); };
   api.refresh = () => {
     if (!api.ok) return;

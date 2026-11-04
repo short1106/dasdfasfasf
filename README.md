@@ -182,6 +182,11 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Das Ergebnis erscheint live, `=` löst einen Partikel-Burst aus.
   - Die letzten Rechnungen bleiben als Verlauf stehen, Kopieren geht per Klick.
   - Ein eigener Parser rechnet, `eval` wird nie benutzt.
+- **Objekt in der Mitte:** Statt des D lassen sich andere Objekte aus Partikeln formen:
+  - Japan-Logo (das D mit „ドゥリダン スタジオ“), Blume, Galaxie, Herz, Planet, Atom, Stern und Schmetterling
+  - Die Partikel sprengen beim Wechsel auseinander und setzen sich neu zusammen.
+  - Wählen kannst du in den Einstellungen oder per Doppelklick auf das Objekt, auf dem Handy per Doppeltipp und im Menü.
+- **Autostart:** Unter Einstellungen → „Beim Start“ → „Mit Windows starten“.
 - **Suchen auf der Seite und Zoom** pro Tab, mit Trefferzähler und Zoom-Anzeige.
 - **Einstellungen:** Suchmaschine, Animationen (Normal, Episch, Aus), Akzentfarbe (sechs Presets und eine freie Farbe), Mikro-Sounds (standardmäßig aus). `prefers-reduced-motion` wird respektiert: Ist es aktiv, steht der Standard auf „Aus".
 

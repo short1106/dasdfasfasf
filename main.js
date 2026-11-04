@@ -551,6 +551,13 @@ function ipc() {
   h('update:state', () => ({ ...updater.current(), current: app.getVersion() }));
   h('update:install', () => updater.install());
   h('disco:start', id => discoStart(Number(id)));
+  /* Autostart: beim Windows-Login mitstarten (nur in der installierten App sinnvoll) */
+  h('autostart:get', () => app.isPackaged && app.getLoginItemSettings().openAtLogin);
+  h('autostart:set', on => {
+    if (!app.isPackaged) return { ok: false, msg: 'Autostart geht nur in der installierten App' };
+    app.setLoginItemSettings({ openAtLogin: !!on, args: ['--autostart'] });
+    return { ok: true };
+  });
   h('disco:stop', () => discoStop());
   h('wallet:list', () => wallet.list());
   h('wallet:remove', id => wallet.remove(String(id)));

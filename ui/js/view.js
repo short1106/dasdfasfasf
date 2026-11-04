@@ -22,7 +22,11 @@ export function sendBounds() {
 }
 new ResizeObserver(sendBounds).observe(vp);
 
-const wantShown = t => !!t && t.hasView && !t.home && !t.transitioning && holds.size === 0;
+/* Notbremse: ein Übergang dauert nie länger als 8 s */
+const wantShown = t => {
+  if (t && t.transitioning && performance.now() - (t.transAt || 0) > 8000) { t.transitioning = false; t.readyWait = null; }
+  return !!t && t.hasView && !t.home && !t.transitioning && holds.size === 0;
+};
 
 export function sync(opts) {
   queue = queue.then(() => doSync(opts)).catch(e => console.error('view sync', e));
@@ -99,12 +103,14 @@ function uncoverWipe() {
 }
 
 export function domReady(t) { if (t.readyWait) { t.readyWait(); t.readyWait = null; } }
+/* Laden beendet, auch ohne neue Seite (Download, abgebrochen): Übergang nicht ausharren lassen */
+export function navEnded(t) { domReady(t); }
 
 const loadImg = src => new Promise(r => { if (!src) return r(null); const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
 
 /* Partikel-Übergang: Foto zerfällt → Partikel sammeln sich zum D → Seite lädt → versteckt fotografiert → D explodiert hinein */
 async function morphTransition(t, doNav, url, gen) {
-  t.transitioning = true;
+  t.transitioning = true; t.transAt = performance.now();
   const ready = new Promise(r => { t.readyWait = r; });
   await sync();
   const src = snap.classList.contains('on') ? snap : null;
@@ -126,13 +132,21 @@ async function morphTransition(t, doNav, url, gen) {
   m.finish();
 }
 
-/* Navigation mit Übergang */
+/* Navigation mit Übergang. Geht dabei irgendetwas schief, darf der Tab nie „im Übergang“ hängen bleiben –
+   sonst wird seine Seite nie wieder gezeigt (Tab bleibt leer). */
 export async function transition(t, doNav, url) {
-  const animate = anim() !== 'aus' && t === getActive();
   const gen = (t.navGen = (t.navGen || 0) + 1);
-  if (!animate) { await doNav(); return sync(); }
+  try { await runTransition(t, doNav, url, gen); }
+  catch (e) { console.warn('Übergang', e); }
+  finally {
+    if (gen === t.navGen && t.transitioning) { t.transitioning = false; t.readyWait = null; resetWipe(); if (morphRun && morphRun.t === t) { morphRun.m.finish(); morphRun = null; } sync(); }
+  }
+}
+async function runTransition(t, doNav, url, gen) {
+  const animate = anim() !== 'aus' && t === getActive();
+  if (!animate) { t.transitioning = false; await doNav(); return sync(); }
   if (morph.ok) return morphTransition(t, doNav, url, gen);
-  t.transitioning = true;
+  t.transitioning = true; t.transAt = performance.now();
   const ready = new Promise(r => { t.readyWait = r; });
   await sync();
   coverWipe(url);

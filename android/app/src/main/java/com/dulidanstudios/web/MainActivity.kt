@@ -100,24 +100,13 @@ class MainActivity : Activity() {
         super.onCreate(saved)
         Dw.init(this); Haptic.init(this)
         store = Store(this)
-        Dw.accent(store.accent); Dw.anim = store.anim; adblockOn = store.adblock
+        Dw.apply(store.accent, store.customColor); Dw.anim = store.anim; adblockOn = store.adblock
         edgeToEdge()
         AdBlock.init(this)
 
         root = FrameLayout(this).apply { setBackgroundColor(Dw.BG) }
         pages = FrameLayout(this)
-        home = WebView(this).apply {
-            setBackgroundColor(Dw.BG)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = true
-            isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER
-            addJavascriptInterface(HomeBridge(), "Dulidan")       /* nur auf der lokalen Startseite, nie in fremden Seiten */
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean { go(r.url.toString()); return true }
-            }
-            loadUrl("file:///android_asset/home/index.html")
-        }
+        home = makeHome()
         morphFx = FxView(this)
         topFx = FxView(this)
         bar = BottomBar(this)
@@ -153,7 +142,8 @@ class MainActivity : Activity() {
         /* Sitzung wiederherstellen oder frisch starten */
         val s = store.session()
         if (s != null && s.first.any { it.isNotEmpty() }) {
-            for (u in s.first.take(30)) { val t = createTab(); if (u.isNotEmpty()) { t.home = false; t.url = u; ensureWeb(t).loadUrl(u) } }
+            /* Nur der aktive Tab lädt sofort, die anderen beim Antippen – sonst laden 30 Seiten gleichzeitig */
+            for (u in s.first.take(30)) { val t = createTab(); if (u.isNotEmpty()) { t.home = false; t.url = u } }
             activate(tabs[s.second.coerceIn(0, tabs.size - 1)], reveal = false)
             toast("↺ ${tabs.size} ${if (tabs.size == 1) "Tab" else "Tabs"} wiederhergestellt")
         } else newTab(null, intro = false)
@@ -166,6 +156,28 @@ class MainActivity : Activity() {
                 if (!handleBack()) moveTaskToBack(true)
             }
         }
+    }
+
+    /* Startseite (lokal, mit Brücke). Stirbt ihr Renderer, wird sie neu gebaut statt die App zu beenden */
+    private fun makeHome(): WebView = WebView(this).apply {
+        setBackgroundColor(Dw.BG)
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.mediaPlaybackRequiresUserGesture = true
+        isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER
+        addJavascriptInterface(HomeBridge(), "Dulidan")       /* nur auf der lokalen Startseite, nie in fremden Seiten */
+        webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean { go(r.url.toString()); return true }
+            override fun onRenderProcessGone(v: WebView, d: android.webkit.RenderProcessGoneDetail): Boolean {
+                val i = root.indexOfChild(v)
+                root.removeView(v); v.destroy(); homeReady = false
+                home = makeHome()
+                root.addView(home, i.coerceAtLeast(0), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                home.visibility = if (active?.home == true) View.VISIBLE else View.GONE
+                return true
+            }
+        }
+        loadUrl("file:///android_asset/home/index.html")
     }
 
     private fun playBoot() {
@@ -221,9 +233,12 @@ class MainActivity : Activity() {
     private fun activate(t: Tab, reveal: Boolean = true) {
         active?.let { if (it != t) it.thumb = snapshot(it) }
         active = t
+        /* Tab ohne WebView (wiederhergestellt oder Renderer gestorben): jetzt laden */
+        if (!t.home && t.web == null && t.url.startsWith("http")) ensureWeb(t).loadUrl(t.url)
         for (o in tabs) o.web?.visibility = if (o == t && !o.home) View.VISIBLE else View.GONE
         home.visibility = if (t.home) View.VISIBLE else View.GONE
-        if (t.home) home.onResume()
+        /* Startseite rechnet nur, wenn sie zu sehen ist */
+        if (t.home) { home.onResume(); homeJs("dwPause(false)") } else { homeJs("dwPause(true)"); home.onPause() }
         if (reveal && !t.home && Dw.on) t.web?.let { w -> w.alpha = 0f; w.scaleX = 1.06f; w.scaleY = 1.06f; w.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(420).setInterpolator(Spring(7f, 9f)).start() }
         updateBar()
         bar.tabs.count = tabs.size
@@ -350,8 +365,8 @@ class MainActivity : Activity() {
         }
         override fun onRenderProcessGone(v: WebView, d: android.webkit.RenderProcessGoneDetail): Boolean {
             pages.removeView(v); v.destroy(); t.web = null
-            if (t == active) { ensureWeb(t).loadUrl(t.url); activate(t) }
-            toast("Seite abgestürzt – neu geladen")
+            /* Nicht sichtbare Tabs laden beim nächsten Antippen neu (activate) */
+            if (t == active) { activate(t, reveal = false); toast("Seite abgestürzt – neu geladen") }
             return true
         }
     }
@@ -470,14 +485,15 @@ class MainActivity : Activity() {
     inner class HomeBridge {
         @JavascriptInterface fun go(text: String) { ui.post { this@MainActivity.go(text) } }
         @JavascriptInterface fun haptic(kind: String) { ui.post { Haptic.play(kind) } }
-        @JavascriptInterface fun ready() { ui.post { homeReady = true; pushHome() } }
+        @JavascriptInterface fun ready() { ui.post { homeReady = true; pushHome(); if (active?.home == false) homeJs("dwPause(true)") } }
+        @JavascriptInterface fun shape(key: String) { ui.post { if (key.matches(Regex("[a-z]{1,20}"))) { store.center = key; Haptic.play("fire") } } }
         @JavascriptInterface fun calcValue(expr: String): String = Calc.tryCalc(expr)?.let { Calc.format(it) } ?: ""
         @JavascriptInterface fun calc(expr: String) { ui.post { hideKeyboard(); this@MainActivity.calc.show(expr.ifEmpty { null }) } }
     }
     private fun homeJs(js: String) { if (homeReady) home.evaluateJavascript(js, null) }
     private fun pushHome() {
         val d = resources.displayMetrics.density
-        homeJs("dwInsets(${(insetTop / d).toInt()},${(barH / d).toInt()});dwAccent('${Dw.hex(Dw.vio)}','${Dw.hex(Dw.mag)}','${Dw.hex(Dw.pink)}');dwAnim('${Dw.anim}');dwTabs(${tabs.size})")
+        homeJs("dwInsets(${(insetTop / d).toInt()},${(barH / d).toInt()});dwAccent('${Dw.hex(Dw.vio)}','${Dw.hex(Dw.mag)}','${Dw.hex(Dw.pink)}');dwAnim('${Dw.anim}');dwTabs(${tabs.size});dwShape('${store.center}')")
     }
 
     /* ===================== Leiste + Vorschläge ===================== */
@@ -622,7 +638,10 @@ class MainActivity : Activity() {
             "copy" -> if (t != null && !t.home) { Calc.copy(this, t.url); toast("Link kopiert") }
             "update" -> { toast("Suche nach Updates …"); updater.check(force = true) }
             "engine" -> toast("Suchmaschine: ${Search.engineName(store.engine)}")
-            "accent" -> { bar.pill.resetShader(); bar.invalidate(); homeThumbCache = null; pushHome() }
+            "accent" -> { bar.pill.resetShader(); bar.invalidate(); homeThumbCache = null; pushHome(); SearchWidget.refresh(this) }
+            "widget-color" -> SearchWidget.refresh(this)
+            "accent-live" -> { bar.pill.resetShader(); bar.invalidate(); homeThumbCache = null; pushHome() }
+            "center" -> { pushHome(); if (active?.home == false) goHome() }
             "anim" -> { pushHome(); toast("Animationen: ${Dw.anim.uppercase()}") }
             "adblock" -> { adblockOn = store.adblock; updateBar(); toast("Werbeblocker: ${if (adblockOn) "AN" else "AUS"}") }
         }
@@ -702,7 +721,8 @@ class MainActivity : Activity() {
     @Deprecated("Framework-Activity")
     override fun onBackPressed() { if (!handleBack()) moveTaskToBack(true) }
 
-    override fun onPause() { super.onPause(); saveSession(); CookieManager.getInstance().flush() }
+    override fun onPause() { super.onPause(); saveSession(); CookieManager.getInstance().flush(); homeJs("dwPause(true)"); bar.running = false }
+    override fun onResume() { super.onResume(); bar.running = true; if (active?.home == true) homeJs("dwPause(false)") }
     override fun onDestroy() { for (t in tabs) t.web?.destroy(); home.destroy(); super.onDestroy() }
 
     companion object { private const val REQ_FILE = 42; private const val REQ_VOICE = 43 }

@@ -13,7 +13,7 @@ import * as view from './view.js';
 import * as pal from './palette.js';
 import { initPanels, openPanel, closePanel, onDownload } from './panels.js';
 import { runBoot, booted } from './boot.js';
-import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark } from './data.js';
+import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark, history } from './data.js';
 import { sfx } from './sound.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
@@ -81,8 +81,16 @@ async function newTab(url = null, { focus = true, intro = true, background = fal
   const t = { id, url: '', title: '', favicon: null, loading: false, canBack: false, canFwd: false, home: true, hasView: false, progress: 0, scroll: 0, pw: 0, blocked: 0, zoom: 1 };
   tabs.set(id, t);
   strip.add(t);
+  if (background && url && restoring) {
+    /* Wiederherstellen: erst laden, wenn der Tab angeklickt wird – sonst laden beim Start alle gleichzeitig */
+    t.url = url; t.home = false; t.pending = true;
+    const known = history.find(e => e.url === url);
+    t.title = (known && known.title) || hostOf(url).replace(/^www\./, ''); t.favicon = (known && known.fav) || null;
+    strip.update(t);
+    return t;
+  }
   if (background && url) {
-    /* Im Hintergrund laden (Rechtsklick „In neuem Tab öffnen“, Wiederherstellen) */
+    /* Im Hintergrund laden (Rechtsklick „In neuem Tab öffnen“) */
     t.url = url; t.home = false;
     startProgress(t);
     strip.update(t);
@@ -102,6 +110,9 @@ function activate(t, { fresh = false } = {}) {
   if (!t || !tabs.has(t.id)) return;
   const same = active === t;
   active = t;
+  /* Wiederhergestellter oder abgestürzter Tab: nach dem Umschalten (neu) laden */
+  const load = t.pending || t.crashed ? t.url : null;
+  t.pending = t.crashed = false;
   strip.setActive(t);
   if (!same && !t.home) t.reveal = 'switch';
   if (!same) { omni.close(); big.close(); closeFind(); pwUi.onTabSwitch(t.id); }
@@ -112,6 +123,7 @@ function activate(t, { fresh = false } = {}) {
   view.sync();
   if (!t.transitioning) view.settleWipe();
   saveSession();
+  if (load) go(t, load);
 }
 
 async function closeTab(t) {
@@ -462,6 +474,7 @@ const COMMANDS = () => [
   { icon: 'key', name: 'Passwörter verwalten', run: () => ACTIONS.passwords() },
   { icon: 'card', name: 'Adressen & Karten', run: () => ACTIONS.wallet() },
   { icon: 'calc', name: 'Taschenrechner', key: 'Strg ⇧ R', run: () => ACTIONS.calc() },
+  ...((window.DW_SHAPES && window.DW_SHAPES.list) || []).map(s => ({ icon: 'd', name: 'Objekt in der Mitte: ' + s.name, run: () => { setSetting('center', s.key); if (active && !active.home) goHome(active); } })),
   { icon: 'disco', name: 'Disko-Modus (Musik im Vollbild)', key: 'Strg ⇧ M', run: () => ACTIONS.disco() },
   { icon: 'shield', name: settings.adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten', run: () => { setSetting('adblock', !settings.adblock); toast('Werbeblocker: ' + (settings.adblock ? 'AN' : 'AUS')); } },
   { icon: 'plus', name: 'Zoom: größer', key: 'Strg +', run: () => zoom(1) },
@@ -548,7 +561,7 @@ function onTabState(t, e) {
   if (typeof e.canBack === 'boolean') { t.canBack = e.canBack; t.canFwd = e.canFwd; }
   if (typeof e.pw === 'number') t.pw = e.pw;
   if (typeof e.zoom === 'number') t.zoom = e.zoom;
-  if (wasLoading && !t.loading) { endProgress(t); view.domReady(t); }
+  if (wasLoading && !t.loading) { endProgress(t); view.navEnded(t); }
   if (!wasLoading && t.loading) startProgress(t);
   if (t.url !== prevUrl) { addHistory(t.url, t.title, t.favicon); saveSession(); }
   else if (t.title !== prevTitle) updateHistory(t.url, { title: t.title });
@@ -589,7 +602,12 @@ api.on(e => {
       break;
     case 'html-full': body.classList.toggle('html-full', !!e.on); setTimeout(view.sendBounds, 50); break;
     case 'disco': body.classList.toggle('disco-on', !!e.on); break;
-    case 'crash': toast('Tab abgestürzt – F5 lädt neu'); break;
+    case 'crash':
+      /* Abgestürzter Tab lädt sich selbst neu: sofort, wenn er sichtbar ist, sonst beim nächsten Anklicken */
+      if (!t || t.home) break;
+      t.crashed = true; t.loading = false; endProgress(t);
+      if (t === active) { toast('Tab abgestürzt – wird neu geladen'); activate(t); }
+      break;
     case 'audio': feedAudio(e); break;
   }
 });
@@ -598,6 +616,20 @@ onSettings(k => {
   if (k === 'adblock') { api.adblock(settings.adblock); updateToolbar(); }
   if (k === 'accent' || k === 'custom' || k === 'anim') { logo.refresh(); nebula.refresh(); }
   if (k === 'engine') $('#bigEngine').textContent = engineName().toUpperCase();
+  if (k === 'center') { logo.setShape(settings.center); if (active && active.home) logo.shock(); }
+});
+/* Doppelklick auf das Objekt: nächstes Objekt */
+function nextShape(dir = 1) {
+  const L = (window.DW_SHAPES && window.DW_SHAPES.list) || [];
+  if (!L.length) return;
+  const i = L.findIndex(s => s.key === settings.center);
+  const s = L[(i + dir + L.length) % L.length];
+  setSetting('center', s.key);
+  toast('Objekt: ' + s.name);
+}
+homeEl.addEventListener('dblclick', e => {
+  const r = $('#logoStage').getBoundingClientRect();
+  if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) nextShape(1);
 });
 
 
@@ -682,13 +714,15 @@ addEventListener('beforeunload', () => { restoring = false; saveSession(true); }
 
 /* ===== Start ===== */
 async function start() {
+  /* Autostart-Schalter zeigt den echten Zustand aus Windows */
+  api.autostart.get().then(v => { if (typeof v === 'boolean' && v !== settings.autostart) setSetting('autostart', v); }).catch(() => {});
   initCursor();
   initButtons();
   buildHome();
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
   initCalc();
-  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

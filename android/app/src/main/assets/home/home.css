@@ -70,11 +70,12 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 
 /* ---------- Suchleiste mit Energiestrahl ---------- */
 .bar{position:relative;width:100%;max-width:560px;margin-top:22px;border-radius:20px;transition:transform .7s var(--spring)}
-.bar::before{content:"";position:absolute;inset:-2px;border-radius:inherit;background:var(--grad-x);opacity:.4;filter:blur(16px);animation:pulse 3s ease-in-out infinite}
-@keyframes pulse{50%{opacity:.75;filter:blur(24px)}}
+.bar::before{content:"";position:absolute;inset:-2px;border-radius:inherit;background:var(--grad-x);opacity:.4;filter:blur(18px);will-change:opacity;animation:pulse 3s ease-in-out infinite}
+/* Nur die Deckkraft animieren: ein wechselnder Blur müsste jedes Bild neu gerechnet werden */
+@keyframes pulse{50%{opacity:.75}}
 .bar.focus{transform:scale(1.03) translateY(-3px)}
 .bar.focus::before{opacity:.9}
-.bar-in{position:relative;z-index:2;display:flex;align-items:center;gap:10px;height:58px;padding:0 6px 0 16px;border-radius:inherit;background:rgba(10,8,16,.85);border:1px solid rgba(var(--mag-rgb),.35);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.bar-in{position:relative;z-index:2;display:flex;align-items:center;gap:10px;height:58px;padding:0 6px 0 16px;border-radius:inherit;background:rgba(10,8,16,.92);border:1px solid rgba(var(--mag-rgb),.35)}
 .bar .ico{width:20px;height:20px;color:var(--pink);flex-shrink:0;filter:drop-shadow(0 0 6px rgba(var(--mag-rgb),.9));transition:transform .6s var(--spring)}
 .bar.focus .ico{transform:rotate(-20deg) scale(1.15)}
 .bar input{flex:1;min-width:0;height:100%;background:none;border:0;outline:none;font-size:17px}
@@ -135,3 +136,10 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .run .card{transition:opacity .5s var(--ease),transform .9s var(--spring);transition-delay:calc(1.1s + var(--i) * 60ms)}
 .run .band{transition:transform 1.2s var(--spring) .8s}
 html[data-anim="aus"] *{animation:none!important;transition:none!important}
+
+/* Leichte Stufe für schwächere Handys (setzt home.js automatisch, wenn die FPS fallen) */
+.lite .grid{animation:none}
+.lite .bar::before{animation:none;opacity:.5}
+.lite .track{animation-duration:34s}
+.lite .band-a{box-shadow:none}
+.lite .hud-calc{animation:none}

@@ -163,7 +163,10 @@ class BottomBar(ctx: Context) : LinearLayout(ctx) {
         addView(menu, LayoutParams(s, s))
     }
 
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); spin.start() }
+    /* Energiestrahl nur, solange die App sichtbar ist */
+    var running = true
+        set(v) { field = v; if (v && isAttachedToWindow && !spin.isStarted) spin.start() else if (!v) spin.cancel() }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); if (running) spin.start() }
     override fun onDetachedFromWindow() { spin.cancel(); super.onDetachedFromWindow() }
 
     override fun onDraw(c: Canvas) {

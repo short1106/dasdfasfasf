@@ -21,6 +21,10 @@
   window.dwAnim = a => { anim = a; root.dataset.anim = a; };
   window.dwTabs = n => { $('#tabs').textContent = n; };
   window.dwIntro = () => intro();
+  /* Native pausiert die Startseite, solange ein Tab sie verdeckt (sonst rechnet sie unsichtbar weiter) */
+  let paused = false;
+  window.dwPause = on => { paused = !!on; if (!paused) startLoop(); };
+  window.dwShape = k => logo.setShape(k);
   window.dwClear = () => { q.value = ''; setChip(null); $('#calcres').hidden = true; };
 
   /* ===== GL-Helfer ===== */
@@ -45,6 +49,17 @@
     if (e.gamma == null) return;
     tilt.tx = clamp(e.gamma / 30, -1, 1); tilt.ty = clamp((e.beta - 45) / 30, -1, 1);
   });
+
+  /* ===== Leistung: Qualitätsstufen. Schafft das Handy keine ~45 FPS, wird die Auflösung von Nebel und Partikeln gesenkt ===== */
+  const TIERS = [{ neb: 0.42, dpr: 2, every: 1 }, { neb: 0.3, dpr: 1.5, every: 1 }, { neb: 0.22, dpr: 1.15, every: 2 }];
+  let tier = 0;
+  const Q = Object.assign({}, TIERS[0]);
+  function setTier(t) {
+    tier = Math.min(TIERS.length - 1, t); Object.assign(Q, TIERS[tier]);
+    document.body.classList.toggle('lite', tier > 0);
+    if (neb && neb.size) neb.size();
+    logo.layout();
+  }
 
   /* ===== Nebel ===== */
   const neb = (() => {
@@ -74,35 +89,42 @@
     } catch (e) { return null; }
     const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    const S = 0.45;
-    function size() { cv.width = Math.max(2, innerWidth * S | 0); cv.height = Math.max(2, innerHeight * S | 0); gl.viewport(0, 0, cv.width, cv.height); gl.uniform2f(P.U.uR, cv.width, cv.height); }
+    function size() { const S = Q.neb; cv.width = Math.max(2, innerWidth * S | 0); cv.height = Math.max(2, innerHeight * S | 0); gl.viewport(0, 0, cv.width, cv.height); gl.uniform2f(P.U.uR, cv.width, cv.height); }
     size(); addEventListener('resize', size);
-    return now => {
+    const draw = now => {
       gl.uniform1f(P.U.uT, anim === 'aus' ? 3 : now / 1000);
       gl.uniform2f(P.U.uM, tilt.x, -tilt.y);
       gl.uniform3fv(P.U.uC1, ACC[0]); gl.uniform3fv(P.U.uC2, ACC[1]); gl.uniform3fv(P.U.uC3, ACC[2]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
+    draw.size = size;
+    return draw;
   })();
 
   /* ===== Partikel-Logo ===== */
   const logo = (() => {
-    const api = { ok: false, draw() {}, shock() {}, intro() {}, layout() {} };
+    const api = { ok: false, draw() {}, shock() {}, intro() {}, layout() {}, setShape() {}, shape: () => 'd' };
     const cv = $('#gl'), stage = $('#stage');
     $('#fallback').src = window.DW_LOGO || '';
     const gl = cv.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: false });
     if (!gl) return api;
     let P;
     try {
-      P = program(gl, `attribute vec2 aP; attribute vec4 aR; attribute float aL;
-        uniform float uT, uIntro, uS, uAsp, uPx, uK, uMF; uniform vec2 uC, uM, uTilt; uniform vec3 uSh[4]; uniform vec3 uC1, uC2, uC3;
+      P = program(gl, `attribute vec2 aP, aQ; attribute vec4 aR; attribute float aL, aM;
+        uniform float uT, uIntro, uS, uAsp, uPx, uK, uMF, uMorph, uSpinA, uSpinB, uDiffA, uDiffB; uniform vec2 uC, uM, uTilt; uniform vec3 uSh[4]; uniform vec3 uC1, uC2, uC3;
         varying vec3 vC; varying float vA;
         vec2 rot(vec2 v, float a){ float c = cos(a), s = sin(a); return vec2(c*v.x - s*v.y, s*v.x + c*v.y); }
+        vec2 spin(vec2 p, float s, float d){ return s == 0.0 ? p : rot(p, uT*s*(d > 0.5 ? 0.3/(0.22 + length(p)) : 1.0)); }
         void main(){
+          /* Formwechsel: auseinandersprengen, wirbeln, neue Form */
+          float m = smoothstep(0.0, 1.0, uMorph), boom = sin(m*3.14159);
+          vec2 pa = spin(aP, uSpinA, uDiffA), pb = spin(aQ, uSpinB, uDiffB);
+          vec2 tgt = rot(mix(pa, pb, m), boom*(aR.w - 0.5)*2.4) + normalize(pa + vec2(1e-3, 0.0))*boom*(0.3 + aR.z*0.9);
+          float lum = mix(aL, aM, m);
           float k = clamp(uIntro*1.7 - aR.x*0.7, 0.0, 1.0); k = 1.0 - pow(1.0 - k, 4.0);
           float a = aR.y*6.2831 + (1.0 - k)*5.0;
-          vec2 p = mix(vec2(cos(a), sin(a))*(1.4 + aR.z*2.6), aP, k);
-          float glow = (1.0 - k)*0.7;
+          vec2 p = mix(vec2(cos(a), sin(a))*(1.4 + aR.z*2.6), tgt, k);
+          float glow = (1.0 - k)*0.7 + boom*1.2;
           p += vec2(sin(uT*1.3 + aR.x*40.0), cos(uT*1.1 + aR.y*33.0))*0.008*uK;
           p += uTilt*(0.04 + aR.z*0.1)*uK;
           vec2 d = p - uM; float f = exp(-dot(d, d)*9.0)*uMF;
@@ -115,15 +137,15 @@
           }
           gl_Position = vec4(uC.x + p.x*uS/uAsp, uC.y + p.y*uS, 0.0, 1.0);
           gl_PointSize = uPx*(0.7 + aR.z*1.1)*(1.0 + glow*0.9);
-          vec3 base = mix(mix(uC1, uC2, clamp((aP.x - aP.y)*0.3 + 0.5, 0.0, 1.0)), uC3, aL*0.5);
-          vC = base*(0.8 + aL*0.6) + vec3(glow*0.5); vA = 0.9;
+          vec3 base = mix(mix(uC1, uC2, clamp((tgt.x - tgt.y)*0.3 + 0.5, 0.0, 1.0)), uC3, lum*0.5);
+          vC = base*(0.8 + lum*0.6) + vec3(glow*0.5); vA = 0.9;
         }`, `precision mediump float; varying vec3 vC; varying float vA;
         void main(){ float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(vC, smoothstep(0.5, 0.05, d)*vA); }`);
     } catch (e) { return api; }
     let N = 0, asp = 1, introT = performance.now();
     const st = { cx: 0, cy: 0, s: 0.4, mx: 9, my: 9, mf: 0 }, shocks = [];
     function layout() {
-      const dpr = Math.min(2, devicePixelRatio || 1), s = stage.getBoundingClientRect();
+      const dpr = Math.min(Q.dpr, devicePixelRatio || 1), s = stage.getBoundingClientRect();
       cv.width = innerWidth * dpr | 0; cv.height = innerHeight * dpr | 0; gl.viewport(0, 0, cv.width, cv.height);
       asp = innerWidth / innerHeight;
       st.cx = (s.left + s.width / 2) / innerWidth * 2 - 1; st.cy = 1 - (s.top + s.height / 2) / innerHeight * 2; st.s = s.height / innerHeight;
@@ -131,25 +153,37 @@
     }
     const toLogo = (x, y) => [((x / innerWidth) * 2 - 1 - st.cx) * asp / st.s, (1 - (y / innerHeight) * 2 - st.cy) / st.s];
     const img = new Image();
+    /* Formen aus shared/shapes.js (D, Japan-Logo, Blume, Galaxie …) */
+    const SH = window.DW_SHAPES, NP = 4200, bufs = {};
+    let shape = 'd', want = 'd', morphT = -1, next = null;
+    const put = (name, arr) => { gl.bindBuffer(gl.ARRAY_BUFFER, bufs[name]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, arr); };
+    const setSpin = (slot, key) => { gl.uniform1f(P.U['uSpin' + slot], SH.spin(key)); gl.uniform1f(P.U['uDiff' + slot], SH.diff(key) ? 1 : 0); };
+    function beginMorph(key) { const g = SH.gen(key, NP, img); put('aQ', g.P); put('aM', g.L); setSpin('B', key); morphT = performance.now(); next = { key, g }; }
+    function endMorph() { put('aP', next.g.P); put('aL', next.g.L); setSpin('A', next.key); shape = next.key; next = null; morphT = -1; gl.uniform1f(P.U.uMorph, 0); }
+    api.setShape = key => {
+      want = key;
+      if (!api.ok || !SH || !SH.has(key)) return;
+      if (next) endMorph();
+      if (key === shape) return;
+      beginMorph(key);
+      if (anim === 'aus') endMorph();
+    };
     img.onload = () => {
-      const S = 200, oc = document.createElement('canvas'); oc.width = oc.height = S;
-      const x = oc.getContext('2d'); x.drawImage(img, 0, 0, S, S);
-      let d; try { d = x.getImageData(0, 0, S, S).data; } catch (e) { return; }
-      const Pp = [], R = [], L = [];
-      for (let y = 0; y < S; y += 2) for (let i = 0; i < S; i += 2) {
-        const o = (y * S + i) * 4; if (d[o + 3] < 140) continue;
-        Pp.push((i / S - 0.5) * 2, -(y / S - 0.5) * 2); R.push(Math.random(), Math.random(), Math.random(), Math.random());
-        L.push((d[o] * 0.3 + d[o + 1] * 0.59 + d[o + 2] * 0.11) / 255);
-      }
-      N = L.length;
-      const buf = (name, arr, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); const l = gl.getAttribLocation(P.p, name); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 0, 0); };
-      buf('aP', Pp, 2); buf('aR', R, 4); buf('aL', L, 1);
+      if (!SH) return;
+      const first = SH.gen(SH.has(want) ? want : 'd', NP, img);
+      shape = SH.has(want) ? want : 'd';
+      const R = new Float32Array(NP * 4).map(Math.random);
+      N = NP;
+      const buf = (name, arr, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW); const l = gl.getAttribLocation(P.p, name); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 0, 0); bufs[name] = b; };
+      buf('aP', first.P, 2); buf('aQ', first.P.slice(), 2); buf('aR', R, 4); buf('aL', first.L, 1); buf('aM', first.L.slice(), 1);
+      setSpin('A', shape); setSpin('B', shape);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       layout(); addEventListener('resize', layout);
       api.ok = true; document.body.classList.add('gl-ok');
     };
     img.src = window.DW_LOGO || '';
     api.layout = layout;
+    api.shape = () => next ? next.key : shape;
     api.intro = () => { introT = performance.now(); };
     api.shock = (x, y) => { if (!api.ok) return; const [a, b] = x == null ? [0, 0] : toLogo(x, y); shocks.unshift({ x: a, y: b, t: performance.now() }); shocks.length = Math.min(4, shocks.length); };
     api.draw = now => {
@@ -158,6 +192,7 @@
       st.mx = lerp(st.mx, tx, 0.2); st.my = lerp(st.my, ty, 0.2); st.mf = lerp(st.mf, touch.on, 0.08);
       const sh = new Float32Array(12);
       for (let i = 0; i < 4; i++) { const s = shocks[i]; if (s) { sh[i * 3] = s.x; sh[i * 3 + 1] = s.y; sh[i * 3 + 2] = (now - s.t) / 1000; } else sh[i * 3 + 2] = -1; }
+      if (morphT >= 0) { const m = Math.min(1, (now - morphT) / 1500); gl.uniform1f(P.U.uMorph, m); if (m >= 1) endMorph(); }
       gl.uniform1f(P.U.uT, now / 1000); gl.uniform1f(P.U.uIntro, anim === 'aus' ? 1 : clamp((now - introT) / 2400, 0, 1));
       gl.uniform1f(P.U.uS, st.s); gl.uniform1f(P.U.uAsp, asp); gl.uniform1f(P.U.uK, Math.max(0.3, amp()));
       gl.uniform2f(P.U.uC, st.cx, st.cy); gl.uniform2f(P.U.uM, st.mx, st.my); gl.uniform1f(P.U.uMF, st.mf);
@@ -171,17 +206,41 @@
   })();
 
   /* ===== Hauptschleife ===== */
-  let frames = 0, fpsT = performance.now();
+  let frames = 0, fpsT = performance.now(), lastF = 0, slow = 0, nebDrawn = false, fc = 0;
+  let looping = false;
+  function startLoop() { if (!looping) { looping = true; requestAnimationFrame(loop); } }
   function loop(now) {
+    if (paused || document.hidden) { looping = false; return; }
     tilt.x = lerp(tilt.x, tilt.tx, 0.06); tilt.y = lerp(tilt.y, tilt.ty, 0.06);
     root.style.setProperty('--tx', tilt.x.toFixed(3)); root.style.setProperty('--ty', tilt.y.toFixed(3));
-    if (neb) neb(now);
+    /* Nebel: bei „aus“ nur einmal zeichnen, auf schwachen Handys nur jedes zweite Bild */
+    if (neb && (anim !== 'aus' || !nebDrawn) && (++fc % Q.every === 0)) { neb(now); nebDrawn = true; }
     logo.draw(now);
     beamStep(now);
-    if (++frames && now - fpsT > 600) { $('#fps').textContent = Math.round(frames * 1000 / (now - fpsT)); frames = 0; fpsT = now; }
+    if (++frames && now - fpsT > 600) {
+      const fps = frames * 1000 / (now - fpsT);
+      $('#fps').textContent = Math.round(fps); frames = 0; fpsT = now;
+      /* Drei langsame Messungen hintereinander (≈ 2 s unter 45 FPS) → eine Stufe leichter */
+      if (now > 4000 && fps < 45 && tier < TIERS.length - 1) { if (++slow >= 3) { slow = 0; setTier(tier + 1); } } else slow = 0;
+    }
+    lastF = now;
     requestAnimationFrame(loop);
   }
-  requestAnimationFrame(loop);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !paused) startLoop(); });
+  /* Doppeltipp auf das Objekt: nächstes Objekt (die App merkt es sich) */
+  let lastTap = 0;
+  addEventListener('pointerup', e => {
+    const r = $('#stage').getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    const now = performance.now();
+    if (now - lastTap < 320 && window.DW_SHAPES) {
+      const L = window.DW_SHAPES.list, i = L.findIndex(s => s.key === logo.shape()), n = L[(i + 1) % L.length];
+      logo.setShape(n.key); app.shape && app.shape(n.key);
+      lastTap = 0; return;
+    }
+    lastTap = now;
+  });
+  startLoop();
 
   /* Tippen auf freie Fläche: Schockwelle im Logo + Blitz + Vibration */
   addEventListener('pointerdown', e => {

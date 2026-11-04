@@ -37,7 +37,7 @@ export function deriveAccent(hex) {
 }
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const DEFAULTS = { engine: 'dulidan', anim: reduced ? 'aus' : 'episch', accent: 'dulidan', custom: '#c020b8', sound: false, adblock: true, restore: true };
+const DEFAULTS = { engine: 'dulidan', anim: reduced ? 'aus' : 'episch', accent: 'dulidan', custom: '#c020b8', sound: false, adblock: true, restore: true, center: 'd', autostart: false };
 
 const subs = new Set();
 export const settings = { ...DEFAULTS, ...store.get('dw_settings', {}) };

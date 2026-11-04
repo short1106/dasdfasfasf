@@ -178,7 +178,30 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
     - Es werden synchronisierte LRC genommen, beim Treffer mit der passendsten Länge.
   - Anzeige Wort für Wort (Pop, Blur, große Wörter mit Verlauf, die Zeile springt auf Kicks, Glühen nach Stimme).
 
+### 3.7 Objekt in der Mitte (Desktop und Android)
+- **`shared/shapes.js`** ist ein *klassisches* Skript, kein Modul, weil die Android-Startseite über `file://` läuft. Es setzt `window.DW_SHAPES`:
+  - `list`
+  - `gen(key, n, logoImg)` → `{P, L}`, also Zielpunkte in [-1,1]² und Helligkeit
+  - `spin(key)`, `diff(key)`, `has(key)`
+- **Formen:** `d`, `japan`, `blume`, `galaxie`, `herz`, `planet`, `atom`, `stern`, `schmetterling`.
+  - `d` und `japan` werden aus einer Canvas abgetastet. Das Japan-Logo besteht aus dem D, „ドゥリダン“ und „スタジオ“ mit Glitzer und Herzen. Die Schrift kommt vom System: Yu Gothic/Meiryo unter Windows, Noto CJK unter Android.
+  - Alle anderen Formen sind Mathe.
+- **Wechsel:** Die Partikel haben zwei Zielpositionen (`aP`/`aQ`). `uMorph` geht in 1,6 s von 0 auf 1, dabei sprengen und wirbeln die Partikel. Danach wird das Ziel zur Ausgangsform.
+  - Eigenbewegung über `uSpinA/B` und `uDiffA/B`. „Differentiell“ heißt: innen schneller, für die Galaxie.
+- **Desktop** (`ui/js/gl.js`):
+  - Einstellung `center` im Panel „Objekt in der Mitte“, dazu Palette-Befehle „Objekt in der Mitte: …“.
+  - Doppelklick auf das Objekt wechselt weiter.
+- **Android** (`assets/home/home.js`):
+  - `dwShape(key)` von nativ; Store-Feld `center`.
+  - Im Menü der Abschnitt „OBJEKT IN DER MITTE“.
+  - Doppeltipp auf das Objekt → Brücke `Dulidan.shape(key)`.
+
 ### Weitere Desktop-Funktionen
+- **Autostart:** Einstellung „Mit Windows starten“ → `app.setLoginItemSettings`. Geht nur in der installierten App. Der Schalter liest beim Start den echten Zustand.
+- **Tabs robust:**
+  - **Übergänge:** `view.transition()` räumt in `finally` immer auf, damit ein Tab nie „im Übergang“ hängen bleibt (sonst bliebe er leer). Notbremse: 8 s.
+  - **Wiederherstellen ist lazy:** Nur der aktive Tab lädt, die anderen tragen `t.pending` und laden beim Anklicken. Den Titel holen sie aus dem Verlauf.
+  - **Abgestürzte Tabs** laden sich selbst neu: sichtbar sofort, sonst beim Anklicken.
 - **Passwörter:** `main/passwords.js`. Verschlüsselt mit `safeStorage` (unter Windows DPAPI), Ausweich AES-256-GCM mit lokalem Schlüssel.
   - Auto-Login auch zweistufig (Google/Microsoft), höchstens ein Auto-Versuch pro Minute.
   - Die Option „Automatisch anmelden“ gibt es. **Offene Frage an den Nutzer:** nur einfüllen oder auch abschicken?
@@ -211,6 +234,19 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `SearchProxy.kt`: Ergebnisseite und Proxy unter `https://dulidan.search/`
   - `Updater.kt`: liest `android-version.json`, lädt per DownloadManager, öffnet den Installer. Passt der Schlüssel nicht, sagt die App ehrlich „einmal neu installieren“.
 - **Assets:** `assets/home/` (Startseite, klassische Skripte, Logo als data-URL), `assets/fonts/`. Dazu `shared/` über `sourceSets["main"].assets.srcDir("../../shared")`, also `assets/search/…` und `assets/calc.js`.
+- **Leistung (gegen Ruckeln):**
+  - Die Startseite wird pausiert, sobald ein Tab sie verdeckt: `home.onPause()` plus JS `dwPause`. Vorher lief sie unsichtbar weiter.
+  - **Automatische Qualitätsstufen in `home.js`:** Schafft das Handy keine ~45 FPS, sinken Nebel-Auflösung und Partikel-DPR, und `body.lite` schaltet teure CSS-Animationen ab.
+  - **CSS:** Kein animierter `filter: blur`, kein `backdrop-filter` über WebGL.
+  - **Energiestrahl:** Der Animator der unteren Leiste stoppt in `onPause`.
+- **Tabs robust:**
+  - Wiederherstellen ist lazy, nur der aktive Tab lädt.
+  - `activate()` baut eine fehlende WebView neu auf und lädt die URL. Das betrifft Tabs nach einem Renderer-Absturz, bei dem Android oft alle WebViews auf einmal verliert.
+  - Stirbt der Renderer der Startseite, wird sie neu gebaut, statt dass die App beendet wird.
+- **Farben:**
+  - Akzent: 6 Presets plus „eigene Farbe“ über den Spektrum-Regler (`SpectrumBar` in `Panels.kt`). `Dw.apply(key, custom)` leitet die drei Töne ab wie der Desktop.
+  - **Widget-Farbe:** „Wie App“, ein Akzent oder eigene Farbe. `SearchWidget` zeichnet Rand, Mikro- und Rechner-Knopf als Bitmap in dieser Farbe, weil sich Verläufe in RemoteViews nicht umfärben lassen.
+  - Bei jedem Farbwechsel ruft die App `SearchWidget.refresh()`.
 - **Auf Android fehlen noch:** Disko-Modus, Musik-Analyse, Passwörter/Autofill. Vorher fragen.
 
 ---
@@ -258,12 +294,15 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `anatest.js`: Analyse-Werte je Song-Abschnitt
   - `hometest*.js`: Android-Startseite im Browser
   - `calctest.mjs`: Parser-Einheitstests
+  - `tabstress.js`: viele Tabs, schnelles Umschalten, Navigieren im Übergang, Absturz, Neustart mit Lazy-Restore
+  - `shapes.js`: alle Objekte am Desktop, mit Screenshots in `tests/out/shapes/`
+  - `homeshapes.js`: Android-Startseite (Assets plus `shared/` wie in der APK), Objekte, Doppeltipp, Pause, Leistungsstufen
 - **Test-Haken (nur über Umgebungsvariablen aktiv):**
   - `DW_PROXY_BASE=http://127.0.0.1:8799`: der Such-Proxy fragt den Nachbau
   - `DW_LYRICS_BASE=http://127.0.0.1:8798`: LRCLIB-Nachbau
   - `DW_DEBUG=1`: Proxy-Fehler loggen
 - **Stolpersteine:**
-  - Die Tests nutzen das echte Profil (`~/.config/dulidan-web`). `test4.js` erwartet ein leeres `wallet.json`, `gtest.js` ein noch nicht gespeichertes Passwort.
+  - Die Tests nutzen das echte Profil (`~/.config/dulidan-web`). `test4.js` erwartet ein leeres `wallet.json`. `gtest.js` und `test3.js` erwarten ein noch nicht gespeichertes Passwort, also vorher `vault.json` beiseitelegen, sonst meldet sich die App automatisch an.
   - Playwright-Tasten lösen kein `before-input-event` aus. Dafür gibt es einen DOM-Keydown-Ausweich in der Oberfläche.
   - `page.screenshot` zeigt nur die Oberfläche. Tab-Inhalte holt man mit `view.webContents.capturePage()`.
   - Chromiums History-Intervention: Zurück braucht in Tests `userGesture`.
@@ -335,6 +374,13 @@ Der Nutzer findet die Idee „geil“: ein Modus **ohne Video**, nur Motion-Art-
   - Lesemodus, Inkognito-Tabs
 
 ---
+
+### 7.4 Offen: Google-Anmeldung („Dieser Browser oder diese App ist unter Umständen nicht sicher“)
+- **Stand:** Google lehnt die Anmeldung in Dulidan Web ab. Der Nutzer hat das am PC gemeldet und gezeigt. Der Versuch, sich auf den Google-Anmeldeseiten als Firefox auszugeben (UA-Wechsel, Client-Hints entfernen, `userAgentData` verbergen), wurde vom Sicherheits-Klassifikator von Claude Code als **Umgehung einer Bot-Erkennung** abgelehnt und ist **nicht** umgesetzt.
+- **Nicht eigenmächtig nachbauen.** Optionen, die mit dem Nutzer zu besprechen sind:
+  1. Der Nutzer erlaubt diese Art Änderung ausdrücklich, per Berechtigungsregel in den Claude-Code-Einstellungen.
+  2. „Mit Google anmelden“ im Systembrowser öffnen. Das ist für Google-Konten im Browser selbst aber nicht hilfreich, weil die Sitzung nicht übernommen wird.
+  3. Ohne Google-Konto weiter nutzen. YouTube und Co. gehen auch abgemeldet.
 
 ## 8. Bekannte Grenzen
 - **DRM** (Netflix, Spotify Web): Weder Audio-Analyse noch Video-Textur sind möglich.
