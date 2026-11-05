@@ -1,6 +1,6 @@
 /* Dulidan Web · Disko-Modus – läuft in einer eigenen isolierten Welt des Tabs (vom Main-Prozess eingesetzt).
    Pegel/Lyrics kommen als Text-Ereignisse vom Tab-Preload über <dulidan-disco>, Befehle gehen zurück.
-   Aufbau: Zustand · Oberfläche (Shadow DOM) · WebGL (Hintergrund, Video/Ring, Partikel) · Lyrics · Steuerung · Schleife */
+   Aufbau: Zustand · Oberfläche (Shadow DOM) · WebGL (Hintergrund, Video/Ring, Partikel) · Lyrics · Welt-Wahl · Steuerung · Schleife */
 (() => {
   'use strict';
   if (window.__dwDisco) { window.__dwDisco.start(); return; }
@@ -13,7 +13,7 @@
   /* Lyrics-Zustand: exact = YouTube-Untertitel (kein Versatz nötig), locked = Stimm-Abgleich hat den Versatz sicher,
      gate = Text noch zurückhalten („warte auf Gesang“), live = Untertitel werden live aus dem Player gelesen */
   const L = { lines: [], idx: -2, offset: 0, manual: false, exact: false, locked: false, gate: true, live: false, dur: 0, show: true,
-    chorus: new Set(), onsets: [], bins: null, seen: null, quiet: 0, sustain: 0, pulse: 0, prevV: 0, lastAlign: 0, score: 0, cur: null, energy: 0, key: '' };
+    chorus: new Set(), onsets: [], bins: null, seen: null, quiet: 0, sustain: 0, pulse: 0, prevV: 0, lastAlign: 0, score: 0, cur: null, energy: 0, key: '', plain: false, plainI: -1, plainAt: 0, genre: '', world: '', worldWhy: '', worldAuto: true, chorusSeen: 0 };
   let mode = 'video', motion = null;
   const kicks = [];
   const $ = (s, r = root) => r.querySelector(s);
@@ -70,6 +70,7 @@
   .waiting .wait{display:block}
   .bpm{font:700 10.5px ui-monospace,monospace;letter-spacing:.12em;color:#ff7ae6;min-width:62px;text-align:center}
   .motion > canvas:first-child,.motion .center,.motion .lyr,.motion .wait{display:none!important}
+  .world{font:700 9.5px ui-monospace,monospace;letter-spacing:.2em;color:#7af3ff;margin-top:6px;text-shadow:0 0 10px rgba(122,243,255,.6)}
   .src{font:600 9.5px ui-monospace,monospace;letter-spacing:.16em;color:#8a83a0;margin-top:6px}
   .pause{position:absolute;inset:0;display:grid;place-items:center;font:700 13px ui-monospace,monospace;letter-spacing:.4em;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;background:rgba(5,4,10,.35)}
   .paused .pause{opacity:1}
@@ -95,10 +96,11 @@
       h('div', { class: 'lyr' }, h('div', { class: 'prev' }), h('div', { class: 'cur' })),
       h('div', { class: 'wait' }, '♪ WARTE AUF GESANG …'),
       h('div', { class: 'hud' },
-        h('div', {}, h('div', { class: 'tag' }, '// DULIDAN DISCO'), h('div', { class: 'ti' }), h('div', { class: 'ar' }), h('div', { class: 'src' })),
+        h('div', {}, h('div', { class: 'tag' }, '// DULIDAN DISCO'), h('div', { class: 'ti' }), h('div', { class: 'ar' }), h('div', { class: 'src' }), h('div', { class: 'world' })),
         h('div', { class: 'ctl' },
           h('span', { class: 'bpm' }, '— BPM'),
           h('button', { class: 'mode', title: 'Video / Lyric Motion (V)' }, '◐ MOTION · V'),
+          h('button', { class: 'wld', title: 'Welt wechseln (W)' }, '✦ WELT · W'),
           h('div', { class: 'grp lv' }, ...LEVELS.map((l, i) => h('button', { 'data-lv': i }, l[1]))),
           h('button', { 'data-off': '-0.5', title: 'Lyrics früher' }, '−'), h('span', { class: 'off' }, 'LYRICS ±0.0'), h('button', { 'data-off': '0.5', title: 'Lyrics später' }, '+'),
           h('button', { class: 'sync', title: 'Drücken, wenn eine Zeile gesungen wird (S)' }, '⟳ SYNC · S'),
@@ -117,6 +119,7 @@
       else if (b.classList.contains('lyt')) toggleLyrics();
       else if (b.classList.contains('sync')) syncNow();
       else if (b.classList.contains('mode')) setMode(mode === 'video' ? 'motion' : 'video');
+      else if (b.classList.contains('wld')) nextWorld();
       else if (b.classList.contains('x')) cmd('exit');
     });
     setLevel(level);
@@ -360,7 +363,7 @@
     else if (A.v > 0.45) {
       if (L.quiet > 0.3) {
         const t = A.t, o = L.onsets;
-        if (!o.some(x => Math.abs(x - t) < 0.25)) { o.push(t); o.sort((x, y) => x - y); }
+        if (!o.some(x => Math.abs(x - t) < 0.25)) { o.push(t); o.sort((x, y) => x - y); plainStep(now); }
       }
       L.quiet = 0;
     }
@@ -437,7 +440,7 @@
   /* ===== Wörter: Ausgabe an den aktiven Modus (Video-Lyrics im DOM oder Lyric Motion) ===== */
   const big = w => w.length > 6 || (w === w.toUpperCase() && /[A-ZÄÖÜ]{2}/.test(w)) || /!$/.test(w);
   function activeLine(text, words, meta) {
-    if (mode === 'motion' && motion) { if (text) motion.line(text, meta); else motion.clear(); return; }
+    if (mode === 'motion' && motion) { if (text) motion.line(text, Object.assign({}, meta, { words })); else motion.clear(); return; }
     const cur = $('.cur'), old = cur.firstElementChild;
     if (old) { old.classList.add('out'); setTimeout(() => old.remove(), 650); }
     $('.prev').textContent = meta.prev || '';
@@ -453,22 +456,55 @@
     if (w) w.classList.add('on');
   }
   /* Neue Zeile: Wortzeiten planen (exakt aus YouTube, sonst verteilt; gepoppt wird auf Silben-Impulse) */
+  /* Silben grob zählen (Vokalgruppen; CJK: ein Zeichen = eine Silbe) – lange Wörter brauchen mehr Zeit */
+  const syl = w => /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(w) ? [...w].length : Math.max(1, (w.toLowerCase().match(/[aeiouyäöüàáâéèêíìóòôúù]+/g) || []).length);
+  /* Wortzeiten: exakt aus der Quelle (YouTube/NetEase/erweitertes LRC), sonst nach Silben über die Zeile verteilt */
+  function planTimes(t0, words, dur) {
+    const sy = words.map(syl), tot = sy.reduce((a, b) => a + b, 0) || 1;
+    const span = Math.min(dur * 0.85, tot * 0.2 + words.length * 0.05);
+    let acc = 0;
+    return words.map((_, k) => { const at = t0 + (acc / tot) * span; acc += sy[k]; return at; });
+  }
   function startLine(i, te) {
-    const ln = L.lines[i], text = ln.text.trim(), words = text ? text.split(/\s+/) : [];
+    const ln = L.lines[i], text = ln.text.trim();
+    const exactW = !!(ln.w && ln.w.length && ln.w.every(x => x.text));
+    const words = !text ? [] : exactW ? ln.w.map(x => x.text) : text.split(/\s+/);
     const next = L.lines[i + 1], dur = Math.min(6, Math.max(0.6, (next ? next.t : ln.t + 4) - ln.t));
-    const span = Math.min(dur * 0.72, words.length * 0.42);
-    const exactW = ln.w && ln.w.length === words.length;
-    const times = words.map((_, k) => (exactW ? ln.w[k].t : ln.t + (k / Math.max(1, words.length)) * span));
-    const meta = { chorus: L.chorus.has(norm(text)), energy: L.energy, prev: i > 0 ? L.lines[i - 1].text : '' };
-    L.cur = { text, words, times, popped: 0, lastPop: 0, exactW: exactW || L.exact && words.length < 2, meta };
+    const times = exactW ? ln.w.map(x => x.t) : planTimes(ln.t, words, dur);
+    const n = norm(text), chorus = L.chorus.has(n);
+    if (chorus && !L.chorusLine) L.chorusSeen++;
+    L.chorusLine = chorus;
+    const meta = { chorus, firstChorus: chorus && L.chorusSeen === 1 && !L.firstChorusDone, energy: L.energy, prev: i > 0 ? L.lines[i - 1].text : '', idx: i, dur, gap: i > 0 && !L.lines[i - 1].text.trim() };
+    if (meta.firstChorus) L.firstChorusDone = true;
+    L.cur = { text, words, times, sy: words.map(syl), popped: 0, lastPop: 0, exactW: exactW || L.exact && words.length < 2, meta };
     activeLine(text, words, meta);
+  }
+  /* Text ohne Zeiten: jeder neue Gesangseinsatz holt die nächste Zeile (mindestens 1,2 s Abstand) */
+  function plainStep(now) {
+    if (!L.plain || !L.show || !L.lines.length || now - L.plainAt < 1200) return;
+    L.plainAt = now; L.plainI = Math.min(L.lines.length - 1, L.plainI + 1);
+    const ln = L.lines[L.plainI]; ln.t = A.t;
+    const words = ln.text.split(/\s+/).filter(Boolean);
+    startLineFrom(ln, words, A.t);
+  }
+  function startLineFrom(ln, words, t0) {
+    const n = norm(ln.text), chorus = L.chorus.has(n);
+    if (chorus && !L.chorusLine) L.chorusSeen++;
+    L.chorusLine = chorus;
+    const meta = { chorus, firstChorus: chorus && L.chorusSeen === 1 && !L.firstChorusDone, energy: L.energy, prev: L.cur ? L.cur.text : '', idx: L.plainI, dur: 3, gap: false };
+    if (meta.firstChorus) L.firstChorusDone = true;
+    L.cur = { text: ln.text, words, times: planTimes(t0, words, 2.6), sy: words.map(syl), popped: 0, lastPop: 0, exactW: false, meta };
+    activeLine(ln.text, words, meta);
   }
   function wordTick(te, now) {
     const c = L.cur; if (!c) return;
     while (c.popped < c.words.length) {
       const at = c.times[c.popped];
+      /* Ohne exakte Zeiten: Wort ploppt auf einen Silben-Impuls der Stimme, spätestens 0,3 s nach Plan;
+         lange Wörter (viele Silben) halten das nächste Wort etwas zurück */
+      const hold = c.popped > 0 ? 110 + (c.sy ? c.sy[c.popped - 1] : 1) * 70 : 0;
       const ok = c.exactW ? te >= at - 0.05
-        : te >= at + 0.3 || (te >= at - 0.25 && (now - L.pulse < 90 || now - c.lastPop > 380));
+        : te >= at + 0.3 || (te >= at - 0.3 && now - c.lastPop > hold && (now - L.pulse < 90 || now - c.lastPop > 420));
       if (!ok) break;
       revealWord(c.popped); c.popped++; c.lastPop = now;
     }
@@ -477,8 +513,10 @@
   function lyricsTick(now) {
     trackVoice(now);
     /* Zustand am Host-Element (für Tests und Fehlersuche, enthält nur Zahlen/Zeile) */
-    if (now - dbgT > 400) { dbgT = now; H.dataset.sync = [L.offset.toFixed(1), L.locked ? 'L' : '', L.gate ? 'G' : '', L.exact ? 'X' : '', mode, 'v' + A.v.toFixed(2), 'o' + L.onsets.length, 's' + L.sustain.toFixed(1)].join(' '); H.dataset.line = L.cur ? L.cur.words.slice(0, L.cur.popped).join(' ') : ''; }
+    if (now - dbgT > 400) { dbgT = now; H.dataset.sync = [L.offset.toFixed(1), L.locked ? 'L' : '', L.gate ? 'G' : '', L.exact ? 'X' : '', mode, 'v' + A.v.toFixed(2), 'o' + L.onsets.length, 's' + L.sustain.toFixed(1)].join(' '); H.dataset.line = L.cur ? L.cur.words.slice(0, L.cur.popped).join(' ') : ''; H.dataset.motion = motion && mode === 'motion' ? motion.el.dataset.state || '' : ''; }
     L.energy += (A.l - L.energy) * 0.01;
+    autoWorld(now);
+    if (L.plain) { if (L.cur) wordTick(A.t, now); else if (L.gate === false || L.onsets.length) idleMotion(now); return; }
     if (L.live || !L.lines.length) { if (L.cur && L.live) wordTick(A.t, now); else if (!L.live) idleMotion(now); return; }
     align(now); gateCheck();
     if (L.gate || !L.show) return;
@@ -507,12 +545,85 @@
   }
   const norm = t => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
 
+  /* ===================== Welt-Wahl: Sprache, Thema und Genre entscheiden, wie Lyric Motion aussieht ===================== */
+  const WORLDS = ['dulidan', 'neon', 'inferno', 'galaxie', 'japan', 'ozean', 'synthwave', 'weihnachten'];
+  const WORLD_NAME = { dulidan: 'DULIDAN', neon: 'NEON-CITY', inferno: 'INFERNO', galaxie: 'GALAXIE', japan: 'JAPAN 和', ozean: 'OZEAN', synthwave: 'SYNTHWAVE', weihnachten: 'WEIHNACHTEN 🎄' };
+  /* Schlüsselwörter (de/en/es/ja) → Thema; gezählt wird pro Wortanfang */
+  const THEMES = {
+    weihnachten: /^(christmas|xmas|weihnacht|santa|nikolaus|christkind|jingle|bells?$|glocke|schnee|snow|tannenbaum|christmas ?tree|rentier|reindeer|rudolph|sleigh|schlitten|mistletoe|noel|navidad|feliz|holy$|heilig|stille$|silent$|lametta|advent|geschenk|presents?$|winter ?wonderland|frosty|kling|feliz)/,
+    japan: /^(japan|japanese|tokyo|tokio|kyoto|osaka|sakura|kirschblüt|samurai|ninja|geisha|kimono|anime|shibuya|harajuku|東京|桜|日本|侍)/,
+    galaxie: /^(stars?|sterne?n?|galax|universe|universum|space|weltall|kosmos|cosmos|planet|moon|mond|comet|komet|rocket|rakete|astronaut|orbit|supernova|nebula|milky|milchstra|gravity|schwerelos|satellit|estrella|luna|cielo)/,
+    inferno: /^(fire|feuer|flame|flamm|burn|brenn|hell|hölle|inferno|devil|teufel|demon|dämon|blood|blut|rage|wut|war$|krieg|smoke|rauch|ash|asche|fuego|infierno|scream|schrei|kill|bullet|kugel)/,
+    ozean: /^(ocean|ozean|sea$|meer|waves?$|welle|rain|regen|tears?$|träne|water|wasser|river|fluss|beach|strand|cry|crying|wein(e|en|st)|alone|allein|einsam|lonely|sad$|traurig|broken|kaputt|drown|ertrink|mar$|lluvia|lágrima|blue$)/,
+    neon: /^(city|stadt|street|straße|strasse|block|hood|ghetto|money|cash|para$|geld|night|nacht|neon|lights?$|lichter|club|benz|gang|ticken|kiez|hustle|grind|drip|ice$|diamond|rolex|lambo|calle|noche|dinero)/,
+    synthwave: /^(dance|danc|tanz|disco|party|groove|funky|tonight|heute ?nacht|summer|sommer|radio|drive|highway|cruise|retro|neon|roller|boogie|baila|fiesta|verano)/
+  };
+  function lang(text) {
+    const kana = (text.match(/[぀-ヿ]/g) || []).length, han = (text.match(/[一-鿿]/g) || []).length, ko = (text.match(/[가-힯]/g) || []).length;
+    const n = text.length || 1;
+    if (kana / n > 0.03 || (han / n > 0.15 && kana > 0)) return 'ja';
+    if (ko / n > 0.1) return 'ko';
+    if (han / n > 0.2) return 'zh';
+    const w = text.toLowerCase().split(/[^\p{L}]+/u), c = re => w.filter(x => re.test(x)).length;
+    const de = c(/^(ich|und|nicht|der|die|das|du|wir|mein|dich|mich|ist|auf)$/), en = c(/^(the|and|you|i|me|my|is|it|your|love|don't|we)$/), es = c(/^(el|la|que|y|de|mi|tu|yo|amor|con|por|para)$/);
+    return de > en && de > es ? 'de' : es > en ? 'es' : en ? 'en' : '';
+  }
+  function themes(text) {
+    const sc = {}; for (const k in THEMES) sc[k] = 0;
+    for (const w of text.toLowerCase().split(/[^\p{L}\p{N}]+/u)) if (w) for (const k in THEMES) if (THEMES[k].test(w)) sc[k]++;
+    return Object.entries(sc).sort((a, b) => b[1] - a[1]);
+  }
+  function genreWorld(g) {
+    g = g.toLowerCase();
+    if (/holiday|christmas|weihnacht|xmas/.test(g)) return 'weihnachten';
+    if (/j-?pop|j-?rock|anime|japan|enka|kayō|kayo/.test(g)) return 'japan';
+    if (/hip.?hop|rap|trap|drill|grime|k-?pop/.test(g)) return 'neon';
+    if (/metal|rock|punk|grunge|hardcore|emo|alternative/.test(g)) return 'inferno';
+    if (/electro|dance|house|techno|trance|edm|dubstep|drum|hardstyle|club/.test(g)) return 'galaxie';
+    if (/disco|funk|synth|new wave|schlager|80/.test(g)) return 'synthwave';
+    if (/singer|songwriter|ballad|soul|r&b|rnb|jazz|blues|classical|klassik|acoustic|folk|ambient|lo-?fi|chill|easy/.test(g)) return 'ozean';
+    return '';
+  }
+  function chooseWorld(d) {
+    const text = (L.lines.map(l => l.text).join(' ') + ' ' + (d.title || L.trackTitle || '') + ' ' + (L.trackTitle || '')).slice(0, 20000);
+    const lg = lang(text), th = themes(text), g = L.genre, gw = genreWorld(g);
+    let w = '', why = '';
+    if (gw === 'weihnachten' || (th.find(x => x[0] === 'weihnachten') || [0, 0])[1] >= 3) { w = 'weihnachten'; why = 'WEIHNACHTSLIED'; }
+    else if (lg === 'ja') { w = 'japan'; why = 'JAPANISCH'; }
+    else if (th[0][0] === 'japan' && th[0][1] >= 2) { w = 'japan'; why = 'THEMA JAPAN'; }
+    else if (gw) { w = gw; why = g.toUpperCase(); if (th[0][1] >= 4 && th[0][0] !== gw && /pop|latin|dance/i.test(g)) { w = th[0][0]; why = 'THEMA ' + WORLD_NAME[w]; } }
+    else if (th[0][1] >= 3) { w = th[0][0]; why = 'THEMA ' + WORLD_NAME[w]; }
+    else if (/pop|latin|reggae|schlager/i.test(g)) { w = 'synthwave'; why = g.toUpperCase(); }
+    else if (lg === 'ko') { w = 'neon'; why = 'K-POP'; }
+    if (L.worldAuto) setWorld(w || 'dulidan', why || (g ? g.toUpperCase() : 'STANDARD'), !w);
+  }
+  /* Ohne klare Hinweise: nach 15 s Tempo und Energie entscheiden lassen */
+  function autoWorld(now) {
+    if (!L.worldAuto || !L.worldPending || now - (L.trackAt || 0) < 15000) return;
+    L.worldPending = false;
+    const bpm = parseInt($('.bpm').textContent, 10) || 0;
+    const w = L.energy > 0.5 && bpm >= 118 ? 'galaxie' : L.energy < 0.3 || (bpm && bpm < 92) ? 'ozean' : bpm >= 100 ? 'synthwave' : 'dulidan';
+    if (w !== L.world) setWorld(w, (bpm ? bpm + ' BPM' : 'ENERGIE'), false);
+  }
+  function setWorld(w, why, pending) {
+    L.world = w; L.worldWhy = why; L.worldPending = !!pending;
+    const el = root && $('.world'); if (el) el.textContent = 'WELT · ' + WORLD_NAME[w] + (why ? ' · ' + why : '');
+    H.dataset.world = w;
+    if (motion && motion.setWorld) motion.setWorld(w);
+  }
+  function nextWorld() {
+    L.worldAuto = false;
+    const w = WORLDS[(WORLDS.indexOf(L.world) + 1) % WORLDS.length];
+    setWorld(w, 'VON HAND', false);
+    pill('✦ WELT: ' + WORLD_NAME[w]);
+  }
+
   /* ===================== Steuerung ===================== */
   let idleT = 0;
   function wake() { root.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => root && root.classList.add('idle'), 2600); }
   function onKey(e) {
     const k = e.key;
-    const handled = ['Escape', ' ', 'ArrowLeft', 'ArrowRight', '+', '-', '1', '2', '3', 'l', 'L', 's', 'S', 'v', 'V'].includes(k);
+    const handled = ['Escape', ' ', 'ArrowLeft', 'ArrowRight', '+', '-', '1', '2', '3', 'l', 'L', 's', 'S', 'v', 'V', 'w', 'W'].includes(k);
     if (!handled || e.ctrlKey || e.metaKey || e.altKey) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (e.type !== 'keydown') return;
@@ -527,6 +638,7 @@
     else if (k === 'l' || k === 'L') toggleLyrics();
     else if (k === 's' || k === 'S') syncNow();
     else if (k === 'v' || k === 'V') setMode(mode === 'video' ? 'motion' : 'video');
+    else if (k === 'w' || k === 'W') nextWorld();
     wake();
   }
 
@@ -539,7 +651,7 @@
   }
   function onTrack(e) {
     let d; try { d = JSON.parse(e.detail); } catch { return; }
-    Object.assign(L, { lines: [], idx: -2, offset: 0, manual: false, exact: false, locked: false, gate: true, live: false, cur: null, key: d.key || '' });
+    Object.assign(L, { lines: [], idx: -2, offset: 0, manual: false, exact: false, locked: false, gate: true, live: false, cur: null, key: d.key || '', plain: false, plainI: -1, genre: '', worldAuto: true, chorusSeen: 0, chorusLine: false, firstChorusDone: false, trackAt: performance.now(), trackTitle: d.title || '', trackArtist: d.artist || '' });
     resetVoice(); updateWait();
     $('.cur').replaceChildren(); $('.prev').textContent = ''; $('.src').textContent = 'SUCHE LYRICS …';
     if (motion) motion.clear();
@@ -552,6 +664,9 @@
       .map(l => ({ t: l.t, text: l.text.slice(0, 200), w: Array.isArray(l.w) ? l.w.filter(x => x && typeof x.t === 'number').slice(0, 40) : null })) : [];
     L.dur = +d.duration || 0; L.idx = -2; L.cur = null;
     L.exact = !!d.exact; L.live = !!d.live; L.locked = L.exact; L.gate = !L.exact && !L.live;
+    L.plain = !!d.plain && L.lines.length > 0; L.plainI = -1; L.plainAt = 0;
+    if (L.plain) { L.gate = false; L.locked = true; }
+    L.genre = String(d.genre || '').slice(0, 60);
     if (typeof d.offset === 'number') { L.manual = true; L.gate = false; L.locked = true; setOffset(d.offset); }
     else setOffset(0);
     /* Refrain = Zeilen, die mehrfach vorkommen */
@@ -560,7 +675,10 @@
     if (d.title) { $('.ti').textContent = d.title; $('.ct').textContent = d.title; }
     if (d.artist) $('.ar').textContent = d.artist;
     root.classList.toggle('haslyr', L.lines.length > 0 || L.live);
-    $('.src').textContent = L.exact ? 'LYRICS: YOUTUBE-UNTERTITEL · EXAKT' : L.live ? 'LYRICS: LIVE AUS DEM PLAYER' : L.lines.length ? (L.manual ? 'LYRICS: LRCLIB · GEMERKTER SYNC' : 'LYRICS: LRCLIB · WIRD AM GESANG AUSGERICHTET') : 'KEINE LYRICS';
+    const srcName = String(d.source || 'LRCLIB').slice(0, 40);
+    $('.src').textContent = L.exact ? 'LYRICS: YOUTUBE-UNTERTITEL · EXAKT' : L.live ? 'LYRICS: LIVE AUS DEM PLAYER' : L.plain ? 'LYRICS: ' + srcName + ' · ZEILEN AUF DEN GESANG' : L.lines.length ? (L.manual ? 'LYRICS: ' + srcName + ' · GEMERKTER SYNC' : 'LYRICS: ' + srcName + ' · WIRD AM GESANG AUSGERICHTET') : 'KEINE LYRICS';
+    H.dataset.src = $('.src').textContent;
+    chooseWorld(d);
     pill(L.exact ? '♪ Lyrics aus den YouTube-Untertiteln' : L.live ? '♪ Live-Untertitel' : L.lines.length ? '♪ Lyrics gefunden' : 'Keine Lyrics gefunden – nur Effekte');
     updateWait();
   }
@@ -605,6 +723,7 @@
       if (!motion) { pill('Lyric Motion braucht WebGL'); return; }
     }
     mode = m;
+    if (motion && motion.setWorld && L.world) motion.setWorld(L.world);
     root.classList.toggle('motion', m === 'motion');
     if (motion) motion.show(m === 'motion');
     $('.mode').textContent = m === 'motion' ? '◑ VIDEO · V' : '◐ MOTION · V';
@@ -622,6 +741,7 @@
     if (!initGL()) pill('WebGL nicht verfügbar – nur Lyrics');
     H.addEventListener('dw:a', onAudio); H.addEventListener('dw:track', onTrack); H.addEventListener('dw:lyrics', onLyrics); H.addEventListener('dw:live', onLive); H.addEventListener('dw:off', stop);
     resetVoice();
+    setWorld('dulidan', 'STANDARD', true);
     addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true); addEventListener('keypress', onKey, true);
     root.addEventListener('pointermove', wake); wake();
     prevOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';

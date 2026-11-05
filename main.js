@@ -266,6 +266,11 @@ function wire(t, wc) {
     return lyrics.find({ title: String(info.title || '').slice(0, 300), artist: String(info.artist || '').slice(0, 200), duration: Number(info.duration) || 0 })
       .then(r => ({ ...r, offset: lyrics.getOffset(key) }));
   });
+  /* Genre für die Wahl der Motion-Welt (bei YouTube-Untertiteln, die ohne LRCLIB auskommen) */
+  wc.ipc.handle('lyrics:genre', (e, info) => {
+    if (e.senderFrame !== wc.mainFrame || discoId !== t.id || !info || typeof info !== 'object') return '';
+    return lyrics.genre({ title: String(info.title || '').slice(0, 300), artist: String(info.artist || '').slice(0, 200), duration: Number(info.duration) || 0 }).catch(() => '');
+  });
   /* Sync-Taste: Versatz pro Video merken, damit er beim nächsten Mal sofort stimmt */
   wc.ipc.handle('lyrics:offset', (e, key) => (e.senderFrame === wc.mainFrame ? lyrics.getOffset(String(key || '').slice(0, 300)) : null));
   wc.ipc.on('lyrics:offset:set', (e, key, offset) => { if (e.senderFrame === wc.mainFrame && discoId === t.id && !t.incognito) lyrics.setOffset(String(key || '').slice(0, 300), Number(offset)); });

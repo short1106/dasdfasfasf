@@ -175,19 +175,31 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
     - Beim Drop zerfällt es in Glitch-Streifen.
     - Dazu kommen Lichtfächer, Tunnel, eine Spiegelung und Partikelstürme.
   - **Ohne Video:** Ein Spektrum-Ring pulsiert um einen leuchtenden Kern, dazu ein eigener Ring für die Stimme.
-  - **Lyric Motion** (`V` schaltet live um): ohne Video, nur die Wörter im 3D-Raum wie im Orbit, mit Sternen, Gitterboden und fliegender Kamera.
-    - Die Wörter knallen aus der Tiefe (Slam), fliegen vorbei, stapeln sich, glitchen, kreisen oder zerfallen in Partikel.
-    - Der Refrain bekommt automatisch die krassesten Effekte. Beim Drop rollt die Kamera und das Bild invertiert kurz.
-    - Die Disko startet immer in Lyric Motion, `V` holt das Video in die Mitte.
+  - **Lyric Motion** (`V` schaltet live um): ohne Video, die Wörter fliegen durch eine 3D-Welt.
+    - **8 Welten**, automatisch passend zum Song gewählt (Sprache, Thema des Texts, Genre, Tempo), mit `W` von Hand wechselbar:
+      - **Neon-City** (Rap, Hip-Hop, Nacht/Stadt): Hochhäuser mit flackernden Fenstern, nasse Straße, Regen, Leuchtreklame-Schrift
+      - **Inferno** (Rock, Metal, Feuer): Lava-Risse, Glutregen, Rauch, Blitze, Metall-Schrift
+      - **Galaxie** (Electronic, Weltall): Nebel, Planet mit Ring, Asteroiden, Supernova beim Drop
+      - **Japan 和** (japanische Lieder, Thema Japan): rote Sonne, Fuji, Torii-Tore, Kirschblüten, Pinsel-Schrift
+      - **Ozean** (Balladen, Liebe, Traurigkeit): Unterwasser-Licht, Seetang, Blasen, Kaustik am Boden
+      - **Synthwave** (Pop, Disco, 80er): Streifen-Sonne, Palmen, Drahtgitter-Berge, Chrom-Schrift
+      - **Weihnachten 🎄** (Weihnachtslieder): Schneefall, Tannenbäume mit Lichterketten, Nordlicht, goldene Schrift
+      - **Dulidan**: der klassische Look
+    - **15 Textarten:** Slam, Fly-Through, Shatter, Glitch, Stack, Ring, Split (Buchstaben fliegen von überall rein), Welle, Regen, Burn-in, Sternbild, Slice, Flip, Typo-Wand. Dazu **Echo-Trails** (leuchtende Nachbilder), im Refrain voll.
+    - **Kamera:** Push, Spirale, Orbit, Seitenfahrt, Draufsicht, Dolly-Zoom, Froschperspektive. Neue Abschnitte bekommen einen harten Schnitt.
+    - **Erster Refrain:** Zeitlupe, dann eine Explosion in der Art der Welt (Blütensturm, Glutwelle, Supernova …).
+    - **Schlüsselwörter:** „Welt“ bringt eine drehende Weltkugel 🌍, dazu rund 45 weitere Begriffe mit Symbol (Herz, Feuer, Stern, Mond, Geld, Krone, Diamant, Blitz, Rose, Schnee, Rakete, Engel, Teufel, Meer …). Farbwörter wie rot, blau, gold oder pink erscheinen in genau dieser Farbe.
+    - Beim Drop rollt die Kamera und das Bild invertiert kurz. Die Disko startet immer in Lyric Motion, `V` holt das Video in die Mitte.
   - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.).
     - Zuerst kommen die **YouTube-Untertitel** des Videos, wenn es welche gibt. Die sind exakt auf das Video getimt, Intro inklusive.
-    - Sonst kommen synchronisierte Texte von [LRCLIB](https://lrclib.net). Die werden **am echten Gesang ausgerichtet**: Bis der Gesang einsetzt, steht „♪ warte auf Gesang …“ da, danach rutscht der Text auf die gesungenen Zeilen.
+    - Sonst sucht der Modus bei [LRCLIB](https://lrclib.net) (mehrere Schreibweisen, z. B. ohne „Sped Up“ oder „Remix“) und bei **NetEase Cloud Music** (sehr viele Songs, oft wortgenau getimt). Gibt es nur den Text ohne Zeiten, legt er die Zeilen selbst auf die Gesangseinsätze.
+    - Synchronisierte Texte Die werden **am echten Gesang ausgerichtet**: Bis der Gesang einsetzt, steht „♪ warte auf Gesang …“ da, danach rutscht der Text auf die gesungenen Zeilen.
     - Die Wörter ploppen auf die Silben der Stimme rein, die Zeile springt auf den Beat.
     - Passt es trotzdem nicht: `S` drücken, wenn eine Zeile einsetzt. Das wird **für dieses Video gemerkt**, ebenso `+`/`−`.
   - **Steuerung:**
     - `Esc` beendet, Leertaste pausiert, `←`/`→` spult 5 s.
     - `1`/`2`/`3` wechselt zwischen Chill, Party und Eskalation.
-    - `L` schaltet die Lyrics ein und aus, `V` wechselt Video ↔ Lyric Motion, `S` synchronisiert.
+    - `L` schaltet die Lyrics ein und aus, `V` wechselt Video ↔ Lyric Motion, `W` wechselt die Welt, `S` synchronisiert.
     - Oben steht live das Tempo (BPM).
   - **Grenzen:**
     - Kopiergeschützte Inhalte (DRM, etwa Netflix oder Spotify Web) lassen sich nicht abgreifen.

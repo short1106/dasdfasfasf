@@ -177,7 +177,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Mitte: das **echte Video als Textur** (`texImage2D(video)`) mit Zoom, Shake, Farbversatz, Glitch-Streifen beim Drop, Glühkante und Spiegelung. Bei fremden Videos ohne Freigabe oder bei reinem Audio stattdessen der **Spektrum-Ring** (Balken, Kern, Stimm-Ring).
   - 2200 Partikel (Kick-Bursts, Drop-Explosion, Melodie-Strom).
 - **Stufen:** `1`/`2`/`3` für Chill (0,55), Party (1) und Eskalation (1,65).
-- **Tasten:** Esc beendet, Leertaste pausiert, ←/→ spult 5 s, `+`/`−` verschiebt die Lyrics, `L` schaltet die Lyrics, `V` Video ↔ Lyric Motion, `S` Sync jetzt.
+- **Tasten:** Esc beendet, Leertaste pausiert, ←/→ spult 5 s, `+`/`−` verschiebt die Lyrics, `L` schaltet die Lyrics, `V` Video ↔ Lyric Motion, `W` Welt wechseln, `S` Sync jetzt.
 - **Lyrics-Quellen (in dieser Reihenfolge, `tab-preload.js` `loadLyrics`):**
   1. **YouTube-Untertitel** (`ytLyrics`): holt `/watch?v=<id>` (gleiche Herkunft), liest `captionTracks` aus dem Seitentext (`jsonArrayAfter`), nimmt **nur manuelle** Tracks (kein `asr`), lädt `baseUrl&fmt=json3` → Zeilen mit Wortzeiten (`w`), Lücken als leere Zeilen. `exact: true`, kein Abgleich. Neu ermittelt bei SPA-Wechsel (Video-ID).
   2. Ist die json3-Datei gesperrt: **Live-Untertitel** aus dem Player (`liveStart`, MutationObserver auf die Caption-Fenster), `live: true`.
@@ -191,12 +191,16 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Debug: `H.dataset.sync` (Versatz, L/G/X, Modus, Stimme, Einsätze) und `H.dataset.line`.
 - **Anzeige Video-Modus:** Wort für Wort auf Silben-Impulse der Stimme (oder Wortzeit), Pop, Blur, große Wörter mit Verlauf, Zeile springt auf Kicks. HUD mit BPM, Quelle, Modus, Sync.
 - **Lyric Motion `main/disco-motion.js`** (wird vor `disco-page.js` in dieselbe Welt gesetzt, `window.__dwMotion`):
-  - WebGL1-3D wie Orbit: Himmel, Gitterboden mit Wellen, Sternentunnel, 3200 Partikel, Wörter als Canvas-Texturen.
-  - Stile: Refrain (mehrfach vorkommende Zeilen) → Slam/Shatter, Energie > 0,55 → Glitch/Stack, sonst Fly/Ring.
-  - Bass → Kamera-Punch, Stimme → Leuchten, Melodie → Farbfluss, Drop → Kamera-Rolle, Explosion, kurzer Invert.
-  - Farben über `hsv()` auf Dulidan-Töne gefaltet (Blauviolett bis Pink).
-  - Ohne Lyrics laufen Titel und „DULIDAN DISCO“ (`idleMotion`).
-  - Startmodus ist immer Lyric Motion (vom Nutzer entschieden), `V` wechselt zum Video-Modus.
+  - WebGL1-3D. Kamera-Rig `S.z` fliegt den Weg entlang; Wörter mit `rel` fahren mit dem Rig mit (Zeilen-Layout, vorab gemessen und umbrochen), `fly` steht fest im Raum (Fly-Through).
+  - **8 Welten** (`WORLDS`: Farben C1–C3, Boden `floor`, Partikel `amb`, Requisiten `props`, Explosion `burst`, Textarten calm/hot/chorus): dulidan, neon, inferno, galaxie, japan, ozean, synthwave, weihnachten. Himmel als Bildschirm-Shader je Welt (`W`), unter dem Horizont abgedunkelt; Boden-Shader je Art; Requisiten als Canvas-Billboards (Torii, Palmen, Hochhäuser, Lava-Spitzen, Asteroiden, Seetang, Tannenbäume); Schrift je Welt (`FONTS`, `paint`).
+  - **Textarten:** slam, fly, shatter, glitch, stack, ring, flip, slice, typo und Buchstaben-Stile (eigene Textur pro Buchstabe) split, wave, rain, burn, constellation (mit Linien). Echo-Trails über Positionsverlauf, Stärke `S.trail` (Refrain 1). Abgang je Stil (`kill`).
+  - **Kamera** `poseOf`: push, spiral, orbit, side, top, dolly (Vertigo), low; weicher Übergang 1,1 s oder Schnitt mit Blitz (neuer Abschnitt nach Pause, Refrain-Beginn, Drop). Wörter/Requisiten werden zur Kamera ausgerichtet (RV/UV).
+  - **Erster Refrain** (`meta.firstChorus`): 0,75 s Zeitlupe (`S.ts`), dann `burst` der Welt, Invert, Rolle.
+  - **Schlüsselwörter** (`ICONS`, `COLORS`, Wortanfang de/en/es): Symbol als Emoji-Textur hinter dem Wort (Weltkugel animiert 🌍🌎🌏), höchstens 2 pro Zeile; Farbwörter → Schrift und Funken (Partikelart 5) in dieser Farbe.
+  - Debug: `canvas.dataset.state` → `H.dataset.motion` (Welt, Stil, Kamera, Wörter, Trail, Zeitlupe).
+- **Welt-Wahl (`disco-page.js` `chooseWorld`):** Weihnachten (Genre Holiday oder ≥ 3 Weihnachtswörter) > Japanisch (Kana) > Thema Japan > Genre (iTunes `primaryGenreName` → `genreWorld`) > Thema (`THEMES`, ≥ 3 Treffer) > Pop → Synthwave > Koreanisch → Neon. Ohne Hinweis nach 15 s über BPM/Energie (`autoWorld`). `W` wechselt von Hand. HUD `.world`, `H.dataset.world`.
+- **Lyrics-Quellen in `main/lyrics.js`:** LRCLIB `/api/get` (mit Länge) und `/api/search` mit Varianten (`variants`, ohne Remix/Sped Up/Klammern), Treffer über `sim()`; dann **NetEase** (`/api/search/get/web`, `/api/song/lyric/v1` mit `yrc` = Wortzeiten → `parseYrc`, Mitwirkenden-Zeilen raus über `META`); dann LRCLIB `plainLyrics` → `plain: true` (disco-page legt jede Zeile auf den nächsten Gesangseinsatz, `plainStep`). Erweitertes LRC (`<mm:ss>` Wortzeiten) wird gelesen. Genre über iTunes-Suche (`genre`, IPC `lyrics:genre` für den YouTube-Weg). Eigene Session `dw-lyrics`, weil `net.fetch` den Referer-Header blockiert (`ERR_BLOCKED_BY_CLIENT`), NetEase ihn aber will → `webRequest`. Test-Haken `DW_NETEASE_BASE`, `DW_ITUNES_BASE`. **Gegen echtes NetEase/iTunes ungetestet.**
+- **Wortzeiten:** exakt, wenn die Quelle Wörter liefert (YouTube json3, NetEase yrc, erweitertes LRC; dann sind die Wörter die der Quelle), sonst nach Silben (`syl`, Vokalgruppen bzw. CJK-Zeichen) über die Zeile verteilt (`planTimes`) und auf Silben-Impulse gepoppt.
 - **Test:** `tests/e2e/discosync.js` mit `intro.html` (`phrases.webm`, 6-s-Intro, LRC ohne Intro → erwartet +6 s, Sync-Datei 6).
 
 ### 3.9 Dulidan Maps `shared/maps/` (Desktop)
@@ -405,6 +409,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `prognose.js`: Liga-Schalter und Prognose (Tipps, Simulation, Abschlusstabelle)
   - `answers.js`: Sofort-Antworten (Wetter, Währung, Einheiten, Bundesliga, Verein, F1) und Inkognito (Cookies weg nach Schließen, kein Verlauf)
   - `mobilesearch.js`: Ergebnisseite im Handy-Format
+  - `motionworlds.js`: Lyric Motion (Welt-Wahl Rock → Inferno, alle 8 Welten per W mit Screenshots, NetEase wortgenau + Holiday → Weihnachten, Text ohne Zeiten) mit `xmas.html`/`plain.html`
   - `discotest.js video.html|audio.html`: Disko inklusive Esc, Drops und Screenshots
   - `anatest.js`: Analyse-Werte je Song-Abschnitt
   - `hometest*.js`: Android-Startseite im Browser

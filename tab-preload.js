@@ -277,6 +277,7 @@ async function loadLyrics(force) {
     if (y && y.lines) res = y;
     else if (y && y.live && liveStart()) res = { lines: [], live: true, source: 'youtube-live' };
     if (res) { try { const off = await ipcRenderer.invoke('lyrics:offset', key); if (off != null) res.offset = off; } catch {} }
+    if (res) { try { res.genre = await ipcRenderer.invoke('lyrics:genre', info); } catch {} }
   }
   if (!res) { try { res = await ipcRenderer.invoke('lyrics', { ...info, key }); } catch {} }
   if (disco && lyricKey === key) disco.host.dispatchEvent(new CustomEvent('dw:lyrics', { detail: JSON.stringify(res || { lines: [] }) }));
