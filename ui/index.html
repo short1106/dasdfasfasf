@@ -26,6 +26,7 @@
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-snip" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.8"/><circle cx="6" cy="18" r="2.8"/><path d="M8.2 7.8L20 17M8.2 16.2L20 7M13 12h.01"/></symbol>
   <symbol id="i-mask" viewBox="0 0 24 24"><path d="M3 9.5c0-1.4 1-2.5 2.4-2.5h13.2C20 7 21 8.1 21 9.5v1.2c0 3-2.2 5.3-5 5.3-1.6 0-2.6-.9-3.2-2.2a.9.9 0 0 0-1.6 0C10.6 15.1 9.6 16 8 16c-2.8 0-5-2.3-5-5.3z"/><circle cx="8" cy="11" r="1.6"/><circle cx="16" cy="11" r="1.6"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
@@ -124,6 +125,7 @@
 
       <div class="tool-group">
         <button class="disco-btn fx" id="btnDisco" data-cursor="DISKO · STRG ⇧ M" aria-label="Disko-Modus" hidden><svg><use href="#i-disco"/></svg><span>DISKO</span><i class="eq"><b></b><b></b><b></b></i></button>
+        <button class="icon-btn fx mag" id="btnSnip" data-cursor="SCREENSHOT · STRG ⇧ S" data-ico="pop" aria-label="Screenshot"><svg><use href="#i-snip"/></svg></button>
         <button class="icon-btn fx mag" id="btnCalc" data-cursor="RECHNER" data-ico="pop" aria-label="Taschenrechner"><svg><use href="#i-calc"/></svg></button>
         <button class="icon-btn fx mag" id="btnDl" data-cursor="DOWNLOADS" data-ico="drop" aria-label="Downloads"><svg><use href="#i-dl"/></svg><b class="badge" id="dlBadge" hidden></b><i class="ring-prog" id="dlRing"></i></button>
         <button class="chip-btn fx mag" id="btnPal" data-cursor="BEFEHLE" aria-label="Command Palette"><svg><use href="#i-cmd"/></svg><kbd>Strg K</kbd></button>

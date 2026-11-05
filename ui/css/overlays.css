@@ -260,3 +260,48 @@ body.orbit .tab-glow{opacity:.3!important}
 .calc-hist li{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:8px;color:var(--dim);cursor:pointer;animation:sgItem .4s var(--spring)}
 .calc-hist li:hover{background:rgba(var(--mag-rgb),.1);color:var(--text)}
 .calc-hist b{color:var(--pink);font-weight:500}
+
+/* ---------- Snipping-Tool (snip.js): Foto der Seite, Bereich ziehen, Werkzeugleiste ---------- */
+.snip{position:fixed;inset:0;z-index:9000;cursor:crosshair;animation:snipIn .25s var(--ease) both}
+.snip.out{animation:snipOut .26s var(--ease) both;pointer-events:none}
+@keyframes snipIn{from{opacity:0}}
+@keyframes snipOut{to{opacity:0}}
+.snip-stage{position:absolute;overflow:hidden;border-radius:4px}
+.snip-shot{position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none}
+.snip-dim{position:absolute;inset:0;background:rgba(7,6,11,.5);pointer-events:none;transition:opacity .2s}
+.snip-sel:not([hidden])~.snip-dim,.snip-dim:has(~.snip-sel:not([hidden])){opacity:0}
+.snip-sel{position:absolute;pointer-events:none;box-shadow:0 0 0 9999px rgba(7,6,11,.58),0 0 0 2px var(--pink),0 0 28px rgba(var(--pink-rgb),.6);border-radius:3px}
+.snip-sel::before{content:"";position:absolute;inset:-2px;border:2px dashed rgba(255,255,255,.85);border-radius:3px;animation:ants 1s linear infinite;mask:linear-gradient(#000 0 0);opacity:.55}
+@keyframes ants{to{border-color:rgba(255,255,255,.5)}}
+.snip-sel.locked{box-shadow:0 0 0 9999px rgba(7,6,11,.72),0 0 0 2px var(--pink),0 0 40px rgba(var(--pink-rgb),.7)}
+.snip-size{position:absolute;left:0;top:-26px;padding:3px 8px;border-radius:7px;background:var(--grad);color:#fff;font-size:10.5px;letter-spacing:.06em;white-space:nowrap}
+.snip-hint{position:fixed;left:50%;top:70px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 10px 8px 16px;border-radius:999px;background:rgba(13,10,21,.92);border:1px solid rgba(var(--pink-rgb),.35);box-shadow:var(--glow);font-size:11px;letter-spacing:.1em;cursor:default;animation:hintIn .6s var(--spring) both}
+@keyframes hintIn{from{opacity:0;transform:translate(-50%,-16px) scale(.9)}}
+.snip.selecting .snip-hint{opacity:0;pointer-events:none}
+.snip-hint button{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);font:600 11px var(--sans);letter-spacing:.02em;transition:background .2s}
+.snip-hint button:hover{background:rgba(var(--mag-rgb),.3)}
+.snip-hint kbd,.snip-bar kbd{font:600 9px var(--mono);padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.1);color:var(--muted)}
+.snip-edit{position:absolute;cursor:crosshair}
+.snip-edit canvas{display:block;width:100%;height:100%}
+.snip.fullmode .snip-stage{background:rgba(7,6,11,.9);overflow:auto}
+.snip-edit.full{position:relative;left:auto;top:auto;width:min(980px,calc(100% - 40px));height:auto;margin:20px auto 90px;box-shadow:0 0 0 2px var(--pink),0 30px 80px rgba(0,0,0,.6)}
+.snip-edit.full canvas{height:auto}
+.snip-flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}
+.snip-flash.on{animation:flash .45s var(--ease)}
+@keyframes flash{0%{opacity:.75}100%{opacity:0}}
+.snip-text{position:absolute;min-width:140px;padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.4);background:rgba(7,6,11,.7);font:700 18px var(--sans);outline:0}
+.snip-bar{position:fixed;display:flex;align-items:center;gap:6px;padding:6px;border-radius:16px;background:rgba(13,10,21,.95);border:1px solid rgba(var(--pink-rgb),.3);box-shadow:0 20px 60px rgba(0,0,0,.6),var(--glow-sm);cursor:default;opacity:0;transform:translateY(10px) scale(.95)}
+.snip-bar.in{opacity:1;transform:none;transition:opacity .3s,transform .55s var(--spring)}
+.sb-g{display:flex;gap:3px}
+.sb-sep{width:1px;height:26px;background:var(--line)}
+.sb-t{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:46px;padding:5px 6px;border-radius:11px;color:var(--muted);transition:background .2s,color .2s,transform .4s var(--spring)}
+.sb-t b{font-size:15px;line-height:1}
+.sb-t span{font-size:9px;letter-spacing:.04em}
+.sb-t:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.sb-t.on{background:rgba(var(--mag-rgb),.25);color:#fff;transform:translateY(-2px)}
+.sb-c{width:20px;height:20px;border-radius:50%;background:var(--c);border:2px solid rgba(7,6,11,.9);box-shadow:0 0 0 1px rgba(255,255,255,.18);transition:transform .35s var(--spring)}
+.sb-c.on{transform:scale(1.25);box-shadow:0 0 0 2px #fff,0 0 12px var(--c)}
+.sb-a{display:flex;align-items:center;gap:6px;height:36px;padding:0 13px;border-radius:11px;background:var(--grad);color:#fff;font-weight:600;font-size:13px;box-shadow:0 0 14px rgba(var(--mag-rgb),.45);transition:transform .45s var(--spring)}
+.sb-a:hover{transform:scale(1.05)}
+.sb-a.ghost{background:rgba(255,255,255,.06);box-shadow:none;color:var(--text);font-size:15px}
+.sb-a.ghost:not(:first-child){font-size:13px}

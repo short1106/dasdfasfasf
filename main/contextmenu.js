@@ -48,6 +48,7 @@ function pageMenu(wc, p, actions) {
       { label: 'Neu laden', click: () => wc.reload() });
     sep();
   }
+  if (actions.snip) T.push({ label: 'Screenshot erstellen …', click: actions.snip });
   if (actions.inspect) T.push({ label: 'Untersuchen', click: () => wc.inspectElement(p.x, p.y) });
   while (T.length && T[T.length - 1].type === 'separator') T.pop();
   return T.length ? Menu.buildFromTemplate(T) : null;

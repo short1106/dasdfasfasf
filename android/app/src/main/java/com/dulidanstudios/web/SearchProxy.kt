@@ -21,7 +21,9 @@ object SearchProxy {
     const val TRANSLATE = "https://$HOST/translate/index.html"
     /* Gleiche Liste wie am Desktop (main.js PROXY_HOSTS) – nicht aufweichen */
     private val SOURCES = setOf("html.duckduckgo.com", "lite.duckduckgo.com", "duckduckgo.com", "de.wikipedia.org", "api.mymemory.translated.net",
-        "photon.komoot.io", "routing.openstreetmap.de", "get.geojs.io")
+        "photon.komoot.io", "routing.openstreetmap.de", "get.geojs.io",
+        /* Sofort-Antworten der Ergebnisseite: Wetter, EZB-Kurse, Fußball, Formel 1 */
+        "api.open-meteo.com", "geocoding-api.open-meteo.com", "api.frankfurter.dev", "api.openligadb.de", "api.jolpi.ca")
     /* OSM-Dienste wollen eine ehrliche App-Kennung statt eines Browser-UA */
     private val OSM = setOf("photon.komoot.io", "routing.openstreetmap.de")
     private val FILES = listOf("search/", "maps/", "translate/", "vendor/maplibre/", "vendor/bergamot/")

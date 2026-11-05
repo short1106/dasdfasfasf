@@ -123,7 +123,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Energiestrahl
 - **Proxy-Regeln** (Desktop `main.js` `searchProxy`, Android `SearchProxy.kt`):
   - nur `https`
-  - nur die Hosts `html.duckduckgo.com`, `lite.duckduckgo.com`, `duckduckgo.com`, `de.wikipedia.org` (plus Maps/Übersetzer, siehe 3.8/3.9, und am Desktop für die Sofort-Antworten `api.open-meteo.com`, `geocoding-api.open-meteo.com`, `api.frankfurter.dev`, `api.openligadb.de`, `api.jolpi.ca`; auf Android noch nicht, dort fehlen die Karten still)
+  - nur die Hosts `html.duckduckgo.com`, `lite.duckduckgo.com`, `duckduckgo.com`, `de.wikipedia.org` (plus Maps/Übersetzer, siehe 3.8/3.9, und für die Sofort-Antworten `api.open-meteo.com`, `geocoding-api.open-meteo.com`, `api.frankfurter.dev`, `api.openligadb.de`, `api.jolpi.ca`, Desktop und Android)
   - nur mit Header `x-dw: 1`. Fremde Seiten bräuchten dafür eine CORS-Vorabanfrage, die nie beantwortet wird.
   - Antwort `{status, body}`, höchstens 4 MB
   - Bei DuckDuckGo wird der Referer gesetzt. Am Desktop geht das per `webRequest.onBeforeSendHeaders` der Proxy-Session, weil `fetch` den Header `referer` verbietet.
@@ -276,6 +276,11 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Letzter Inkognito-Tab zu → `wipeIncognito()` (Storage, Cache, Auth, DNS) → UI `incognito-wiped` mit Glitch-Wisch.
   - Werbeblocker: Ghostery meldet seine IPC-Handler global an, kann also nur eine Session direkt bedienen. Für Inkognito hängt `adblock.attach()` nur die Netzwerk-Filter (`onBeforeRequest`/`onHeadersReceived`) an, ohne kosmetische Filter.
   - UI: `body.inco` (kühle Akzente), Tab `.inco` mit Masken-Icon, Hinweis `.inco-hero` auf der Startseite. `Strg+Umschalt+N`, Menü, Palette.
+- **Snipping-Tool `ui/js/snip.js`** (`Strg+Umschalt+S`, Scheren-Knopf in der Leiste, Palette, Menü, Rechtsklick „Screenshot erstellen …“):
+  - Main `snip:capture(id, full)`: sichtbar per `capturePage` (PNG), ganze Seite per DevTools-Protokoll (`Page.captureScreenshot` mit `captureBeyondViewport`, höchstens 16.000 px hoch). Ohne Tab-View wird die Oberfläche fotografiert.
+  - UI: View per `hold('snip')` verstecken, Foto über `#viewport` legen, Bereich ziehen (oder Enter = ganze Ansicht), dann Canvas-Editor mit Stift, Marker, Pfeil, Rahmen, Text, Verpixeln, 6 Farben, Rückgängig (25 Schritte), Tasten 1–6, Strg+C/S/Z.
+  - `snip:copy`: Electron 45 hat im Main nur noch die Web-artige Zwischenablage (`clipboard.write([new ClipboardItem({'image/png': Blob})])`), ältere `writeImage`. In xvfb nicht prüfbar.
+  - `snip:save` → `Bilder\Dulidan Screenshots\Screenshot JJJJ-MM-TT HH-MM-SS.png`, `snip:show` öffnet den Ordner.
 - **Autostart:** Einstellung „Mit Windows starten“ → `app.setLoginItemSettings`. Geht nur in der installierten App. Der Schalter liest beim Start den echten Zustand.
 - **Tabs robust:**
   - **Übergänge:** `view.transition()` räumt in `finally` immer auf, damit ein Tab nie „im Übergang“ hängen bleibt (sonst bliebe er leer). Notbremse: 8 s.
@@ -377,6 +382,8 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `adtest.js`, `looptest.js`
   - `calcui.js`, `updui.js`
   - `searchtest.js`: Ergebnisseite, braucht `DW_PROXY_BASE`
+  - `snip.js`: Snipping-Tool (Bereich, Werkzeuge, Speichern, Kopieren, ganze Seite über `fixtures/site/long.html`)
+  - `mobileanswers.js`: Sofort-Antworten im Handy-Format
   - `prognose.js`: Liga-Schalter und Prognose (Tipps, Simulation, Abschlusstabelle)
   - `answers.js`: Sofort-Antworten (Wetter, Währung, Einheiten, Bundesliga, Verein, F1) und Inkognito (Cookies weg nach Schließen, kein Verlauf)
   - `mobilesearch.js`: Ergebnisseite im Handy-Format

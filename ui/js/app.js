@@ -15,6 +15,7 @@ import { initPanels, openPanel, closePanel, onDownload } from './panels.js';
 import { runBoot, booted } from './boot.js';
 import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark, history } from './data.js';
 import { sfx } from './sound.js';
+import { openSnip } from './snip.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
 
@@ -66,6 +67,7 @@ async function startDisco() {
   if (!ok) toast('Disko-Modus braucht einen Tab mit Musik oder Video');
 }
 discoBtn.addEventListener('click', () => startDisco());
+$('#btnSnip').addEventListener('click', () => openSnip(active));
 
 let lastShock = 0;
 onKick(b => {
@@ -442,6 +444,7 @@ function focusBar() {
 const ACTIONS = {
   'new-tab': () => newTab(),
   incognito: () => newTab(null, { incognito: true }),
+  snip: () => openSnip(active),
   'close-tab': () => closeTab(active),
   'focus-omnibox': focusBar,
   palette: () => pal.toggle(),
@@ -473,6 +476,7 @@ const ACTIONS = {
 const COMMANDS = () => [
   { icon: 'plus', name: 'Neuer Tab', key: 'Strg T', run: () => newTab() },
   { icon: 'mask', name: 'Neuer Inkognito-Tab', key: 'Strg ⇧ N', run: () => newTab(null, { incognito: true }) },
+  { icon: 'snip', name: 'Screenshot / Snipping-Tool', key: 'Strg ⇧ S', run: () => openSnip(active) },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
   { icon: 'back', name: 'Zurück', key: 'Alt ←', run: () => back(active) },
@@ -559,6 +563,7 @@ function keyName(e) {
   if (c && e.shiftKey && k === 'r') return 'calc';
   if (c && e.shiftKey && k === 'm') return 'disco';
   if (c && e.shiftKey && k === 'n') return 'incognito';
+  if (c && e.shiftKey && k === 's') return 'snip';
   if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
@@ -748,7 +753,7 @@ async function start() {
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
   initCalc();
-  initPanels({ newTab: () => newTab(), incognito: () => ACTIONS.incognito(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), incognito: () => ACTIONS.incognito(), snip: () => ACTIONS.snip(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

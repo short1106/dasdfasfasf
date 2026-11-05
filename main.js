@@ -3,7 +3,8 @@
    Aufbau: Protokoll · Fenster · Tabs (WebContentsView) · Enthüllung · Shortcuts · Downloads · Passwörter · IPC
    Module: main/passwords.js (Tresor) · main/adblock.js (Werbeblocker) · main/contextmenu.js (Rechtsklick) */
 
-const { app, BrowserWindow, WebContentsView, ipcMain, protocol, net, session, shell, clipboard } = require('electron');
+const electron = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, protocol, net, session, shell, clipboard, nativeImage } = electron;
 const path = require('node:path');
 const fs = require('node:fs');
 const vault = require('./main/passwords.js');
@@ -120,7 +121,7 @@ function serveApp(ses) {
 }
 
 /* ===== Zustand ===== */
-let win = null, webSes = null, incoSes = null;
+let win = null, webSes = null, incoSes = null, lastSnip = null;
 const tabs = new Map();
 /* Kennungen: normal Chrome (ohne „Electron“), auf Google-Anmeldeseiten Firefox (auf Wunsch des Nutzers, damit die Anmeldung geht) */
 const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0';
@@ -230,6 +231,7 @@ function wire(t, wc) {
       search: text => ui('search', { text: text.slice(0, 500) }),
       translate: text => ui('translate', { text: text.slice(0, 3000) }),
       passwords: () => { win.webContents.focus(); ui('shortcut', { name: 'passwords' }); },
+      snip: () => { win.webContents.focus(); ui('shortcut', { name: 'snip' }); },
       nav: true, inspect: true
     });
     if (m) m.popup({ window: win });
@@ -498,7 +500,7 @@ function wireAutofill(t, wc) {
 }
 
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'incognito', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
+const FOCUS_UI = new Set(['new-tab', 'incognito', 'snip', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
@@ -510,6 +512,7 @@ function keyName(i) {
     if (k === 'tab') return i.shift ? 'prev-tab' : 'next-tab';
     if (k === 'r' && i.shift) return 'calc';
     if (k === 'm' && i.shift) return 'disco';
+    if (k === 's' && i.shift) return 'snip';
     if (k === 'r') return 'reload';
     if (k === ',') return 'settings';
     if (k === 'j') return 'downloads';
@@ -672,6 +675,47 @@ function ipc() {
     }));
     return out;
   });
+
+  /* ===== Snipping-Tool: Foto der Seite (sichtbar oder ganze Seite), kopieren, speichern ===== */
+  h('snip:capture', async (id, full) => {
+    const w = wcOf(id);
+    try {
+      if (!w) { const img = await win.webContents.capturePage(); return img.isEmpty() ? null : img.toDataURL(); }
+      if (full) {
+        /* Ganze Seite über das DevTools-Protokoll (capturePage kann nur den sichtbaren Teil) */
+        const dbg = w.debugger, mine = !dbg.isAttached();
+        try {
+          if (mine) dbg.attach('1.3');
+          const m = await dbg.sendCommand('Page.getLayoutMetrics');
+          const c = m.cssContentSize || m.contentSize, width = Math.ceil(c.width), height = Math.min(16000, Math.ceil(c.height));
+          const r = await dbg.sendCommand('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 } });
+          return { data: 'data:image/png;base64,' + r.data, width, height, cut: Math.ceil(c.height) > height };
+        } finally { if (mine && dbg.isAttached()) try { dbg.detach(); } catch {} }
+      }
+      const img = await w.capturePage(undefined, { stayHidden: true });
+      return img.isEmpty() ? null : img.toDataURL();
+    } catch (e) { if (process.env.DW_DEBUG) console.log('[snip]', e.message); return null; }
+  });
+  const pngOf = d => (typeof d === 'string' && d.startsWith('data:image/png;base64,') && d.length < 80e6 ? nativeImage.createFromDataURL(d) : null);
+  h('snip:copy', async d => {
+    const img = pngOf(d); if (!img || img.isEmpty()) return false;
+    /* Electron 45: Zwischenablage wie im Web (ClipboardItem mit Blob); ältere Versionen: writeImage() */
+    if (typeof clipboard.writeImage === 'function') clipboard.writeImage(img);
+    else await clipboard.write([new electron.ClipboardItem({ 'image/png': new Blob([img.toPNG()], { type: 'image/png' }) })]);
+    return true;
+  });
+  h('snip:save', async d => {
+    const img = pngOf(d); if (!img || img.isEmpty()) return null;
+    const dir = path.join(app.getPath('pictures'), 'Dulidan Screenshots');
+    const p2 = n => String(n).padStart(2, '0'), t = new Date();
+    const name = `Screenshot ${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())} ${p2(t.getHours())}-${p2(t.getMinutes())}-${p2(t.getSeconds())}.png`;
+    await fs.promises.mkdir(dir, { recursive: true });
+    const file = uniquePath(dir, name);
+    await fs.promises.writeFile(file, img.toPNG());
+    lastSnip = file;
+    return file;
+  });
+  h('snip:show', () => { if (lastSnip) shell.showItemInFolder(lastSnip); });
 
   h('win:min', () => win.minimize());
   h('win:max', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));

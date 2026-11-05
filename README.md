@@ -46,6 +46,7 @@ Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ord
     - Enter öffnet den Rechner, Antippen des Vorschlags kopiert das Ergebnis.
 - **Dulidan Maps** (`maps ort`, Startseiten-Karte „Maps“ oder Menü → „Maps“): dieselbe Nachtkarte wie am PC, mit Suche, Routen und Verkehrs-Modus (Menü → „Verkehr“).
   - „Mein Standort“ nimmt auf dem Handy das echte GPS. Android fragt beim ersten Antippen einmal nach der Erlaubnis. Nur Dulidan Maps bekommt den Standort, fremde Seiten nie.
+- **Sofort-Antworten** wie am PC: Wetter, Währungen, Einheiten, Bundesliga mit Prognose, Vereine und Formel 1.
 - **Übersetzer** (`tr text` oder Menü → „Übersetzer“): Deutsch, Englisch, Spanisch und Französisch übersetzt das Handy selbst, nach einmaligem Laden des Sprachpakets auch offline. Japanisch und Türkisch gehen online.
 - **Widget „Dulidan Suche“ für den Startbildschirm:** Menü → „Widget“ legt es direkt ab. Alternativ: Startbildschirm lange drücken → Widgets → Dulidan Web.
   - Tippen öffnet einen leeren Tab mit Tastatur.
@@ -84,6 +85,7 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | --- | --- |
 | `Strg+T` | Neuer Tab |
 | `Strg+Umschalt+N` | Neuer Inkognito-Tab |
+| `Strg+Umschalt+S` | Screenshot (Snipping-Tool) |
 | `Strg+W` | Tab schließen |
 | `Strg+Tab` / `Strg+Umschalt+Tab` | Nächster / vorheriger Tab |
 | `Strg+L` | Adressleiste fokussieren |
@@ -224,6 +226,10 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - **Lokal:** Deutsch, Englisch, Spanisch und Französisch übersetzt Dulidan Web direkt auf dem PC (Mozilla Bergamot). Das ist privat, und nach dem einmaligen Laden des Sprachpakets (ca. 20–40 MB) geht es offline.
   - **Online:** Japanisch und Türkisch laufen über den kostenlosen Dienst MyMemory, mit Tageslimit.
   - Dazu: Sprache automatisch erkennen, Tauschen, Kopieren, Vorlesen.
+- **Snipping-Tool** (`Strg+Umschalt+S`, Scheren-Knopf oben, Menü oder Rechtsklick → „Screenshot erstellen …“):
+  - Bereich ziehen, „Ganze Ansicht“ (Enter) oder „Ganze Seite“ (auch der Teil, den man erst durch Scrollen sieht).
+  - Danach markieren: Stift, Marker, Pfeil, Rahmen, Text, Verpixeln (für Namen oder Passwörter), 6 Farben, Rückgängig.
+  - **Kopieren** (`Strg+C`, danach mit `Strg+V` überall einfügen) oder **Speichern** (`Strg+S`) nach `Bilder\Dulidan Screenshots`.
 - **Inkognito-Tabs** (`Strg+Umschalt+N`, Menü oder Palette): eigener Tab mit Masken-Symbol und kühlem Farbschema.
   - Kein Verlauf, keine gespeicherten Passwörter oder Adressen, wird nicht wiederhergestellt.
   - Cookies, Speicher, Cache und Logins liegen nur im Arbeitsspeicher. Schließt du den letzten Inkognito-Tab, wird alles gelöscht („SPUREN GELÖSCHT“).
