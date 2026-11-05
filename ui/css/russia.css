@@ -1,0 +1,61 @@
+/* Dulidan Web · russia.css – Design „Россия“: Winternacht, Purpurrot und Gold, Zwiebelkuppeln, Ornament-Borten, kyrillische Schrift
+   Alles nur unter html[data-theme=russland]; Farben setzt settings.js (Akzent = Nachtblau/Rot/Gold), Schnee und Kuppeln kommen aus russia.js.
+   Aufbau: Tokens · Rahmen/Leisten (Ornament-Borte) · Tabs · Startseite (Kuppeln, Glühen, Titel, Senkrecht-Schrift) · Panels/Toasts · Schnee */
+
+html[data-theme=russland]{
+  --bg:#080b1c;--bg-2:#0c1028;--surface:#111633;--surface-2:#171d40;
+  --text:#f4f0e8;--muted:#c8c0b2;--dim:#948c80;
+  --line:rgba(244,240,232,.10);--line-2:rgba(232,184,74,.38);
+  --ru-red:#d52b1e;--ru-gold:#e8b84a;--ru-ice:#cfe0ff;
+  --serif:"Palatino Linotype","Book Antiqua",Georgia,"Times New Roman",serif;
+}
+html[data-theme=russland] body{background:radial-gradient(120% 80% at 50% 120%,#24123a 0%,#0d1330 40%,var(--bg) 70%)}
+
+/* ---------- Rahmen, Leisten: goldene Ornament-Borte (Rauten und Punkte wie Volkskunst) ---------- */
+html[data-theme=russland] .titlebar,html[data-theme=russland] .toolbar{background:linear-gradient(180deg,rgba(17,22,51,.94),rgba(12,16,40,.88))}
+html[data-theme=russland] .toolbar{position:relative}
+html[data-theme=russland] .toolbar::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:6px;pointer-events:none;opacity:.85;
+  background:linear-gradient(45deg,transparent 40%,var(--ru-gold) 40% 60%,transparent 60%) 0 0/12px 6px,linear-gradient(-45deg,transparent 40%,var(--ru-red) 40% 60%,transparent 60%) 6px 0/12px 6px}
+html[data-theme=russland] .brand-t::after{content:" РУС";font-family:var(--serif);color:var(--ru-gold);font-weight:700;letter-spacing:.06em}
+html[data-theme=russland] .omni{background:rgba(8,11,28,.85);border-color:rgba(232,184,74,.25);border-radius:10px}
+html[data-theme=russland] .omni:focus-within{border-color:var(--ru-gold);box-shadow:0 0 0 3px rgba(232,184,74,.16),0 0 26px rgba(213,43,30,.35)}
+
+/* ---------- Tabs: gewölbter Rahmen mit Gold-Rot-Gold-Kante ---------- */
+html[data-theme=russland] .tab{border-radius:14px 14px 0 0}
+html[data-theme=russland] .tab.active{background:linear-gradient(180deg,rgba(213,43,30,.22),rgba(23,29,64,.95));border-color:rgba(232,184,74,.45)}
+html[data-theme=russland] .tab.active::after{content:"";position:absolute;left:8px;right:8px;top:-1px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--ru-gold) 15%,var(--ru-red) 50%,var(--ru-gold) 85%,transparent);box-shadow:0 0 12px rgba(232,184,74,.7)}
+
+/* ---------- Startseite ---------- */
+html:not([data-theme=russland]) .ru-city,html:not([data-theme=russland]) .ru-glow,html:not([data-theme=russland]) .ru-vert,html:not([data-theme=russland]) .ru-sub,html:not([data-theme=russland]) .ru-snow{display:none}
+html[data-theme=russland] .ru-city{position:absolute;left:0;right:0;bottom:0;width:100%;height:34vh;z-index:1;pointer-events:none;opacity:.9;
+  -webkit-mask-image:linear-gradient(0deg,#000 55%,transparent);mask-image:linear-gradient(0deg,#000 55%,transparent);filter:drop-shadow(0 0 22px rgba(232,184,74,.25))}
+/* Glühen hinter dem Logo: wie Nordlicht über dem Platz */
+html[data-theme=russland] .ru-glow{position:absolute;left:50%;top:40%;width:min(70vw,900px);height:min(48vh,440px);transform:translate(-50%,-55%);z-index:1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(232,184,74,.28),rgba(213,43,30,.16) 45%,rgba(40,90,200,.08) 70%,transparent);filter:blur(8px);animation:ruGlow 8s ease-in-out infinite}
+@keyframes ruGlow{50%{transform:translate(-50%,-55%) scale(1.06);opacity:.85}}
+html[data-theme=russland] .home-grid{opacity:.35}
+html[data-theme=russland] .hero-title{font-family:var(--serif);font-weight:800;letter-spacing:.04em}
+html[data-theme=russland] .hero-title .w1 .ch{background:linear-gradient(180deg,#fff 30%,var(--ru-gold));-webkit-background-clip:text;background-clip:text}
+html[data-theme=russland] .hero-title .outline{-webkit-text-stroke:1.5px var(--ru-gold)}
+html[data-theme=russland] .ru-sub{margin-top:4px;font-family:var(--serif);font-size:clamp(14px,1.6vw,20px);letter-spacing:.55em;color:var(--ru-gold);text-shadow:0 0 18px rgba(232,184,74,.55);pointer-events:none}
+html[data-theme=russland] .ru-vert{position:absolute;top:50%;transform:translateY(-50%);z-index:3;writing-mode:vertical-rl;font-family:var(--serif);font-size:clamp(16px,2.2vh,24px);letter-spacing:.45em;color:rgba(244,240,232,.5);pointer-events:none;text-shadow:0 0 14px rgba(213,43,30,.5)}
+html[data-theme=russland] .ru-vert.l{left:5vw}
+html[data-theme=russland] .ru-vert.r{right:5vw;color:rgba(232,184,74,.55)}
+html[data-theme=russland] .band{background:linear-gradient(90deg,#9e1a12,var(--ru-red),#9e1a12)!important}
+html[data-theme=russland] .band-b{background:linear-gradient(90deg,#0f1a48,#1b2a6b,#0f1a48)!important}
+html[data-theme=russland] .band span{font-family:var(--serif);letter-spacing:.16em}
+html[data-theme=russland] .band span::after{width:9px;height:9px;border-radius:2px;background:var(--ru-gold);transform:rotate(45deg);box-shadow:0 0 10px var(--ru-gold)}
+html[data-theme=russland] .bigbar-in{border-radius:14px}
+html[data-theme=russland] .big-go{background:linear-gradient(135deg,#9e1a12,var(--ru-red))}
+html[data-theme=russland] .card{border-radius:12px}
+html[data-theme=russland] .card .top svg{color:var(--ru-gold)}
+html[data-theme=russland] .corner{border-color:var(--ru-gold)!important}
+
+/* ---------- Panels, Toasts, Palette: Gold-Rahmen, Schneeflocken-Siegel ---------- */
+html[data-theme=russland] .panel,html[data-theme=russland] .pal-in,html[data-theme=russland] .modal{border-color:rgba(232,184,74,.32)!important}
+html[data-theme=russland] .panel::after{content:"❄";position:absolute;right:14px;bottom:12px;width:30px;height:30px;display:grid;place-items:center;border:2px solid var(--ru-gold);border-radius:50%;color:var(--ru-gold);font:700 15px var(--serif);opacity:.55;pointer-events:none}
+html[data-theme=russland] .toast{border-color:rgba(232,184,74,.55)}
+html[data-theme=russland] .toast::before{content:"❄";display:inline-grid;place-items:center;width:20px;height:20px;margin-right:10px;border-radius:50%;background:var(--ru-red);color:#fff;font:700 11px var(--serif);vertical-align:-4px}
+
+/* ---------- Schnee über der ganzen Oberfläche (unter den Webseiten) ---------- */
+.ru-snow{position:fixed;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
