@@ -65,8 +65,24 @@
     <button id="zOut" title="Herauszoomen"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
     <button id="compass" title="Nach Norden ausrichten"><svg viewBox="0 0 24 24" id="needle"><path d="M12 3l3.5 9H8.5z" fill="currentColor" stroke="none"/><path d="M12 21l-3.5-9h7z" opacity=".4"/></svg></button>
     <button id="tilt" title="3D an/aus" class="on"><b class="mono">3D</b></button>
+    <button id="traffic" title="Verkehr: Flüge, Schiffe, Züge (T)"><svg viewBox="0 0 24 24"><path d="M12 3c.9 0 1.4.8 1.4 2v4.6l7.1 4v1.9l-7.1-2.2v4.1l2.1 1.6V21L12 20l-3.5 1v-2l2.1-1.6v-4.1l-7.1 2.2v-1.9l7.1-4V5c0-1.2.5-2 1.4-2z"/></svg></button>
     <button id="locate" title="Mein Standort"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button>
   </nav>
+
+  <!-- Verkehr -->
+  <section class="panel lg" id="lg" hidden>
+    <div class="route-head">
+      <span class="tag mono">// VERKEHR · WELTWEIT</span>
+      <button class="x" id="lgClose" aria-label="Verkehr schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="lg-rows">
+      <button class="lg-row on" data-k="air"><i class="lg-ico">✈</i><b>Flüge</b><span id="lgAir"></span></button>
+      <button class="lg-row on" data-k="sea"><i class="lg-ico">⛴</i><b>Schiffe</b><span id="lgSea"></span></button>
+      <button class="lg-row on" data-k="rail"><i class="lg-ico">🚆</i><b>Züge</b><span id="lgRail"></span></button>
+    </div>
+    <div class="lg-live mono"><i></i><span id="lgCount">0</span> unterwegs in der Animation</div>
+    <p class="lg-note">Beliebte Routen, Menge ungefähr – nicht live. Tippe auf eine Linie für Details.</p>
+  </section>
 
   <div class="toast mono" id="toast"></div>
   <div class="ctxmenu" id="ctx" hidden>

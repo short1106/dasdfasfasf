@@ -202,6 +202,10 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Ortssuche mit Vorschlägen beim Tippen.
   - Routen für Auto, Rad und zu Fuß, die sich als Energielinie einzeichnen, mit Abbiege-Hinweisen auf Deutsch.
   - Rechtsklick → „Was ist hier?“ und „Route hierher“.
+  - **Verkehr** (Flugzeug-Knopf rechts oder Taste `T`): Die Karte wird zum Globus und zeigt die beliebtesten Flugrouten, Seewege und Schnellzug-Strecken der Welt.
+    - Flugzeuge mit Leuchtspur, Containerschiffe und Züge fahren darauf hin und her. Je mehr Verkehr eine Route hat, desto mehr Fahrzeuge und desto heller die Linie.
+    - Flüge, Schiffe und Züge lassen sich einzeln an- und ausschalten. Ein Klick auf eine Linie zeigt, wie viel dort ungefähr pro Tag fährt.
+    - Das ist **nicht live**: Routen und Mengen sind gerundete Richtwerte, die Fahrzeuge sind Animation.
   - Die Daten kommen von OpenStreetMap über OpenFreeMap, Photon und routing.openstreetmap.de, alles frei und ohne Konto. Street View, Bewertungen und Live-Verkehr gibt es dort nicht.
 - **Übersetzer:** Aufruf über `tr text` in der Adressleiste, über Menü und Palette oder per Rechtsklick auf markierten Text → „Übersetzen“.
   - **Animation:** Die Ausgabe zeigt erst deinen Text, dann transkribiert er sich Wort für Wort in einer Welle zur Übersetzung, mit Glitch-Zeichen, Pop und Funken.

@@ -211,6 +211,13 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - D-Pin fällt elastisch ein, der Standort pulsiert.
   - Die Route zeichnet sich als Energielinie ein (`line-gradient` mit `line-progress`, Stützstellen streng aufsteigend), danach läuft ein Puls die Linie entlang.
 - **Bedienung:** Rechtsklick „Was ist hier? / Route hierher / Route von hier“, 3D an/aus, Kompass, `/` fokussiert die Suche.
+- **Verkehr `shared/maps/logistics.js`** (Knopf `#traffic`, Taste `T`, URL `?layer=verkehr`):
+  - **Nicht live**, Wunsch des Nutzers: beliebte Routen mit ungefährer Menge. Daten fest im Modul: ~90 Flughäfen, ~120 Flugrouten (Flüge/Tag), 16 Seewege als Wegpunkte (Schiffe/Tag, Längen > 180 laufen über die Datumsgrenze), 26 Schnellzug-Strecken (Züge/Tag). Zahlen sind gerundete Richtwerte.
+  - Flüge als Großkreise (`greatCircle`, Längen entfaltet), Seewege/Bahn fein unterteilt (`densify`).
+  - Fahrzeuge: Anzahl nach Menge, halb hin, halb zurück. Ein GeoJSON-Punkt-Source wird ~30×/s neu gesetzt. Icons per Canvas (`map.addImage`), gedreht nach Mercator-Kurs, Flugzeuge mit Leuchtspur (`line-gradient`).
+  - Farben: Flug pink, Schiff cyan `#7af3ff`, Bahn bernstein `#ffc27a`. Linienbreite und Helligkeit nach Menge, Hover hebt hervor, Klick → Toast mit Route und Menge.
+  - Beim Öffnen Globus (`setProjection({type:'globe'})`) und Flug nach außen, beim Schließen zurück zu Mercator und zur alten Ansicht.
+  - Test: `tests/e2e/traffic.js` (gleiche Server wie `maps.js`).
 - **Grenzen:** kein Street View, keine Bewertungen, kein Live-Verkehr und keine ÖPNV-Fahrpläne. Diese Daten gehören Google.
 - **Test:** `tests/e2e/maps.js` gegen `tests/fixtures/maps/tileserver.py` (echte MVT-Kacheln prozedural, braucht `pip install mapbox-vector-tile shapely`, Port 8796) und den Photon/OSRM/geojs-Nachbau in `search-server.js`.
 - **Android:** noch nicht. Dort zeigt `maps` weiter auf Google Maps. Vorher fragen.

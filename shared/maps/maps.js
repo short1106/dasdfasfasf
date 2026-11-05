@@ -1,8 +1,9 @@
 /* Dulidan Maps · maps.js – eigene Karte im Dulidan-Look
    Karte: MapLibre + OpenFreeMap (OpenStreetMap-Daten). Suche: Photon. Routen: routing.openstreetmap.de (Auto/Rad/Fuß).
    Suche, Routen und Standort laufen über den App-Proxy (/api/fetch), die Kacheln lädt MapLibre direkt.
-   Aufbau: Hilfen · Karte + Intro · Suche · Ort-Karte · Route (Energielinie, Schritte) · Steuerung · Kontextmenü */
+   Aufbau: Hilfen · Karte + Intro · Suche · Ort-Karte · Route (Energielinie, Schritte) · Steuerung · Kontextmenü · Verkehr */
 import { dulidanStyle } from './style.js';
+import { createLogistics } from './logistics.js';
 
 const $ = s => document.querySelector(s);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -51,6 +52,7 @@ map.on('load', async () => {
   const q = params.get('q');
   const p = await locateIP();
   if (p) setMe(p);
+  if (params.get('layer') === 'verkehr') return openTraffic();
   if (q) { $('#q').value = q; const r = await searchPlaces(q).catch(() => []); if (r[0]) return showPlace(r[0], true); }
   if (p) map.flyTo({ center: [p.lng, p.lat], zoom: 12.6, pitch: 55, bearing: -18, duration: reduced ? 0 : 4200, curve: 1.6, essential: true });
 });
@@ -274,4 +276,42 @@ $('#ctx').addEventListener('click', async e => {
   else if (c.dataset.c === 'to') openRoute(R.from, p);
   else openRoute(p, R.to);
 });
-addEventListener('keydown', e => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('#q').focus(); } });
+addEventListener('keydown', e => {
+  if (document.activeElement.tagName === 'INPUT') return;
+  if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
+  else if (e.key === 't' || e.key === 'T') { LG.active ? closeTraffic() : openTraffic(); }
+});
+
+/* ===================== Verkehr: beliebte Flug-, Schiffs- und Zugrouten (nicht live) ===================== */
+const LG = createLogistics(map, { onPick: label => toast(label) });
+const nf = new Intl.NumberFormat('de-DE');
+$('#lgAir').textContent = `${LG.counts.air} Routen\n≈ ${nf.format(LG.totals.air)}/Tag`;
+$('#lgSea').textContent = `${LG.counts.sea} Seewege\n≈ ${nf.format(LG.totals.sea)}/Tag`;
+$('#lgRail').textContent = `${LG.counts.rail} Strecken\n≈ ${nf.format(LG.totals.rail)}/Tag`;
+for (const id of ['#lgAir', '#lgSea', '#lgRail']) $(id).style.whiteSpace = 'pre';
+let lgCountT = 0, lgView = null;
+function openTraffic() {
+  if (LG.active) return;
+  lgView = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
+  try { map.setProjection({ type: 'globe' }); } catch {}
+  LG.start();
+  $('#lg').hidden = false; $('#traffic').classList.add('on');
+  /* Rausfliegen, bis man die Welt sieht; Mitte grob beim Standort */
+  const c = me ? [me.lng, Math.max(-20, Math.min(45, me.lat))] : [20, 30];
+  map.flyTo({ center: c, zoom: innerWidth < 700 ? 1.1 : 1.7, pitch: 0, bearing: 0, duration: reduced ? 0 : 3200, curve: 1.8, essential: true });
+  clearInterval(lgCountT); lgCountT = setInterval(() => { $('#lgCount').textContent = nf.format(LG.count()); }, 1000);
+  toast('Verkehr · beliebte Routen, Menge ungefähr');
+}
+function closeTraffic() {
+  if (!LG.active) return;
+  LG.stop(); clearInterval(lgCountT);
+  $('#lg').hidden = true; $('#traffic').classList.remove('on');
+  try { map.setProjection({ type: 'mercator' }); } catch {}
+  if (lgView && lgView.zoom > 3) map.flyTo({ ...lgView, duration: reduced ? 0 : 2200 });
+}
+$('#traffic').addEventListener('click', () => (LG.active ? closeTraffic() : openTraffic()));
+$('#lgClose').addEventListener('click', closeTraffic);
+$('#lg').addEventListener('click', e => {
+  const b = e.target.closest('.lg-row'); if (!b) return;
+  const v = !b.classList.contains('on'); b.classList.toggle('on', v); LG.set(b.dataset.k, v);
+});
