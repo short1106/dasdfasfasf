@@ -224,6 +224,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Farben: Flug pink, Schiff cyan `#7af3ff`, Bahn bernstein `#ffc27a`. Linienbreite und Helligkeit nach Menge, Hover hebt hervor, Klick → Toast mit Route und Menge.
   - Beim Öffnen Globus (`setProjection({type:'globe'})`) und Flug nach außen, beim Schließen zurück zu Mercator und zur alten Ansicht.
   - Test: `tests/e2e/traffic.js` (gleiche Server wie `maps.js`).
+- **Live-Flüge `shared/maps/live.js`** (Schalter „Live-Flüge“ im Verkehr-Panel): echte Flugzeuge von OpenSky (`opensky-network.org/api/states/all`, anonym mit Tageskontingent, in beiden Whitelists). Ab Zoom 3,2 nur der sichtbare Ausschnitt alle 20 s, weiter weg die ganze Welt alle 60 s, nach Verschieben neu. Zwischen den Abrufen Weiterrechnen nach Tempo und Kurs; 429 → „Tageslimit“. Klick → Rufzeichen, Land, Höhe, Tempo. Test `tests/e2e/liveair.js`.
 - **News `shared/maps/news.js`** (Knopf `#newsBtn`, Taste `N`, URL `?layer=news`, schließt den Verkehrs-Modus und umgekehrt):
   - Quelle **GDELT DOC 2.0** (`api.gdeltproject.org/api/v2/doc/doc`, frei, ohne Schlüssel, alle 15 Minuten neu), in beiden Proxy-Whitelists.
   - Länder als Punkte aus einer eigenen Tabelle (~120 Länder: ISO, GDELT-Name wie `unitedstates`, deutscher Name, Mittelpunkt), weil die OpenMapTiles-Kacheln keine Länderflächen haben. Ring pulsiert per `setPaintProperty` (~20/s).

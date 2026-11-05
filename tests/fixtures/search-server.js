@@ -132,6 +132,11 @@ http.createServer((req, rsp) => {
       return J({ articles: Array.from({ length: 14 }, (_, i) => ({ url: 'https://news.test/' + land + '/' + i, url_mobile: '', title: (topic ? topic + ': ' : '') + 'Schlagzeile ' + (i + 1) + ' aus ' + land + (i === 3 ? ' (Doppelt)' : ''), seendate: sd(new Date(t - i * 47 * 60000)), socialimage: i % 3 ? 'https://img.test/news' + i + '.jpg' : '', domain: land + '-zeitung' + (i % 4) + '.test', language: LG, sourcecountry: land }))
         .concat([{ url: 'https://news.test/dup', title: (topic ? topic + ': ' : '') + 'Schlagzeile 4 aus ' + land + ' (Doppelt)', seendate: sd(t), domain: 'dup.test', language: LG }]) });
     }
+    /* OpenSky: Flugzeuge über Europa (Format states/all) */
+    if (u.pathname === '/opensky-network.org/api/states/all') {
+      const st = Array.from({ length: 60 }, (_, i) => [('3c' + (1000 + i).toString(16)).slice(0, 6), 'DLH' + (100 + i) + ' ', i % 3 ? 'Germany' : 'France', 0, 0, 2 + (i % 10) * 1.6, 45 + Math.floor(i / 10) * 1.5, 10000 + i * 20, false, 230 + i, (i * 37) % 360, 0, null, 10200 + i * 20, '1000', false, 0]);
+      return J({ time: Math.floor(Date.now() / 1000), states: st });
+    }
     /* Google-News-RSS (Ausweich im News-Modus) */
     if (u.pathname === '/news.google.com/rss' || u.pathname === '/news.google.com/rss/search') {
       const gl = u.searchParams.get('gl') || 'US', items = Array.from({ length: 10 }, (_, i) => `<item><title>Google-Schlagzeile ${i + 1} aus ${gl} - Zeitung ${i}</title><link>https://news.google.com/rss/articles/x${i}</link><pubDate>${new Date(Date.now() - i * 3600e3).toUTCString()}</pubDate><source url="https://zeitung${i}.test">Zeitung ${i}</source></item>`).join('');

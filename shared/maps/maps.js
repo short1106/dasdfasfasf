@@ -5,6 +5,7 @@
 import { dulidanStyle } from './style.js';
 import { createLogistics } from './logistics.js';
 import { createNews } from './news.js';
+import { createLiveAir } from './live.js';
 
 const $ = s => document.querySelector(s);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -319,7 +320,7 @@ function openTraffic() {
 }
 function closeTraffic(keepView) {
   if (!LG.active) return;
-  LG.stop(); clearInterval(lgCountT);
+  LG.stop(); LIVE.stop(); document.querySelector('.lg-row.live').classList.remove('on'); $('#lgLive').textContent = 'ECHT · OPENSKY'; clearInterval(lgCountT);
   $('#lg').hidden = true; $('#traffic').classList.remove('on'); document.body.classList.remove('lg-on');
   if (keepView) return;
   try { map.setProjection({ type: 'mercator' }); } catch {}
@@ -351,5 +352,12 @@ $('#newsBtn').addEventListener('click', () => (NW.active ? closeNews() : openNew
 $('#lgClose').addEventListener('click', closeTraffic);
 $('#lg').addEventListener('click', e => {
   const b = e.target.closest('.lg-row'); if (!b) return;
-  const v = !b.classList.contains('on'); b.classList.toggle('on', v); LG.set(b.dataset.k, v);
+  const v = !b.classList.contains('on'); b.classList.toggle('on', v);
+  if (b.dataset.k === 'live') { v ? LIVE.start() : LIVE.stop(); if (v) $('#lgLive').textContent = 'VERBINDE …'; return; }
+  LG.set(b.dataset.k, v);
+});
+/* Echte Flugzeuge (OpenSky) – Zahl und Alter im Schalter */
+const LIVE = createLiveAir(map, {
+  onPick: t => toast(t),
+  onStatus: (n, err) => { $('#lgLive').textContent = err ? err.toUpperCase() : nf.format(n) + ' IN DER LUFT · ECHT'; if (err) toast(err); }
 });

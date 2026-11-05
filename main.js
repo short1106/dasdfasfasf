@@ -44,7 +44,8 @@ protocol.registerSchemesAsPrivileged([
 const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org', 'api.mymemory.translated.net',
   'photon.komoot.io', 'routing.openstreetmap.de', 'get.geojs.io',   /* Maps: Ortssuche, Routen, ungefährer Standort */
   'api.open-meteo.com', 'geocoding-api.open-meteo.com', 'api.frankfurter.dev', 'api.openligadb.de', 'api.jolpi.ca',   /* Sofort-Antworten: Wetter, EZB-Kurse, Fußball, Formel 1 */
-  'api.gdeltproject.org', 'news.google.com']);   /* Maps: News pro Land (GDELT, Ausweich Google-News-RSS) */
+  'api.gdeltproject.org', 'news.google.com',
+  'opensky-network.org']);   /* Maps: echte Flugzeuge (OpenSky) */   /* Maps: News pro Land (GDELT, Ausweich Google-News-RSS) */
 /* GDELT braucht für Länder-Abfragen oft länger als 9 s */
 const SLOW_HOSTS = new Set(['api.gdeltproject.org']);
 const OSM_HOSTS = new Set(['photon.komoot.io', 'routing.openstreetmap.de']);

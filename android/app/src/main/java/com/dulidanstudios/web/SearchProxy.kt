@@ -25,7 +25,9 @@ object SearchProxy {
         /* Sofort-Antworten der Ergebnisseite: Wetter, EZB-Kurse, Fußball, Formel 1 */
         "api.open-meteo.com", "geocoding-api.open-meteo.com", "api.frankfurter.dev", "api.openligadb.de", "api.jolpi.ca",
         /* Maps: News pro Land (GDELT) */
-        "api.gdeltproject.org", "news.google.com")
+        "api.gdeltproject.org", "news.google.com",
+        /* Maps: echte Flugzeuge (OpenSky) */
+        "opensky-network.org")
     /* OSM-Dienste wollen eine ehrliche App-Kennung statt eines Browser-UA */
     private val OSM = setOf("photon.komoot.io", "routing.openstreetmap.de")
     private val FILES = listOf("search/", "maps/", "translate/", "vendor/maplibre/", "vendor/bergamot/")

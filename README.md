@@ -221,6 +221,7 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - **News** (Zeitungs-Knopf rechts oder Taste `N`): Der Globus zeigt jedes Land als leuchtenden Punkt. Ein Land antippen zeigt die neuesten Schlagzeilen von dort, mit Bild, Quelle und Uhrzeit. Ein Thema eingeben (z. B. „Ukraine“) lässt die Länder leuchten, die gerade am meisten darüber berichten. Fremdsprachige Überschriften lassen sich mit „DE“ übersetzen. Daten: GDELT, alle 15 Minuten neu.
   - **Verkehr** (Flugzeug-Knopf rechts oder Taste `T`): Die Karte wird zum Globus und zeigt die beliebtesten Flugrouten, Seewege und Schnellzug-Strecken der Welt.
     - Flugzeuge mit Leuchtspur, Containerschiffe und Züge fahren darauf hin und her. Je mehr Verkehr eine Route hat, desto mehr Fahrzeuge und desto heller die Linie.
+    - **Live-Flüge:** Der Schalter „🛰 Live-Flüge“ zeigt echte Flugzeuge, die gerade in der Luft sind (OpenSky). Sie fliegen flüssig weiter, ein Klick zeigt Rufzeichen, Land, Höhe und Tempo. OpenSky hat ohne Konto ein Tageslimit.
     - Flüge, Schiffe und Züge lassen sich einzeln an- und ausschalten. Ein Klick auf eine Linie zeigt, wie viel dort ungefähr pro Tag fährt.
     - Das ist **nicht live**: Routen und Mengen sind gerundete Richtwerte, die Fahrzeuge sind Animation.
   - Die Daten kommen von OpenStreetMap über OpenFreeMap, Photon und routing.openstreetmap.de, alles frei und ohne Konto. Street View, Bewertungen und Live-Verkehr gibt es dort nicht.
