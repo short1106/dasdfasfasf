@@ -2,6 +2,7 @@
    Aufbau: Zustand/Adresse · Rendern (Web, Wissen, Rechner, Bilder, Videos, News) · Nachladen · Lightbox · Hintergrund · Suchleiste */
 import { web, media, wiki } from './engine.js';
 import { tryCalc, format } from '../calc.js';
+import { answer } from './answers.js';
 
 const $ = s => document.querySelector(s);
 const h = (tag, attrs = {}, ...kids) => {
@@ -197,6 +198,8 @@ async function start() {
   /* Sofortantworten: Rechnung */
   const v = tryCalc(S.q);
   if (v != null && S.t === 'web') side.append(calcCard(S.q, v));
+  /* Sofort-Antworten (Wetter, Umrechnen, Sport) immer frisch holen, auch beim Zurückkommen */
+  if (v == null && S.t === 'web') answer(S.q).then(c => { if (c) side.prepend(enter(c)); }).catch(() => {});
   /* Zurück-Navigation: alles aus dem Zwischenspeicher, samt Scrollposition */
   let cached = null;
   try { cached = JSON.parse(sessionStorage.getItem(CACHE) || 'null'); } catch {}

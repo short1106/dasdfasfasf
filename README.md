@@ -83,6 +83,7 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | Kürzel | Aktion |
 | --- | --- |
 | `Strg+T` | Neuer Tab |
+| `Strg+Umschalt+N` | Neuer Inkognito-Tab |
 | `Strg+W` | Tab schließen |
 | `Strg+Tab` / `Strg+Umschalt+Tab` | Nächster / vorheriger Tab |
 | `Strg+L` | Adressleiste fokussieren |
@@ -114,6 +115,11 @@ Eine einzige Leiste für Adressen und Suche. Eingaben ohne Domain landen auf der
   - Videos mit Vorschaubild, Dauer und Aufrufen
   - News mit Quelle und „vor 3 Std.“
 - **Sofortantworten:** eine Wikipedia-Karte zum Begriff. Bei Rechnungen wie `200*15%` erscheint eine Rechner-Karte mit dem Ergebnis.
+  - **Wetter** (`wetter`, `wetter berlin`, `tokio wetter`): animierte Karte mit fallendem Regen, Schnee, Blitzen, Sonnenstrahlen oder Sternen, dazu Kurve der nächsten 24 Stunden und 7 Tage. Daten: Open-Meteo.
+  - **Währungen** (`100 usd in eur`, `50€ in pfund`, `dollar kurs`): EZB-Kurs, Betrag direkt in der Karte änderbar, Tauschen-Knopf, Verlauf der letzten 30 Tage.
+  - **Einheiten** (`5 meilen in km`, `30 °c in f`, `2 gb in mb`, `100 km/h in mph`): Länge, Gewicht, Volumen, Tempo, Daten, Zeit, Fläche, Temperatur.
+  - **Fußball** (`bundesliga`, `2. liga`, `3. liga`, `bvb`, `fc bayern`, `schalke`, `msv duisburg` …): Spieltag mit Live-Ergebnissen, die sich jede Minute selbst aktualisieren, Tabelle, beim Verein Form, nächste Spiele und Tabellenplatz. Daten: OpenLigaDB.
+  - **Formel 1** (`f1`, `formel 1`): Fahrer-WM mit Teamfarben und Countdown zum nächsten Rennen. Daten: Jolpica.
 - **Woher die Treffer kommen:** Die App holt sie im Hintergrund von DuckDuckGo, also ohne Tracking und ohne API-Schlüssel, dazu Wikipedia. Angezeigt wird alles nur in der eigenen Seite.
   - Der Abruf läuft über einen kleinen Proxy in der App. Er spricht ausschließlich diese festen Quellen an und ist nur für die Ergebnisseite selbst nutzbar, fremde Webseiten kommen nicht an ihn heran.
 - **Andere Suchmaschine:** Wer doch eine möchte, kann sie in den Einstellungen wählen (DuckDuckGo, Google, Bing, Brave, Ecosia, Startpage).
@@ -215,6 +221,10 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - **Lokal:** Deutsch, Englisch, Spanisch und Französisch übersetzt Dulidan Web direkt auf dem PC (Mozilla Bergamot). Das ist privat, und nach dem einmaligen Laden des Sprachpakets (ca. 20–40 MB) geht es offline.
   - **Online:** Japanisch und Türkisch laufen über den kostenlosen Dienst MyMemory, mit Tageslimit.
   - Dazu: Sprache automatisch erkennen, Tauschen, Kopieren, Vorlesen.
+- **Inkognito-Tabs** (`Strg+Umschalt+N`, Menü oder Palette): eigener Tab mit Masken-Symbol und kühlem Farbschema.
+  - Kein Verlauf, keine gespeicherten Passwörter oder Adressen, wird nicht wiederhergestellt.
+  - Cookies, Speicher, Cache und Logins liegen nur im Arbeitsspeicher. Schließt du den letzten Inkognito-Tab, wird alles gelöscht („SPUREN GELÖSCHT“).
+  - Downloads und Lesezeichen bleiben erhalten.
 - **Suchen auf der Seite und Zoom** pro Tab, mit Trefferzähler und Zoom-Anzeige.
 - **Einstellungen:** Suchmaschine, Animationen (Normal, Episch, Aus), Akzentfarbe (sechs Presets und eine freie Farbe), Mikro-Sounds (standardmäßig aus). `prefers-reduced-motion` wird respektiert: Ist es aktiv, steht der Standard auf „Aus".
 

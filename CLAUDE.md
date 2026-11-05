@@ -111,6 +111,9 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Web: DuckDuckGo-HTML (`POST html.duckduckgo.com/html/`), Ausweich auf DuckDuckGo-Lite. Anzeigen werden gefiltert, nachgeladen wird über das Formular mit dem größten `s`.
   - Bilder/Videos/News: JSON-Endpunkte `i.js`/`v.js`/`news.js` mit `vqd`-Schlüssel aus `duckduckgo.com/?q=`.
   - Wissen: Wikipedia-API (de), nur wenn der Titel zur Suche passt.
+  - **Sofort-Antworten `answers.js`** (`detect(q)` → Karte oder `null`, Fehler bleiben still): Wetter (Open-Meteo Forecast + Geocoding, ohne Ort IP-Standort), Währung (Frankfurter `api.frankfurter.dev/v1`, EZB, plus 30-Tage-Verlauf), Einheiten (lokal), Fußball (OpenLigaDB: `getmatchdata/bl1|bl2|bl3`, `getbltable/<liga>/<saison>`, `getmatchesbyteam/<filter>/4/3`; Live-Spiele → Karte lädt jede Minute neu), Formel 1 (Jolpica `ergast/f1/current/driverstandings/` und `/races/`).
+    - Vereine nur über eindeutige Namen (`bvb`, `fc bayern`, `msv duisburg` …), Städte allein bleiben normale Suchen.
+    - Formate aus der Doku nachgebaut (Container ohne Zugriff), Nachbau in `tests/fixtures/search-server.js`, Test `tests/e2e/answers.js`. **Gegen die echten APIs ungetestet.**
 - `search.js` rendert alles mit `textContent`, nie fremdes HTML. Weitere Teile:
   - Zwischenspeicher in `sessionStorage`, damit Zurück sofort an derselben Stelle steht
   - Lightbox für Bilder
@@ -118,7 +121,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Energiestrahl
 - **Proxy-Regeln** (Desktop `main.js` `searchProxy`, Android `SearchProxy.kt`):
   - nur `https`
-  - nur die Hosts `html.duckduckgo.com`, `lite.duckduckgo.com`, `duckduckgo.com`, `de.wikipedia.org`
+  - nur die Hosts `html.duckduckgo.com`, `lite.duckduckgo.com`, `duckduckgo.com`, `de.wikipedia.org` (plus Maps/Übersetzer, siehe 3.8/3.9, und am Desktop für die Sofort-Antworten `api.open-meteo.com`, `geocoding-api.open-meteo.com`, `api.frankfurter.dev`, `api.openligadb.de`, `api.jolpi.ca`; auf Android noch nicht, dort fehlen die Karten still)
   - nur mit Header `x-dw: 1`. Fremde Seiten bräuchten dafür eine CORS-Vorabanfrage, die nie beantwortet wird.
   - Antwort `{status, body}`, höchstens 4 MB
   - Bei DuckDuckGo wird der Referer gesetzt. Am Desktop geht das per `webRequest.onBeforeSendHeaders` der Proxy-Session, weil `fetch` den Header `referer` verbietet.
@@ -266,6 +269,11 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Doppeltipp auf das Objekt → Brücke `Dulidan.shape(key)`.
 
 ### Weitere Desktop-Funktionen
+- **Inkognito-Tabs:** `tab:create({incognito})`, eigene Partition `dw-incognito` ohne `persist:` (nur im Speicher), eingerichtet wie `persist:web` über `prepareWebSession()`.
+  - Kein Verlauf (`addHistory` übersprungen), nicht in `dw_session`, keine Passwort-/Wallet-Angebote, kein Lyrics-Sync. Lesen gespeicherter Passwörter bleibt erlaubt.
+  - Letzter Inkognito-Tab zu → `wipeIncognito()` (Storage, Cache, Auth, DNS) → UI `incognito-wiped` mit Glitch-Wisch.
+  - Werbeblocker: Ghostery meldet seine IPC-Handler global an, kann also nur eine Session direkt bedienen. Für Inkognito hängt `adblock.attach()` nur die Netzwerk-Filter (`onBeforeRequest`/`onHeadersReceived`) an, ohne kosmetische Filter.
+  - UI: `body.inco` (kühle Akzente), Tab `.inco` mit Masken-Icon, Hinweis `.inco-hero` auf der Startseite. `Strg+Umschalt+N`, Menü, Palette.
 - **Autostart:** Einstellung „Mit Windows starten“ → `app.setLoginItemSettings`. Geht nur in der installierten App. Der Schalter liest beim Start den echten Zustand.
 - **Tabs robust:**
   - **Übergänge:** `view.transition()` räumt in `finally` immer auf, damit ein Tab nie „im Übergang“ hängen bleibt (sonst bliebe er leer). Notbremse: 8 s.
@@ -367,6 +375,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `adtest.js`, `looptest.js`
   - `calcui.js`, `updui.js`
   - `searchtest.js`: Ergebnisseite, braucht `DW_PROXY_BASE`
+  - `answers.js`: Sofort-Antworten (Wetter, Währung, Einheiten, Bundesliga, Verein, F1) und Inkognito (Cookies weg nach Schließen, kein Verlauf)
   - `mobilesearch.js`: Ergebnisseite im Handy-Format
   - `discotest.js video.html|audio.html`: Disko inklusive Esc, Drops und Screenshots
   - `anatest.js`: Analyse-Werte je Song-Abschnitt

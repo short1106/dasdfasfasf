@@ -43,6 +43,54 @@ http.createServer((req, rsp) => {
         { name: 'Schwanentorbrücke', distance: 600, maneuver: { type: 'turn', modifier: 'slight left', location: coords[18] } }, { name: '', distance: 0, maneuver: { type: 'arrive', location: coords[30] } }];
       return send(JSON.stringify({ code: 'Ok', routes: [{ distance: 1620, duration: foot ? 1250 : bike ? 420 : 300, geometry: { type: 'LineString', coordinates: coords }, legs: [{ steps }] }] }), 'application/json');
     }
+    /* Sofort-Antworten: Open-Meteo, Frankfurter, OpenLigaDB, Jolpica (Formate wie die echten APIs) */
+    const J = o => send(JSON.stringify(o), 'application/json');
+    if (u.pathname === '/geocoding-api.open-meteo.com/v1/search') {
+      const P = { berlin: ['Berlin', 52.52, 13.41, 'Berlin', 'Deutschland'], tokio: ['Tokio', 35.69, 139.69, 'Tokio', 'Japan'], münchen: ['München', 48.14, 11.58, 'Bayern', 'Deutschland'] };
+      const r = P[(u.searchParams.get('name') || '').toLowerCase()];
+      return J(r ? { results: [{ id: 1, name: r[0], latitude: r[1], longitude: r[2], admin1: r[3], country: r[4] }] } : { generationtime_ms: 0.2 });
+    }
+    if (u.pathname === '/api.open-meteo.com/v1/forecast') {
+      const lat = +u.searchParams.get('latitude'), code = lat > 52 ? 63 : lat > 50 ? 0 : lat > 40 ? 73 : 95;
+      const now = new Date(); now.setMinutes(0, 0, 0);
+      const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const H = Array.from({ length: 168 }, (_, i) => new Date(now.getTime() + (i - 14) * 3600e3));
+      const D = Array.from({ length: 7 }, (_, i) => iso(new Date(now.getTime() + i * 864e5)).slice(0, 10));
+      return J({ latitude: lat, timezone: 'Europe/Berlin', current: { time: iso(now), temperature_2m: 8.4, apparent_temperature: 5.9, relative_humidity_2m: 81, weather_code: code, wind_speed_10m: 17.3, is_day: 1, precipitation: 0.4 },
+        hourly: { time: H.map(iso), temperature_2m: H.map((_, i) => +(7 + 4 * Math.sin((i - 8) / 24 * 6.28)).toFixed(1)), weather_code: H.map(() => code), precipitation_probability: H.map((_, i) => (i * 37) % 90) },
+        daily: { time: D, weather_code: [code, 3, 61, 0, 2, 71, 95], temperature_2m_max: [11, 9, 7, 12, 13, 4, 10], temperature_2m_min: [4, 3, 1, 5, 6, -2, 3], precipitation_probability_max: [70, 20, 80, 0, 10, 60, 90], sunrise: D.map(d => d + 'T07:21'), sunset: D.map(d => d + 'T16:44') } });
+    }
+    if (u.pathname.startsWith('/api.frankfurter.dev/v1/')) {
+      const R = { USD: 1, EUR: 0.8642, GBP: 0.7612, JPY: 152.31, CHF: 0.8011, TRY: 42.1 };
+      const b = u.searchParams.get('base'), t = u.searchParams.get('symbols'), rate = +(R[t] / R[b]).toFixed(5);
+      if (u.pathname.endsWith('/latest')) return J({ amount: 1, base: b, date: '2026-11-04', rates: { [t]: rate } });
+      const rates = {}; for (let i = 0; i < 22; i++) rates[`2026-10-${String(5 + i).padStart(2, '0')}`] = { [t]: +(rate * (0.97 + i * 0.0015)).toFixed(5) };
+      return J({ amount: 1, base: b, start_date: '2026-10-05', end_date: '2026-11-04', rates });
+    }
+    if (u.pathname.startsWith('/api.openligadb.de/')) {
+      const T = ['FC Bayern München', 'Borussia Dortmund', 'Bayer 04 Leverkusen', 'RB Leipzig', 'Eintracht Frankfurt', 'VfB Stuttgart', 'SC Freiburg', 'VfL Wolfsburg', 'Borussia Mönchengladbach',
+        '1. FSV Mainz 05', '1. FC Union Berlin', 'TSG Hoffenheim', 'FC Augsburg', 'SV Werder Bremen', '1. FC Heidenheim 1846', 'FC St. Pauli', 'Hamburger SV', '1. FC Köln']
+        .map((n, i) => ({ teamId: 100 + i, teamName: n, shortName: n.replace(/^(FC|1\. FC|1\. FSV|SV|SC|VfL|VfB|TSG|RB) /, '').replace(/ (München|04|05|1846)$/, ''), teamIconUrl: 'https://img.test/crest' + i + '.png' }));
+      const t0 = Date.now();
+      const match = (id, a, b, offMin, fin, s1, s2, goals = []) => ({ matchID: id, matchDateTimeUTC: new Date(t0 + offMin * 60000).toISOString(), matchDateTime: new Date(t0 + offMin * 60000).toISOString().slice(0, 19),
+        leagueShortcut: 'bl1', leagueName: '1. Fußball-Bundesliga 2026/2027', group: { groupName: '10. Spieltag', groupOrderID: 10 }, team1: T[a], team2: T[b], matchIsFinished: fin,
+        matchResults: fin ? [{ resultTypeID: 1, resultOrderID: 1, pointsTeam1: Math.floor(s1 / 2), pointsTeam2: Math.floor(s2 / 2) }, { resultTypeID: 2, resultOrderID: 2, pointsTeam1: s1, pointsTeam2: s2 }] : [], goals });
+      if (u.pathname === '/api.openligadb.de/getmatchdata/bl1') return J([match(1, 0, 1, -3000, true, 3, 2), match(2, 2, 3, -2900, true, 1, 1), match(3, 4, 5, -40, false, 0, 0, [{ scoreTeam1: 1, scoreTeam2: 0, matchMinute: 12, goalGetterName: 'Test' }]),
+        match(4, 6, 7, 1440, false), match(5, 8, 9, 1440, false), match(6, 10, 11, 1600, false), match(7, 12, 13, 2880, false), match(8, 14, 15, 2880, false), match(9, 16, 17, 3000, false)]);
+      if (u.pathname.startsWith('/api.openligadb.de/getbltable/bl1/')) return J(T.map((t, i) => ({ teamInfoId: t.teamId, teamName: t.teamName, shortName: t.shortName, teamIconUrl: t.teamIconUrl, points: 28 - i * 1.5 | 0, matches: 10, won: 9 - (i >> 1), draw: 1, lost: i >> 1, goals: 30 - i, opponentGoals: 8 + i, goalDiff: 22 - 2 * i })));
+      if (u.pathname.startsWith('/api.openligadb.de/getmatchesbyteam/Dortmund/')) return J([match(11, 1, 6, -20160, true, 2, 0), match(12, 9, 1, -10080, true, 1, 1), match(13, 1, 4, -4320, true, 1, 3), match(1, 0, 1, -3000, true, 3, 2), match(14, 1, 11, 4320, false), match(15, 13, 1, 10080, false)]);
+      return J([]);
+    }
+    if (u.pathname === '/api.jolpi.ca/ergast/f1/current/driverstandings/') {
+      const D = [['Norris', 'McLaren', 'mclaren', 391], ['Piastri', 'McLaren', 'mclaren', 366], ['Verstappen', 'Red Bull', 'red_bull', 341], ['Russell', 'Mercedes', 'mercedes', 276], ['Leclerc', 'Ferrari', 'ferrari', 214],
+        ['Hamilton', 'Ferrari', 'ferrari', 148], ['Antonelli', 'Mercedes', 'mercedes', 122], ['Albon', 'Williams', 'williams', 73], ['Hülkenberg', 'Audi', 'audi', 41], ['Alonso', 'Aston Martin', 'aston_martin', 40], ['Bearman', 'Haas', 'haas', 32]];
+      return J({ MRData: { StandingsTable: { season: '2026', StandingsLists: [{ season: '2026', round: '20', DriverStandings: D.map((d, i) => ({ position: String(i + 1), points: String(d[3]), wins: '0', Driver: { familyName: d[0], givenName: '', code: d[0].slice(0, 3).toUpperCase() }, Constructors: [{ constructorId: d[2], name: d[1] }] })) }] } } });
+    }
+    if (u.pathname === '/api.jolpi.ca/ergast/f1/current/races/') {
+      const d = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+      return J({ MRData: { RaceTable: { season: '2026', Races: [{ round: '20', raceName: 'Mexico City Grand Prix', date: d(-12), time: '20:00:00Z', Circuit: { circuitName: 'Autódromo Hermanos Rodríguez', Location: { locality: 'Mexico City', country: 'Mexico' } } },
+        { round: '21', raceName: 'São Paulo Grand Prix', date: d(3), time: '17:00:00Z', Circuit: { circuitName: 'Interlagos', Location: { locality: 'São Paulo', country: 'Brazil' } } }] } } });
+    }
     /* MyMemory-Nachbau für den Übersetzer (Japanisch/Türkisch gehen online) */
     if (u.pathname === '/api.mymemory.translated.net/get') {
       const to = (u.searchParams.get('langpair') || '').split('|')[1];

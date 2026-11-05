@@ -19,7 +19,7 @@ export class TabStrip {
     const title = h('span', { class: 't' }, h('span', {}, 'Neuer Tab'));
     const x = h('button', { class: 'x', 'aria-label': 'Tab schließen', 'data-cursor': 'SCHLIESSEN' }, icon('x'));
     const eq = h('span', { class: 'eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
-    const el = h('div', { class: 'tab' + (animate && anim() !== 'aus' ? ' enter' : ''), role: 'tab', dataset: { id: t.id } }, fav, title, eq, x);
+    const el = h('div', { class: 'tab' + (t.incognito ? ' inco' : '') + (animate && anim() !== 'aus' ? ' enter' : ''), role: 'tab', dataset: { id: t.id } }, fav, title, eq, x);
     el.addEventListener('animationend', e => { if (e.animationName === 'tabIn') el.classList.remove('enter'); });
     x.addEventListener('pointerdown', e => e.stopPropagation());
     x.addEventListener('click', e => { e.stopPropagation(); this.onClose(t); });
@@ -51,20 +51,20 @@ export class TabStrip {
   update(t) {
     if (!t.el) return;
     t.el.classList.toggle('loading', !!t.loading);
-    const name = t.home ? 'Neuer Tab' : (t.title || t.url || 'Lädt …');
+    const name = t.home ? (t.incognito ? 'Inkognito' : 'Neuer Tab') : (t.title || t.url || 'Lädt …');
     const span = t.elTitle.firstChild;
     if (span.textContent !== name) {
       const n = h('span', {}, name);
       t.elTitle.replaceChildren(n);
     }
     t.el.title = name;
-    const want = t.home ? 'home' : t.favicon || 'globe';
+    const want = t.incognito && (t.home || !t.favicon) ? 'mask' : t.home ? 'home' : t.favicon || 'globe';
     if (t.elFav.dataset.k !== want) {
       t.elFav.dataset.k = want;
       const spin = t.elFav.firstChild;
       let ic;
       if (want === 'home') { ic = icon('d', 'd-ico'); ic.setAttribute('viewBox', '0 0 100 100'); }
-      else if (want === 'globe') ic = icon('globe');
+      else if (want === 'globe' || want === 'mask') ic = icon(want);
       else { ic = h('img', { src: want, alt: '', draggable: 'false' }); ic.onerror = () => { t.favicon = null; this.update(t); }; }
       t.elFav.replaceChildren(spin, ic);
     }

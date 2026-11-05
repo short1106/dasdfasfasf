@@ -40,7 +40,8 @@ protocol.registerSchemesAsPrivileged([
 /* ===== Protokoll: liefert nur /ui, /assets und /shared aus, dazu den Such-Proxy ===== */
 /* Die eigene Ergebnisseite holt Treffer über den Main-Prozess, aber nur von diesen Quellen */
 const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org', 'api.mymemory.translated.net',
-  'photon.komoot.io', 'routing.openstreetmap.de', 'get.geojs.io']);   /* Maps: Ortssuche, Routen, ungefährer Standort */
+  'photon.komoot.io', 'routing.openstreetmap.de', 'get.geojs.io',   /* Maps: Ortssuche, Routen, ungefährer Standort */
+  'api.open-meteo.com', 'geocoding-api.open-meteo.com', 'api.frankfurter.dev', 'api.openligadb.de', 'api.jolpi.ca']);   /* Sofort-Antworten: Wetter, EZB-Kurse, Fußball, Formel 1 */
 const OSM_HOSTS = new Set(['photon.komoot.io', 'routing.openstreetmap.de']);
 let proxySes = null;
 /* Eigene Session im Speicher: kein Werbeblocker dazwischen, keine Cookies der Webseiten */
@@ -119,7 +120,7 @@ function serveApp(ses) {
 }
 
 /* ===== Zustand ===== */
-let win = null, webSes = null;
+let win = null, webSes = null, incoSes = null;
 const tabs = new Map();
 /* Kennungen: normal Chrome (ohne „Electron“), auf Google-Anmeldeseiten Firefox (auf Wunsch des Nutzers, damit die Anmeldung geht) */
 const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0';
@@ -163,7 +164,7 @@ function ensureView(t) {
     webPreferences: {
       preload: path.join(ROOT, 'tab-preload.js'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true,
-      backgroundThrottling: false, session: webSes,
+      backgroundThrottling: false, session: t.incognito ? incognitoSession() : webSes,
       nodeIntegrationInSubFrames: true /* nur damit das (sandboxed) Preload auch in Bezahl-iframes läuft */
     }
   });
@@ -250,7 +251,7 @@ function wire(t, wc) {
   });
   /* Sync-Taste: Versatz pro Video merken, damit er beim nächsten Mal sofort stimmt */
   wc.ipc.handle('lyrics:offset', (e, key) => (e.senderFrame === wc.mainFrame ? lyrics.getOffset(String(key || '').slice(0, 300)) : null));
-  wc.ipc.on('lyrics:offset:set', (e, key, offset) => { if (e.senderFrame === wc.mainFrame && discoId === t.id) lyrics.setOffset(String(key || '').slice(0, 300), Number(offset)); });
+  wc.ipc.on('lyrics:offset:set', (e, key, offset) => { if (e.senderFrame === wc.mainFrame && discoId === t.id && !t.incognito) lyrics.setOffset(String(key || '').slice(0, 300), Number(offset)); });
   wc.ipc.on('disco:exit', e => { if (e.senderFrame === wc.mainFrame && discoId === t.id) discoStop(); });
   wc.on('did-navigate', () => { if (discoId === t.id) discoStop(); });
 }
@@ -307,6 +308,24 @@ function closeTab(id) {
     t.view.webContents.close();
   }
   if (activeId === id) activeId = null;
+  if (t.incognito && ![...tabs.values()].some(x => x.incognito)) wipeIncognito();
+}
+
+/* ===== Inkognito: eigene Session nur im Arbeitsspeicher (Partition ohne „persist:“) =====
+   Kein Verlauf, keine gespeicherten Passwörter/Adressen; mit dem letzten Inkognito-Tab wird alles gelöscht. */
+function incognitoSession() {
+  if (!incoSes) { incoSes = session.fromPartition('dw-incognito'); prepareWebSession(incoSes); adblock.attach(incoSes); }
+  return incoSes;
+}
+async function wipeIncognito() {
+  if (!incoSes) return;
+  try {
+    await incoSes.clearStorageData();
+    await incoSes.clearCache();
+    await incoSes.clearAuthCache();
+    await incoSes.clearHostResolverCache();
+  } catch {}
+  ui('incognito-wiped', {});
 }
 
 /* ===== Enthüllung: Logo-Wipe direkt in der Seite (isolierte Welt, CSP- und TrustedTypes-sicher) ===== */
@@ -401,7 +420,7 @@ function wirePasswords(t, wc) {
     let username = str(c.username, 300) ?? '';
     const password = str(c.password, 1000);
     if (!username && t.lastUser && t.lastUser.origin === origin && Date.now() - t.lastUser.at < 15 * 60000) username = t.lastUser.username;
-    if (!origin || !password || !vault.config().offer || vault.isNever(origin)) return;
+    if (t.incognito || !origin || !password || !vault.config().offer || vault.isNever(origin)) return;
     const kind = vault.compare(origin, username, password);
     if (kind === 'same') return;
     t.pendingPw = { origin, username, password, at: Date.now() };
@@ -462,7 +481,7 @@ function wireAutofill(t, wc) {
   });
   wc.ipc.on('af:submit', e => {
     const origin = originOf(e);
-    if (!origin || !wallet.config().offer || wallet.isNever(new URL(wc.getURL()).origin)) { t.afFields.clear(); return; }
+    if (t.incognito || !origin || !wallet.config().offer || wallet.isNever(new URL(wc.getURL()).origin)) { t.afFields.clear(); return; }
     const f = {};
     for (const [k, v] of t.afFields) if (Date.now() - v.at < 10 * 60000) f[k] = v.value;
     t.afFields.clear();
@@ -479,11 +498,12 @@ function wireAutofill(t, wc) {
 }
 
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
+const FOCUS_UI = new Set(['new-tab', 'incognito', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
     if (k === 't') return 'new-tab';
+    if (k === 'n' && i.shift) return 'incognito';
     if (k === 'w') return 'close-tab';
     if (k === 'l') return 'focus-omnibox';
     if (k === 'k') return 'palette';
@@ -550,7 +570,7 @@ function ipc() {
   const tab = id => tabs.get(Number(id));
   const wcOf = id => { const t = tab(id); return t && t.view ? t.view.webContents : null; };
 
-  h('tab:create', () => { const id = nextId++; tabs.set(id, { id, view: null }); return id; });
+  h('tab:create', opts => { const id = nextId++; tabs.set(id, { id, view: null, incognito: !!(opts && opts.incognito) }); return id; });
   h('tab:close', id => closeTab(Number(id)));
   h('tab:navigate', (id, url) => {
     const t = tab(id);
@@ -698,24 +718,11 @@ app.whenReady().then(() => {
   ipc();
   /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */
   webSes = session.fromPartition('persist:web');
-  serveApp(webSes);   /* Fehlerseite und eigene Ergebnisseite laufen in Tabs */
   /* Als normales Chrome auftreten: Google & Co. blockieren Anmeldungen, sobald "Electron" in der Kennung steht */
-  const ua = webSes.getUserAgent().replace(/ dulidan-web\/\S+/i, '').replace(/ Electron\/\S+/i, '');
-  chromeUA = ua;
-  webSes.setUserAgent(ua);
-  app.userAgentFallback = ua;
-  /* Google-Anmeldung: Google lehnt eingebettete Chromium-Browser ab („Dieser Browser ist möglicherweise nicht sicher“).
-     Nur auf den Anmeldeseiten treten wir deshalb als Firefox auf, ohne Chromium-Client-Hints. */
-  webSes.webRequest.onBeforeSendHeaders({ urls: ['https://accounts.google.com/*', 'https://accounts.youtube.com/*'] }, (d, cb) => {
-    const h = d.requestHeaders;
-    h['User-Agent'] = FIREFOX_UA;
-    for (const k of Object.keys(h)) if (/^sec-ch-ua/i.test(k)) delete h[k];
-    cb({ requestHeaders: h });
-  });
-  for (const s of [session.defaultSession, webSes]) {
-    s.setPermissionRequestHandler((_, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
-  }
-  wireDownloads(webSes);
+  chromeUA = webSes.getUserAgent().replace(/ dulidan-web\/\S+/i, '').replace(/ Electron\/\S+/i, '');
+  app.userAgentFallback = chromeUA;
+  prepareWebSession(webSes);
+  session.defaultSession.setPermissionRequestHandler((_, perm, cb) => cb(PERMS.includes(perm)));
   adblock.init(webSes, {
     blocked: wcId => {
       for (const t of tabs.values()) if (t.view && t.view.webContents.id === wcId) { t.blocked = (t.blocked || 0) + 1; ui('blocked', { id: t.id, n: t.blocked }); }
@@ -726,5 +733,22 @@ app.whenReady().then(() => {
   updater.init(app, s => ui('update', s));
   app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
 });
+
+/* Gemeinsame Einrichtung für Webseiten-Sessions (normal und Inkognito) */
+const PERMS = ['fullscreen', 'clipboard-sanitized-write', 'pointerLock'];
+function prepareWebSession(ses) {
+  serveApp(ses);   /* Fehlerseite und eigene Seiten laufen in Tabs */
+  ses.setUserAgent(chromeUA);
+  /* Google-Anmeldung: Google lehnt eingebettete Chromium-Browser ab („Dieser Browser ist möglicherweise nicht sicher“).
+     Nur auf den Anmeldeseiten treten wir deshalb als Firefox auf, ohne Chromium-Client-Hints. */
+  ses.webRequest.onBeforeSendHeaders({ urls: ['https://accounts.google.com/*', 'https://accounts.youtube.com/*'] }, (d, cb) => {
+    const h = d.requestHeaders;
+    h['User-Agent'] = FIREFOX_UA;
+    for (const k of Object.keys(h)) if (/^sec-ch-ua/i.test(k)) delete h[k];
+    cb({ requestHeaders: h });
+  });
+  ses.setPermissionRequestHandler((_, perm, cb) => cb(PERMS.includes(perm)));
+  wireDownloads(ses);
+}
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

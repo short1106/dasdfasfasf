@@ -5,7 +5,16 @@ const { app, net } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 
-let blocker = null, ses = null, enabled = false, loading = null, state = 'aus';
+let blocker = null, enabled = false, loading = null, state = 'aus', primary = null;
+/* Weitere Sessions (Inkognito): Ghostery meldet seine IPC-Handler global an und kann deshalb nur eine Session direkt bedienen.
+   Dort hängen wir nur die Netzwerk-Filter an (gleiche Listen), ohne kosmetische Filter. */
+const extras = new Set();
+function hookExtra(ses, on) {
+  if (on && blocker) {
+    ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (d, cb) => blocker.onBeforeRequest(d, cb));
+    ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (d, cb) => blocker.onHeadersReceived(d, cb));
+  } else { ses.webRequest.onBeforeRequest(null); ses.webRequest.onHeadersReceived(null); }
+}
 let onBlocked = () => {}, onState = () => {};
 
 const fetchList = (url, opts = {}) => net.fetch(url, { ...opts, signal: AbortSignal.timeout(20000) });
@@ -37,21 +46,30 @@ function load() {
 async function setEnabled(on) {
   enabled = !!on;
   if (!enabled) {
-    if (blocker && blocker.isBlockingEnabled(ses)) blocker.disableBlockingInSession(ses);
+    if (blocker && blocker.isBlockingEnabled(primary)) blocker.disableBlockingInSession(primary);
+    for (const ses of extras) hookExtra(ses, false);
     state = 'aus'; onState(state);
     return state;
   }
   const b = await load();
   if (!b || !enabled) return state;
-  if (!b.isBlockingEnabled(ses)) b.enableBlockingInSession(ses);
+  if (!b.isBlockingEnabled(primary)) b.enableBlockingInSession(primary);
+  for (const ses of extras) hookExtra(ses, true);
   state = 'an'; onState(state);
   return state;
 }
 
 function init(session, { blocked, changed }) {
-  ses = session;
+  primary = session;
   onBlocked = blocked || onBlocked;
   onState = changed || onState;
 }
 
-module.exports = { init, setEnabled, state: () => state };
+/* Weitere Session (Inkognito) nachträglich: gleich mit blocken, wenn der Blocker an ist */
+function attach(session) {
+  if (extras.has(session)) return;
+  extras.add(session);
+  if (enabled && blocker) hookExtra(session, true);
+}
+
+module.exports = { init, attach, setEnabled, state: () => state };

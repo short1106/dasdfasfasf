@@ -76,9 +76,9 @@ onKick(b => {
 omniInput.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== omniInput) updateToolbar(); }, 150));
 
 /* ===== Tabs ===== */
-async function newTab(url = null, { focus = true, intro = true, background = false } = {}) {
-  const id = await api.tab.create();
-  const t = { id, url: '', title: '', favicon: null, loading: false, canBack: false, canFwd: false, home: true, hasView: false, progress: 0, scroll: 0, pw: 0, blocked: 0, zoom: 1 };
+async function newTab(url = null, { focus = true, intro = true, background = false, incognito = false } = {}) {
+  const id = await api.tab.create({ incognito });
+  const t = { id, url: '', title: '', favicon: null, loading: false, canBack: false, canFwd: false, home: true, hasView: false, progress: 0, scroll: 0, pw: 0, blocked: 0, zoom: 1, incognito };
   tabs.set(id, t);
   strip.add(t);
   if (background && url && restoring) {
@@ -114,6 +114,7 @@ function activate(t, { fresh = false } = {}) {
   const load = t.pending || t.crashed ? t.url : null;
   t.pending = t.crashed = false;
   strip.setActive(t);
+  body.classList.toggle('inco', !!t.incognito);
   if (!same && !t.home) t.reveal = 'switch';
   if (!same) { omni.close(); big.close(); closeFind(); pwUi.onTabSwitch(t.id); }
   updateHome(fresh);
@@ -150,6 +151,17 @@ function cycle(d) {
   activate(tabs.get(ids[(i + d + ids.length) % ids.length]));
 }
 const updateCount = () => { $('#tabCount').textContent = tabs.size; };
+
+/* Letzter Inkognito-Tab zu: Main hat die Session gelöscht → Glitch-Wisch über das Fenster */
+function incognitoWiped() {
+  toast('🔥 Inkognito beendet – Cookies, Cache und Logins sind gelöscht');
+  sfx('shatter');
+  if (anim() === 'aus') return;
+  const el = document.createElement('div'); el.className = 'inco-burn';
+  const tx = document.createElement('b'); tx.textContent = 'SPUREN GELÖSCHT'; tx.dataset.text = tx.textContent; el.append(tx);
+  document.body.append(el);
+  setTimeout(() => el.remove(), 1500);
+}
 
 /* ===== Navigation ===== */
 function go(t, url) {
@@ -429,6 +441,7 @@ function focusBar() {
 }
 const ACTIONS = {
   'new-tab': () => newTab(),
+  incognito: () => newTab(null, { incognito: true }),
   'close-tab': () => closeTab(active),
   'focus-omnibox': focusBar,
   palette: () => pal.toggle(),
@@ -459,6 +472,7 @@ const ACTIONS = {
 
 const COMMANDS = () => [
   { icon: 'plus', name: 'Neuer Tab', key: 'Strg T', run: () => newTab() },
+  { icon: 'mask', name: 'Neuer Inkognito-Tab', key: 'Strg ⇧ N', run: () => newTab(null, { incognito: true }) },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
   { icon: 'back', name: 'Zurück', key: 'Alt ←', run: () => back(active) },
@@ -544,6 +558,7 @@ function keyName(e) {
   const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
   if (c && e.shiftKey && k === 'r') return 'calc';
   if (c && e.shiftKey && k === 'm') return 'disco';
+  if (c && e.shiftKey && k === 'n') return 'incognito';
   if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
@@ -569,8 +584,9 @@ function onTabState(t, e) {
   if (typeof e.zoom === 'number') t.zoom = e.zoom;
   if (wasLoading && !t.loading) { endProgress(t); view.navEnded(t); }
   if (!wasLoading && t.loading) startProgress(t);
-  if (t.url !== prevUrl) { addHistory(t.url, t.title, t.favicon); saveSession(); }
-  else if (t.title !== prevTitle) updateHistory(t.url, { title: t.title });
+  /* Inkognito: nichts in den Verlauf */
+  if (t.url !== prevUrl) { if (!t.incognito) addHistory(t.url, t.title, t.favicon); saveSession(); }
+  else if (t.title !== prevTitle && !t.incognito) updateHistory(t.url, { title: t.title });
   strip.update(t);
   if (t === active) updateToolbar();
 }
@@ -580,7 +596,7 @@ api.on(e => {
   switch (e.type) {
     case 'tab':
       if (!t) return;
-      if ('favicon' in e) { t.favicon = e.favicon; updateHistory(t.url, { fav: e.favicon }); strip.update(t); return; }
+      if ('favicon' in e) { t.favicon = e.favicon; if (!t.incognito) updateHistory(t.url, { fav: e.favicon }); strip.update(t); return; }
       onTabState(t, e);
       break;
     case 'nav-start':
@@ -609,6 +625,7 @@ api.on(e => {
       break;
     case 'html-full': body.classList.toggle('html-full', !!e.on); setTimeout(view.sendBounds, 50); break;
     case 'disco': body.classList.toggle('disco-on', !!e.on); break;
+    case 'incognito-wiped': incognitoWiped(); break;
     case 'crash':
       /* Abgestürzter Tab lädt sich selbst neu: sofort, wenn er sichtbar ist, sonst beim nächsten Anklicken */
       if (!t || t.home) break;
@@ -702,7 +719,9 @@ function saveSession(now = false) {
   clearTimeout(saveT);
   const write = () => {
     const ids = strip.ids();
-    store.set('dw_session', { tabs: ids.map(id => { const t = tabs.get(id); return t && !t.home && /^https?:/i.test(t.url) ? t.url : ''; }), active: Math.max(0, ids.indexOf(active && active.id)) });
+    /* Inkognito-Tabs werden nie gemerkt */
+    const keep = ids.filter(id => { const t = tabs.get(id); return t && !t.incognito; });
+    store.set('dw_session', { tabs: keep.map(id => { const t = tabs.get(id); return !t.home && /^https?:/i.test(t.url) ? t.url : ''; }), active: Math.max(0, keep.indexOf(active && active.id)) });
   };
   if (now) write(); else saveT = setTimeout(write, 300);
 }
@@ -729,7 +748,7 @@ async function start() {
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
   initCalc();
-  initPanels({ newTab: () => newTab(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), incognito: () => ACTIONS.incognito(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

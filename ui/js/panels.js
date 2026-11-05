@@ -146,6 +146,7 @@ function buildMenu() {
   const mi = (ico, label, key, fn) => h('li', {}, h('button', { class: 'mi fx', onclick: () => { closePanel(); setTimeout(fn, 80); } }, icon(ico), h('span', {}, label), key ? h('kbd', {}, key) : null));
   $('#menuList').replaceChildren(
     mi('plus', 'Neuer Tab', 'Strg T', () => ctx.newTab()),
+    mi('mask', 'Neuer Inkognito-Tab', 'Strg ⇧ N', () => ctx.incognito()),
     mi('cmd', 'Command Palette', 'Strg K', () => ctx.palette()),
     mi('orbit', 'Tab-Übersicht (3D)', 'Strg E', () => ctx.overview()),
     h('li', { class: 'sep' }),
