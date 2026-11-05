@@ -4,6 +4,7 @@
    Aufbau: Hilfen · Karte + Intro · Suche · Ort-Karte · Route (Energielinie, Schritte) · Steuerung · Kontextmenü · Verkehr */
 import { dulidanStyle } from './style.js';
 import { createLogistics } from './logistics.js';
+import { createNews } from './news.js';
 
 const $ = s => document.querySelector(s);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -63,6 +64,7 @@ map.on('load', async () => {
   const p = (await gpsAllowed() && await locateGPS(5000)) || await locateIP();
   if (p) setMe(p);
   if (params.get('layer') === 'verkehr') return openTraffic();
+  if (params.get('layer') === 'news') return openNews();
   if (q) { $('#q').value = q; const r = await searchPlaces(q).catch(() => []); if (r[0]) return showPlace(r[0], true); }
   if (p) map.flyTo({ center: [p.lng, p.lat], zoom: 12.6, pitch: 55, bearing: -18, duration: reduced ? 0 : 4200, curve: 1.6, essential: true });
 });
@@ -290,6 +292,7 @@ addEventListener('keydown', e => {
   if (document.activeElement.tagName === 'INPUT') return;
   if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
   else if (e.key === 't' || e.key === 'T') { LG.active ? closeTraffic() : openTraffic(); }
+  else if (e.key === 'n' || e.key === 'N') { NW.active ? closeNews() : openNews(); }
 });
 
 /* ===================== Verkehr: beliebte Flug-, Schiffs- und Zugrouten (nicht live) ===================== */
@@ -302,6 +305,7 @@ for (const id of ['#lgAir', '#lgSea', '#lgRail']) $(id).style.whiteSpace = 'pre'
 let lgCountT = 0, lgView = null;
 function openTraffic() {
   if (LG.active) return;
+  if (NW.active) closeNews(true);
   lgView = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
   try { map.setProjection({ type: 'globe' }); } catch {}
   LG.start();
@@ -313,14 +317,37 @@ function openTraffic() {
   clearInterval(lgCountT); lgCountT = setInterval(() => { $('#lgCount').textContent = nf.format(LG.count()); }, 1000);
   toast('Verkehr · beliebte Routen, Menge ungefähr');
 }
-function closeTraffic() {
+function closeTraffic(keepView) {
   if (!LG.active) return;
   LG.stop(); clearInterval(lgCountT);
   $('#lg').hidden = true; $('#traffic').classList.remove('on'); document.body.classList.remove('lg-on');
+  if (keepView) return;
   try { map.setProjection({ type: 'mercator' }); } catch {}
   if (lgView && lgView.zoom > 3) map.flyTo({ ...lgView, duration: reduced ? 0 : 2200 });
 }
 $('#traffic').addEventListener('click', () => (LG.active ? closeTraffic() : openTraffic()));
+
+/* ===================== News: Nachrichten pro Land (GDELT, live) ===================== */
+const NW = createNews(map, { h, reduced, onClose: () => closeNews() });
+let nwView = null;
+function openNews() {
+  if (NW.active) return;
+  if (LG.active) closeTraffic(true);
+  nwView = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
+  try { map.setProjection({ type: 'globe' }); } catch {}
+  NW.start(); $('#newsBtn').classList.add('on');
+  const c = me ? [me.lng, Math.max(-20, Math.min(50, me.lat))] : [15, 35];
+  map.flyTo({ center: c, zoom: innerWidth < 700 ? 1.2 : 1.9, pitch: 0, bearing: 0, duration: reduced ? 0 : 3000, curve: 1.8, essential: true });
+  toast('News · tippe auf ein Land');
+}
+function closeNews(keepView) {
+  if (!NW.active) return;
+  NW.stop(); $('#newsBtn').classList.remove('on');
+  if (keepView) return;
+  try { map.setProjection({ type: 'mercator' }); } catch {}
+  if (nwView && nwView.zoom > 3) map.flyTo({ ...nwView, duration: reduced ? 0 : 2200 });
+}
+$('#newsBtn').addEventListener('click', () => (NW.active ? closeNews() : openNews()));
 $('#lgClose').addEventListener('click', closeTraffic);
 $('#lg').addEventListener('click', e => {
   const b = e.target.closest('.lg-row'); if (!b) return;

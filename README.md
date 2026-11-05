@@ -216,6 +216,7 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Ortssuche mit Vorschlägen beim Tippen.
   - Routen für Auto, Rad und zu Fuß, die sich als Energielinie einzeichnen, mit Abbiege-Hinweisen auf Deutsch.
   - Rechtsklick → „Was ist hier?“ und „Route hierher“.
+  - **News** (Zeitungs-Knopf rechts oder Taste `N`): Der Globus zeigt jedes Land als leuchtenden Punkt. Ein Land antippen zeigt die neuesten Schlagzeilen von dort, mit Bild, Quelle und Uhrzeit. Ein Thema eingeben (z. B. „Ukraine“) lässt die Länder leuchten, die gerade am meisten darüber berichten. Fremdsprachige Überschriften lassen sich mit „DE“ übersetzen. Daten: GDELT, alle 15 Minuten neu.
   - **Verkehr** (Flugzeug-Knopf rechts oder Taste `T`): Die Karte wird zum Globus und zeigt die beliebtesten Flugrouten, Seewege und Schnellzug-Strecken der Welt.
     - Flugzeuge mit Leuchtspur, Containerschiffe und Züge fahren darauf hin und her. Je mehr Verkehr eine Route hat, desto mehr Fahrzeuge und desto heller die Linie.
     - Flüge, Schiffe und Züge lassen sich einzeln an- und ausschalten. Ein Klick auf eine Linie zeigt, wie viel dort ungefähr pro Tag fährt.

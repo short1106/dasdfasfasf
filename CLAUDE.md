@@ -223,6 +223,12 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Farben: Flug pink, Schiff cyan `#7af3ff`, Bahn bernstein `#ffc27a`. Linienbreite und Helligkeit nach Menge, Hover hebt hervor, Klick → Toast mit Route und Menge.
   - Beim Öffnen Globus (`setProjection({type:'globe'})`) und Flug nach außen, beim Schließen zurück zu Mercator und zur alten Ansicht.
   - Test: `tests/e2e/traffic.js` (gleiche Server wie `maps.js`).
+- **News `shared/maps/news.js`** (Knopf `#newsBtn`, Taste `N`, URL `?layer=news`, schließt den Verkehrs-Modus und umgekehrt):
+  - Quelle **GDELT DOC 2.0** (`api.gdeltproject.org/api/v2/doc/doc`, frei, ohne Schlüssel, alle 15 Minuten neu), in beiden Proxy-Whitelists.
+  - Länder als Punkte aus einer eigenen Tabelle (~120 Länder: ISO, GDELT-Name wie `unitedstates`, deutscher Name, Mittelpunkt), weil die OpenMapTiles-Kacheln keine Länderflächen haben. Ring pulsiert per `setPaintProperty` (~20/s).
+  - Thema → `mode=timelinesourcecountry&timespan=3d`, Summe je Land → Punktgröße/Helligkeit und Top-6-Liste. Land → `mode=artlist&query=[thema] sourcecountry:<name>&sort=datedesc&timespan=2d`, doppelte Überschriften raus, Link `target=_blank` (Desktop neuer Tab), fremdsprachige Titel mit „DE“-Knopf zum Übersetzer.
+  - GDELT erlaubt etwa eine Anfrage pro 5 s: Warteschlange mit 5,5 s Abstand plus 10 Minuten Zwischenspeicher, Text-Antwort statt JSON → „Zu viele Anfragen“.
+  - Test `tests/e2e/mapnews.js` (GDELT-Nachbau in `search-server.js`). **Gegen das echte GDELT ungetestet.**
 - **Grenzen:** kein Street View, keine Bewertungen, kein Live-Verkehr und keine ÖPNV-Fahrpläne. Diese Daten gehören Google.
 - **Test:** `tests/e2e/maps.js` gegen `tests/fixtures/maps/tileserver.py` (echte MVT-Kacheln prozedural, braucht `pip install mapbox-vector-tile shapely`, Port 8796) und den Photon/OSRM/geojs-Nachbau in `search-server.js`.
 - **Android:** gleiche Seite unter `https://dulidan.search/maps/index.html` (siehe 4.). Dazu dort echtes GPS: `onGeolocationPermissionsShowPrompt` erlaubt den Standort **nur** für den Host `dulidan.search`, Laufzeit-Erlaubnis erst beim Antippen von „Mein Standort“. `maps.js` nimmt GPS beim Start nur, wenn die Erlaubnis schon da ist (`permissions.query`), sonst IP. Am Desktop verweigert Electron Geolocation sofort → IP.
@@ -382,6 +388,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `adtest.js`, `looptest.js`
   - `calcui.js`, `updui.js`
   - `searchtest.js`: Ergebnisseite, braucht `DW_PROXY_BASE`
+  - `mapnews.js`: Maps-News (Globus, Thema, Land → Schlagzeilen, Klick auf der Karte)
   - `snip.js`: Snipping-Tool (Bereich, Werkzeuge, Speichern, Kopieren, ganze Seite über `fixtures/site/long.html`)
   - `mobileanswers.js`: Sofort-Antworten im Handy-Format
   - `prognose.js`: Liga-Schalter und Prognose (Tipps, Simulation, Abschlusstabelle)

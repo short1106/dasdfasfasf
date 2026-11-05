@@ -109,6 +109,19 @@ http.createServer((req, rsp) => {
       if (u.pathname.startsWith('/api.openligadb.de/getmatchesbyteam/Dortmund/')) return J(league('bl1').out.filter(m => (m.team1.teamId === 101 || m.team2.teamId === 101) && Math.abs(m.group.groupOrderID - 10.5) < 4));
       return J([]);
     }
+    /* GDELT DOC 2.0: Artikel pro Land und Berichtsmenge pro Land zu einem Thema */
+    if (u.pathname === '/api.gdeltproject.org/api/v2/doc/doc') {
+      const q = u.searchParams.get('query') || '', mode = u.searchParams.get('mode');
+      if (mode === 'timelinesourcecountry') {
+        const S = [['Germany', 9], ['United States', 14], ['Ukraine', 22], ['Russia', 17], ['Poland', 8], ['France', 6], ['United Kingdom', 7], ['Japan', 2]];
+        return J({ query_details: { title: q }, timeline: S.map(([n, v]) => ({ series: n, data: [{ date: '20261104T000000Z', value: v / 10 }, { date: '20261105T000000Z', value: v / 8 }] })) });
+      }
+      const m = /sourcecountry:(\w+)/.exec(q), land = m ? m[1] : 'welt', topic = q.replace(/sourcecountry:\w+/, '').trim();
+      const t = new Date(Date.now() - 25 * 60000), sd = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+      const LG = { germany: 'German', japan: 'Japanese', france: 'French' }[land] || 'English';
+      return J({ articles: Array.from({ length: 14 }, (_, i) => ({ url: 'https://news.test/' + land + '/' + i, url_mobile: '', title: (topic ? topic + ': ' : '') + 'Schlagzeile ' + (i + 1) + ' aus ' + land + (i === 3 ? ' (Doppelt)' : ''), seendate: sd(new Date(t - i * 47 * 60000)), socialimage: i % 3 ? 'https://img.test/news' + i + '.jpg' : '', domain: land + '-zeitung' + (i % 4) + '.test', language: LG, sourcecountry: land }))
+        .concat([{ url: 'https://news.test/dup', title: (topic ? topic + ': ' : '') + 'Schlagzeile 4 aus ' + land + ' (Doppelt)', seendate: sd(t), domain: 'dup.test', language: LG }]) });
+    }
     if (u.pathname === '/api.jolpi.ca/ergast/f1/current/driverstandings/') {
       const D = [['Norris', 'McLaren', 'mclaren', 391], ['Piastri', 'McLaren', 'mclaren', 366], ['Verstappen', 'Red Bull', 'red_bull', 341], ['Russell', 'Mercedes', 'mercedes', 276], ['Leclerc', 'Ferrari', 'ferrari', 214],
         ['Hamilton', 'Ferrari', 'ferrari', 148], ['Antonelli', 'Mercedes', 'mercedes', 122], ['Albon', 'Williams', 'williams', 73], ['Hülkenberg', 'Audi', 'audi', 41], ['Alonso', 'Aston Martin', 'aston_martin', 40], ['Bearman', 'Haas', 'haas', 32]];
