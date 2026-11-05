@@ -25,7 +25,7 @@ object SearchProxy {
         /* Sofort-Antworten der Ergebnisseite: Wetter, EZB-Kurse, Fußball, Formel 1 */
         "api.open-meteo.com", "geocoding-api.open-meteo.com", "api.frankfurter.dev", "api.openligadb.de", "api.jolpi.ca",
         /* Maps: News pro Land (GDELT) */
-        "api.gdeltproject.org")
+        "api.gdeltproject.org", "news.google.com")
     /* OSM-Dienste wollen eine ehrliche App-Kennung statt eines Browser-UA */
     private val OSM = setOf("photon.komoot.io", "routing.openstreetmap.de")
     private val FILES = listOf("search/", "maps/", "translate/", "vendor/maplibre/", "vendor/bergamot/")
@@ -82,7 +82,8 @@ object SearchProxy {
         val out = JSONObject()
         try {
             val c = target.openConnection() as HttpURLConnection
-            c.connectTimeout = 8000; c.readTimeout = 9000
+            /* GDELT braucht für Länder-Abfragen oft länger */
+            c.connectTimeout = 8000; c.readTimeout = if (target.host == "api.gdeltproject.org") 25000 else 9000
             c.setRequestProperty("User-Agent", if (target.host in OSM) appUa(ctx) else ua)
             c.setRequestProperty("Accept-Language", "de-DE,de;q=0.9,en;q=0.6")
             if (target.host.endsWith("duckduckgo.com")) c.setRequestProperty("Referer", "https://duckduckgo.com/")

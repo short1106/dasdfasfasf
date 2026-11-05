@@ -38,6 +38,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await app.evaluate(({ BrowserWindow }, [x, y]) => { const wc = BrowserWindow.getAllWindows()[0].contentView.children.find(c => c.getVisible()).webContents; wc.sendInputEvent({ type: 'mouseMove', x, y }); wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 }); wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 }); }, xy);
   R.klickKarte = await until("document.querySelector('.nw-country h2') && document.querySelectorAll('.nw-list li').length ? document.querySelector('.nw-country h2').textContent + ' · ' + document.querySelectorAll('.nw-list li').length + ' Meldungen' : ''", 25000);
   await wait(1700); await shot('n4-deutschland.png');
+  /* Großbritannien: GDELT antwortet leer → Google News */
+  await js("document.querySelector('.nw-back').click(); 1"); await wait(300);
+  await js("window.__nwPick && 1");
+  await js("(() => { const li = [...document.querySelectorAll('.nw-top li')].find(l => /Großbritannien/.test(l.textContent)); if (li) li.click(); return !!li; })()");
+  R.ausweich = await until("document.querySelector('.nw-country h2') && document.querySelector('.nw-country h2').textContent === 'Großbritannien' && document.querySelectorAll('.nw-list li').length ? document.querySelectorAll('.nw-list li').length + ' Meldungen · ' + document.querySelector('.nw-status').textContent + ' · 1.: ' + document.querySelector('.nw-list b').textContent : ''", 30000);
   /* Schließen */
   await js("document.querySelector('#nw .x').click(); 1"); await wait(1200);
   R.zu = await js("document.getElementById('nw').hidden + ' · ' + JSON.stringify(__map.getProjection()) + ' · ' + __map.getLayoutProperty('nw-core', 'visibility')");

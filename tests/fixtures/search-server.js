@@ -117,10 +117,17 @@ http.createServer((req, rsp) => {
         return J({ query_details: { title: q }, timeline: S.map(([n, v]) => ({ series: n, data: [{ date: '20261104T000000Z', value: v / 10 }, { date: '20261105T000000Z', value: v / 8 }] })) });
       }
       const m = /sourcecountry:(\w+)/.exec(q), land = m ? m[1] : 'welt', topic = q.replace(/sourcecountry:\w+/, '').trim();
+      /* Wie im echten Fehlerfall: leere Antwort → die Seite muss auf Google News ausweichen */
+      if (land === 'unitedkingdom') return send('', 'application/json');
       const t = new Date(Date.now() - 25 * 60000), sd = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
       const LG = { germany: 'German', japan: 'Japanese', france: 'French' }[land] || 'English';
       return J({ articles: Array.from({ length: 14 }, (_, i) => ({ url: 'https://news.test/' + land + '/' + i, url_mobile: '', title: (topic ? topic + ': ' : '') + 'Schlagzeile ' + (i + 1) + ' aus ' + land + (i === 3 ? ' (Doppelt)' : ''), seendate: sd(new Date(t - i * 47 * 60000)), socialimage: i % 3 ? 'https://img.test/news' + i + '.jpg' : '', domain: land + '-zeitung' + (i % 4) + '.test', language: LG, sourcecountry: land }))
         .concat([{ url: 'https://news.test/dup', title: (topic ? topic + ': ' : '') + 'Schlagzeile 4 aus ' + land + ' (Doppelt)', seendate: sd(t), domain: 'dup.test', language: LG }]) });
+    }
+    /* Google-News-RSS (Ausweich im News-Modus) */
+    if (u.pathname === '/news.google.com/rss' || u.pathname === '/news.google.com/rss/search') {
+      const gl = u.searchParams.get('gl') || 'US', items = Array.from({ length: 10 }, (_, i) => `<item><title>Google-Schlagzeile ${i + 1} aus ${gl} - Zeitung ${i}</title><link>https://news.google.com/rss/articles/x${i}</link><pubDate>${new Date(Date.now() - i * 3600e3).toUTCString()}</pubDate><source url="https://zeitung${i}.test">Zeitung ${i}</source></item>`).join('');
+      return send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Google News</title>${items}</channel></rss>`, 'application/rss+xml');
     }
     if (u.pathname === '/api.jolpi.ca/ergast/f1/current/driverstandings/') {
       const D = [['Norris', 'McLaren', 'mclaren', 391], ['Piastri', 'McLaren', 'mclaren', 366], ['Verstappen', 'Red Bull', 'red_bull', 341], ['Russell', 'Mercedes', 'mercedes', 276], ['Leclerc', 'Ferrari', 'ferrari', 214],

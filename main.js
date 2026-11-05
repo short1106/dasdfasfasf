@@ -43,7 +43,9 @@ protocol.registerSchemesAsPrivileged([
 const PROXY_HOSTS = new Set(['html.duckduckgo.com', 'lite.duckduckgo.com', 'duckduckgo.com', 'de.wikipedia.org', 'api.mymemory.translated.net',
   'photon.komoot.io', 'routing.openstreetmap.de', 'get.geojs.io',   /* Maps: Ortssuche, Routen, ungefährer Standort */
   'api.open-meteo.com', 'geocoding-api.open-meteo.com', 'api.frankfurter.dev', 'api.openligadb.de', 'api.jolpi.ca',   /* Sofort-Antworten: Wetter, EZB-Kurse, Fußball, Formel 1 */
-  'api.gdeltproject.org']);   /* Maps: News pro Land */
+  'api.gdeltproject.org', 'news.google.com']);   /* Maps: News pro Land (GDELT, Ausweich Google-News-RSS) */
+/* GDELT braucht für Länder-Abfragen oft länger als 9 s */
+const SLOW_HOSTS = new Set(['api.gdeltproject.org']);
 const OSM_HOSTS = new Set(['photon.komoot.io', 'routing.openstreetmap.de']);
 let proxySes = null;
 /* Eigene Session im Speicher: kein Werbeblocker dazwischen, keine Cookies der Webseiten */
@@ -90,7 +92,7 @@ async function searchProxy(req, u) {
         'accept-language': 'de-DE,de;q=0.9,en;q=0.6',
         ...(post != null ? { 'content-type': 'application/x-www-form-urlencoded' } : {})
       },
-      signal: AbortSignal.timeout(9000)
+      signal: AbortSignal.timeout(SLOW_HOSTS.has(target.hostname) ? 25000 : 9000)
     });
     const body = (await r.text()).slice(0, 4 * 1024 * 1024);
     return Response.json({ status: r.status, body });

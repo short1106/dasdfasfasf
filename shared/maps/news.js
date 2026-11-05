@@ -38,25 +38,56 @@ const gKey = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 const API = 'https://api.gdeltproject.org/api/v2/doc/doc?';
 const cache = new Map();
 let chain = Promise.resolve(), last = 0;
+async function viaProxy(url) {
+  const r = await fetch('/api/fetch?' + new URLSearchParams({ u: url }), { headers: { 'x-dw': '1' } });
+  return r.json();
+}
 function gdelt(params, onWait) {
   const key = new URLSearchParams(params).toString(), hit = cache.get(key);
   if (hit && Date.now() - hit.at < 10 * 60000) return Promise.resolve(hit.data);
-  const run = async () => {
+  const once = async () => {
     const wait = Math.max(0, last + 5500 - Date.now());
     if (wait && onWait) onWait(wait);
     if (wait) await new Promise(r => setTimeout(r, wait));
     last = Date.now();
-    const r = await fetch('/api/fetch?' + new URLSearchParams({ u: API + key }), { headers: { 'x-dw': '1' } });
-    const j = await r.json();
-    if (!j || j.status >= 400 || !j.body) throw new Error('GDELT nicht erreichbar');
-    /* Bei Überlast antwortet GDELT mit Text statt JSON */
-    let data; try { data = JSON.parse(j.body); } catch { throw new Error(/limit/i.test(j.body) ? 'Zu viele Anfragen – kurz warten' : 'Keine Daten'); }
+    const j = await viaProxy(API + key);
+    const st = j ? j.status : 0, body = (j && j.body) || '';
+    /* GDELT: leere Antwort = keine Treffer; 429 oder Text „limit“ = zu schnell; 599 = keine Antwort in 25 s */
+    if (st === 200 && !body.trim()) return {};
+    if (st === 429 || /limit requests/i.test(body)) throw Object.assign(new Error('GDELT bremst gerade (zu viele Anfragen)'), { retry: true });
+    if (st >= 400 || !body) throw Object.assign(new Error(st === 599 ? 'GDELT antwortet gerade nicht' : 'GDELT-Fehler ' + st), { retry: st === 599 || st >= 500 });
+    /* GDELT-JSON enthält manchmal rohe Steuerzeichen */
+    try { return JSON.parse(body.replace(/[\u0000-\u001f]+/g, ' ')); }
+    catch { throw new Error(/query/i.test(body) ? 'GDELT versteht die Anfrage nicht' : 'GDELT lieferte keine Daten'); }
+  };
+  const run = async () => {
+    let data;
+    try { data = await once(); }
+    catch (e) { if (!e.retry) throw e; if (onWait) onWait(6000); await new Promise(r => setTimeout(r, 500)); data = await once(); }
     cache.set(key, { at: Date.now(), data });
     return data;
   };
   const p = chain.then(run, run);
   chain = p.catch(() => {});
   return p;
+}
+/* Ausweich: Google-News-RSS je Land (Schlagzeilen ohne Bild), wenn GDELT nicht antwortet */
+const GN = { DE: 'de', AT: 'de', CH: 'de', FR: 'fr', BE: 'fr', IT: 'it', ES: 'es', MX: 'es', AR: 'es', CO: 'es', CL: 'es', PE: 'es', PT: 'pt-PT', BR: 'pt-BR', NL: 'nl', PL: 'pl', CZ: 'cs', SK: 'sk',
+  HU: 'hu', RO: 'ro', BG: 'bg', RS: 'sr', HR: 'hr', SI: 'sl', GR: 'el', TR: 'tr', RU: 'ru', UA: 'uk', SE: 'sv', NO: 'no', DK: 'da', FI: 'fi', LT: 'lt', LV: 'lv', IL: 'he', SA: 'ar', AE: 'ar', EG: 'ar',
+  MA: 'fr', JP: 'ja', KR: 'ko', CN: 'zh-Hans', TW: 'zh-Hant', HK: 'zh-Hant', TH: 'th', VN: 'vi', ID: 'id', MY: 'ms' };
+async function googleNews(c, topic) {
+  const hl = GN[c.iso] || 'en', base = hl.split('-')[0];
+  const qs = new URLSearchParams({ hl, gl: c.iso, ceid: c.iso + ':' + base });
+  const url = topic ? 'https://news.google.com/rss/search?' + new URLSearchParams({ q: topic }) + '&' + qs : 'https://news.google.com/rss?' + qs;
+  const j = await viaProxy(url);
+  if (!j || j.status >= 400 || !j.body) throw new Error('Auch Google News antwortet nicht');
+  const doc = new DOMParser().parseFromString(j.body, 'text/xml');
+  return [...doc.querySelectorAll('item')].slice(0, 30).map(it => {
+    const t = (it.querySelector('title') || {}).textContent || '', src = (it.querySelector('source') || {}).textContent || '';
+    const d = new Date((it.querySelector('pubDate') || {}).textContent || '');
+    return { url: (it.querySelector('link') || {}).textContent || '', title: src && t.endsWith(' - ' + src) ? t.slice(0, -(src.length + 3)) : t, domain: src,
+      seendate: isNaN(d) ? '' : d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''), language: '', socialimage: '' };
+  });
 }
 const ago = s => {
   const m = /^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/.exec(s || ''); if (!m) return '';
@@ -143,11 +174,17 @@ export function createNews(map, { h, onOpen, onClose, reduced }) {
     say(topic ? 'Neueste Berichte aus ' + c.de + ' zu „' + topic + '“ …' : 'Neueste Nachrichten aus ' + c.de + ' …', true);
     try {
       const q = (topic ? topic + ' ' : '') + 'sourcecountry:' + c.g;
-      const d = await gdelt({ query: q, mode: 'artlist', maxrecords: '40', sort: 'datedesc', timespan: '2d', format: 'json' }, w => say('Kurz warten (GDELT-Limit) · ' + Math.ceil(w / 1000) + ' s …', true));
+      let arts = [], src = 'GDELT';
+      try {
+        const d = await gdelt({ query: q, mode: 'artlist', maxrecords: '40', sort: 'datedesc', timespan: '2d', format: 'json' }, w => say('Kurz warten (GDELT-Limit) · ' + Math.ceil(w / 1000) + ' s …', true));
+        arts = d.articles || [];
+      } catch (e) { if (my === seq) say(e.message + ' – hole Google News …', true); }
+      if (my !== seq) return;
+      if (!arts.length) { arts = await googleNews(c, topic); src = 'GOOGLE NEWS'; }
       if (my !== seq) return;
       /* Doppelte Überschriften (Agenturmeldungen) nur einmal */
-      const seen = new Set(), list = (d.articles || []).filter(a => a && /^https?:\/\//.test(a.url) && a.title && !seen.has(a.title.toLowerCase()) && seen.add(a.title.toLowerCase())).slice(0, 24);
-      say(list.length ? list.length + ' Meldungen · ' + (ago(list[0].seendate) || 'aktuell') : 'Gerade keine Meldungen gefunden.');
+      const seen = new Set(), list = arts.filter(a => a && /^https?:\/\//.test(a.url) && a.title && !seen.has(a.title.toLowerCase()) && seen.add(a.title.toLowerCase())).slice(0, 24);
+      say(list.length ? list.length + ' Meldungen · ' + (ago(list[0].seendate) || 'aktuell') + ' · ' + src : 'Gerade keine Meldungen gefunden.');
       body.lastChild.replaceWith(h('ul', { class: 'nw-list' }, list.map((a, i) => {
         const imgOk = /^https:\/\//.test(a.socialimage || '');
         const im = imgOk ? h('img', { src: a.socialimage, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : null;
