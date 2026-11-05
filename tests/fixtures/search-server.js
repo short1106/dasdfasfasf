@@ -68,17 +68,45 @@ http.createServer((req, rsp) => {
       return J({ amount: 1, base: b, start_date: '2026-10-05', end_date: '2026-11-04', rates });
     }
     if (u.pathname.startsWith('/api.openligadb.de/')) {
-      const T = ['FC Bayern München', 'Borussia Dortmund', 'Bayer 04 Leverkusen', 'RB Leipzig', 'Eintracht Frankfurt', 'VfB Stuttgart', 'SC Freiburg', 'VfL Wolfsburg', 'Borussia Mönchengladbach',
-        '1. FSV Mainz 05', '1. FC Union Berlin', 'TSG Hoffenheim', 'FC Augsburg', 'SV Werder Bremen', '1. FC Heidenheim 1846', 'FC St. Pauli', 'Hamburger SV', '1. FC Köln']
-        .map((n, i) => ({ teamId: 100 + i, teamName: n, shortName: n.replace(/^(FC|1\. FC|1\. FSV|SV|SC|VfL|VfB|TSG|RB) /, '').replace(/ (München|04|05|1846)$/, ''), teamIconUrl: 'https://img.test/crest' + i + '.png' }));
-      const t0 = Date.now();
-      const match = (id, a, b, offMin, fin, s1, s2, goals = []) => ({ matchID: id, matchDateTimeUTC: new Date(t0 + offMin * 60000).toISOString(), matchDateTime: new Date(t0 + offMin * 60000).toISOString().slice(0, 19),
-        leagueShortcut: 'bl1', leagueName: '1. Fußball-Bundesliga 2026/2027', group: { groupName: '10. Spieltag', groupOrderID: 10 }, team1: T[a], team2: T[b], matchIsFinished: fin,
-        matchResults: fin ? [{ resultTypeID: 1, resultOrderID: 1, pointsTeam1: Math.floor(s1 / 2), pointsTeam2: Math.floor(s2 / 2) }, { resultTypeID: 2, resultOrderID: 2, pointsTeam1: s1, pointsTeam2: s2 }] : [], goals });
-      if (u.pathname === '/api.openligadb.de/getmatchdata/bl1') return J([match(1, 0, 1, -3000, true, 3, 2), match(2, 2, 3, -2900, true, 1, 1), match(3, 4, 5, -40, false, 0, 0, [{ scoreTeam1: 1, scoreTeam2: 0, matchMinute: 12, goalGetterName: 'Test' }]),
-        match(4, 6, 7, 1440, false), match(5, 8, 9, 1440, false), match(6, 10, 11, 1600, false), match(7, 12, 13, 2880, false), match(8, 14, 15, 2880, false), match(9, 16, 17, 3000, false)]);
-      if (u.pathname.startsWith('/api.openligadb.de/getbltable/bl1/')) return J(T.map((t, i) => ({ teamInfoId: t.teamId, teamName: t.teamName, shortName: t.shortName, teamIconUrl: t.teamIconUrl, points: 28 - i * 1.5 | 0, matches: 10, won: 9 - (i >> 1), draw: 1, lost: i >> 1, goals: 30 - i, opponentGoals: 8 + i, goalDiff: 22 - 2 * i })));
-      if (u.pathname.startsWith('/api.openligadb.de/getmatchesbyteam/Dortmund/')) return J([match(11, 1, 6, -20160, true, 2, 0), match(12, 9, 1, -10080, true, 1, 1), match(13, 1, 4, -4320, true, 1, 3), match(1, 0, 1, -3000, true, 3, 2), match(14, 1, 11, 4320, false), match(15, 13, 1, 10080, false)]);
+      /* Ganze Saison je Liga: Hin- und Rückrunde (Kreis-Verfahren), Spieltage 1–10 gespielt, am 11. läuft ein Spiel */
+      const NAMES = {
+        bl1: ['FC Bayern München', 'Borussia Dortmund', 'Bayer 04 Leverkusen', 'RB Leipzig', 'Eintracht Frankfurt', 'VfB Stuttgart', 'SC Freiburg', 'VfL Wolfsburg', 'Borussia Mönchengladbach',
+          '1. FSV Mainz 05', '1. FC Union Berlin', 'TSG Hoffenheim', 'FC Augsburg', 'SV Werder Bremen', '1. FC Heidenheim 1846', 'FC St. Pauli', 'Hamburger SV', '1. FC Köln'],
+        bl2: ['Hertha BSC', 'FC Schalke 04', 'Hannover 96', '1. FC Nürnberg', '1. FC Kaiserslautern', 'Karlsruher SC', 'SC Paderborn 07', 'SV Darmstadt 98', 'Holstein Kiel',
+          'Eintracht Braunschweig', '1. FC Magdeburg', 'SpVgg Greuther Fürth', 'SV Elversberg', 'Preußen Münster', 'Fortuna Düsseldorf', 'VfL Bochum', 'Arminia Bielefeld', 'Dynamo Dresden'],
+        bl3: ['MSV Duisburg', 'TSV 1860 München', 'Rot-Weiss Essen', 'Alemannia Aachen', 'Jahn Regensburg', 'VfL Osnabrück', '1. FC Saarbrücken', 'SC Verl', 'Hansa Rostock', 'Energie Cottbus',
+          'Waldhof Mannheim', 'SSV Ulm 1846', 'Viktoria Köln', 'FC Ingolstadt 04', 'Erzgebirge Aue', 'TSG Hoffenheim II', 'VfB Stuttgart II', 'SV Wehen Wiesbaden', 'Havelse', 'Schweinfurt 05']
+      };
+      const league = lg => {
+        const T = NAMES[lg].map((n, i) => ({ teamId: (lg === 'bl1' ? 100 : lg === 'bl2' ? 200 : 300) + i, teamName: n, shortName: n.replace(/^(FC|1\. FC|1\. FSV|SV|SC|VfL|VfB|TSG|RB|SpVgg|TSV|SSV) /, '').replace(/ (München|04|05|07|98|96|1846)$/, ''), teamIconUrl: 'https://img.test/crest' + i + '.png' }));
+        const n = T.length, idx = [...Array(n).keys()], rounds = [];
+        for (let r = 0; r < n - 1; r++) { const pairs = []; for (let i = 0; i < n / 2; i++) { const a = idx[i], b = idx[n - 1 - i]; pairs.push(r % 2 ? [b, a] : [a, b]); } rounds.push(pairs); idx.splice(1, 0, idx.pop()); }
+        const all = [...rounds, ...rounds.map(r => r.map(([a, b]) => [b, a]))];
+        const t0 = Date.now(), DAY = 864e5, out = [];
+        all.forEach((pairs, md) => pairs.forEach(([a, b], k) => {
+          const id = (lg === 'bl1' ? 1 : lg === 'bl2' ? 2 : 3) * 10000 + md * 100 + k, when = t0 + (md - 10) * 7 * DAY + (k % 3) * 3 * 3600e3 + (md === 10 && k === 2 ? 7 * DAY - 40 * 60000 : 0);
+          const fin = md < 10, live = md === 10 && k === 2;
+          /* Feste Stärke: weiter oben in der Liste = stärker (für eine glaubwürdige Tabelle) */
+          const s1 = fin ? Math.max(0, Math.round(2.2 - a * 0.09 + ((id * 7) % 5) * 0.35 - 0.6)) : 0, s2 = fin ? Math.max(0, Math.round(1.6 - b * 0.07 + ((id * 3) % 5) * 0.3 - 0.6)) : 0;
+          out.push({ matchID: id, matchDateTimeUTC: new Date(when).toISOString(), matchDateTime: new Date(when).toISOString().slice(0, 19), leagueShortcut: lg, leagueName: lg,
+            group: { groupName: (md + 1) + '. Spieltag', groupOrderID: md + 1 }, team1: T[a], team2: T[b], matchIsFinished: fin,
+            matchResults: fin ? [{ resultTypeID: 2, resultOrderID: 2, pointsTeam1: s1, pointsTeam2: s2 }] : [], goals: live ? [{ scoreTeam1: 1, scoreTeam2: 0, matchMinute: 12 }] : [] });
+        }));
+        return { T, out };
+      };
+      const table = lg => {
+        const { T, out } = league(lg), R = new Map(T.map(t => [t.teamId, { teamInfoId: t.teamId, teamName: t.teamName, shortName: t.shortName, teamIconUrl: t.teamIconUrl, points: 0, matches: 0, won: 0, draw: 0, lost: 0, goals: 0, opponentGoals: 0, goalDiff: 0 }]));
+        for (const m of out) if (m.matchIsFinished) {
+          const [x, y] = [m.matchResults[0].pointsTeam1, m.matchResults[0].pointsTeam2], A = R.get(m.team1.teamId), B = R.get(m.team2.teamId);
+          for (const [P, f, g] of [[A, x, y], [B, y, x]]) { P.matches++; P.goals += f; P.opponentGoals += g; P.goalDiff = P.goals - P.opponentGoals; if (f > g) { P.won++; P.points += 3; } else if (f === g) { P.draw++; P.points++; } else P.lost++; }
+        }
+        return [...R.values()].sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff);
+      };
+      let mm;
+      if ((mm = /^\/api\.openligadb\.de\/getmatchdata\/(bl[123])$/.exec(u.pathname))) return J(league(mm[1]).out.filter(m => m.group.groupOrderID === 11));
+      if ((mm = /^\/api\.openligadb\.de\/getmatchdata\/(bl[123])\/\d{4}$/.exec(u.pathname))) return J(league(mm[1]).out);
+      if ((mm = /^\/api\.openligadb\.de\/getbltable\/(bl[123])\/\d{4}$/.exec(u.pathname))) return J(table(mm[1]));
+      if (u.pathname.startsWith('/api.openligadb.de/getmatchesbyteam/Dortmund/')) return J(league('bl1').out.filter(m => (m.team1.teamId === 101 || m.team2.teamId === 101) && Math.abs(m.group.groupOrderID - 10.5) < 4));
       return J([]);
     }
     if (u.pathname === '/api.jolpi.ca/ergast/f1/current/driverstandings/') {

@@ -294,7 +294,7 @@ const when = m => { const d = new Date(m.matchDateTimeUTC || m.matchDateTime); r
 function matchRow(m, focus) {
   const st = state(m), sc = score(m), t1 = m.team1 || {}, t2 = m.team2 || {};
   const nm = t => t.shortName || t.teamName || '?';
-  const mid = st === 'next' ? h('span', { class: 'fx-time mono' }, when(m).split(' · ')[1]) : h('span', { class: 'fx-score mono' + (st === 'live' ? ' live' : '') }, sc ? sc[0] + ':' + sc[1] : '–:–');
+  const mid = st === 'next' ? h('span', { class: 'fx-time mono' }, when(m).split(' · ')[1]) : h('span', { class: 'fx-score mono' + (st === 'live' ? ' live' : '') }, sc ? sc[0] + ':' + sc[1] : st === 'live' ? '0:0' : '–:–');
   const row = h('li', { class: 'fx-m ' + st },
     h('span', { class: 't a' + (focus && (t1.teamName || '').includes(focus) ? ' me' : '') }, h('span', {}, nm(t1)), img(t1.teamIconUrl, 'crest')),
     mid,
@@ -322,20 +322,128 @@ function autoRefresh(el, make, live) {
   }, 60000);
   return el;
 }
-async function league({ league: lg }) {
-  const make = async () => {
-    const [matches, table] = await Promise.all([get('https://api.openligadb.de/getmatchdata/' + lg), get(`https://api.openligadb.de/getbltable/${lg}/${season()}`).catch(() => [])]);
-    if (!Array.isArray(matches) || !matches.length) return null;
-    const live = matches.some(m => state(m) === 'live');
-    const md = matches[0].group && matches[0].group.groupName;
-    const el = card('fx', '// FUSSBALL · ' + LEAGUES[lg][0].toUpperCase(),
+/* ----- Prognose: Poisson-Modell aus Toren/Gegentoren dieser Saison, Rest der Saison 5.000-mal simuliert ----- */
+const SIMS = 5000, HOME = 1.12;
+function strengths(table) {
+  const n = table.reduce((a, r) => a + (r.matches || 0), 0) || 1, g = table.reduce((a, r) => a + (r.goals || 0), 0);
+  const avg = Math.max(0.8, g / n) || 1.5, S = new Map();
+  for (const r of table) {
+    /* Früh in der Saison stark zum Mittel ziehen, sonst entscheidet ein Glückstor alles */
+    const m = r.matches || 0, w = m / (m + 6);
+    const att = 1 + w * ((m ? r.goals / m : avg) / avg - 1), def = 1 + w * ((m ? r.opponentGoals / m : avg) / avg - 1);
+    S.set(r.teamInfoId, { att: Math.max(0.35, att), def: Math.max(0.35, def) });
+  }
+  return { avg, S };
+}
+const lambdas = (M, a, b) => { const A = M.S.get(a) || { att: 1, def: 1 }, B = M.S.get(b) || { att: 1, def: 1 }; return [M.avg * A.att * B.def * HOME, M.avg * B.att * A.def / HOME]; };
+const pois = (l, k) => { let p = Math.exp(-l); for (let i = 1; i <= k; i++) p *= l / i; return p; };
+function predict(M, a, b) {
+  const [l1, l2] = lambdas(M, a, b);
+  let best = [0, 0], bp = -1, p1 = 0, px = 0, p2 = 0;
+  for (let i = 0; i <= 7; i++) for (let j = 0; j <= 7; j++) {
+    const p = pois(l1, i) * pois(l2, j);
+    if (p > bp) { bp = p; best = [i, j]; }
+    if (i > j) p1 += p; else if (i === j) px += p; else p2 += p;
+  }
+  const t = p1 + px + p2 || 1;
+  return { score: best, p1: p1 / t, px: px / t, p2: p2 / t };
+}
+const rpois = l => { const L = Math.exp(-l); let k = 0, p = Math.random(); while (p > L) { k++; p *= Math.random(); } return k; };
+/* Läuft in Häppchen, damit die Seite flüssig bleibt; meldet Fortschritt für die Animation */
+function simulate(table, rest, M, onProgress) {
+  return new Promise(resolve => {
+    const ids = table.map(r => r.teamInfoId), N = ids.length, idx = new Map(ids.map((id, i) => [id, i]));
+    const pts0 = table.map(r => r.points || 0), gd0 = table.map(r => r.goalDiff || 0);
+    const games = rest.map(m => { const a = idx.get(m.team1.teamId), b = idx.get(m.team2.teamId); return a == null || b == null ? null : [a, b, ...lambdas(M, m.team1.teamId, m.team2.teamId)]; }).filter(Boolean);
+    const pos = Array.from({ length: N }, () => new Float64Array(N)), sumPts = new Float64Array(N);
+    let done = 0;
+    const chunk = () => {
+      const end = Math.min(SIMS, done + 250);
+      for (; done < end; done++) {
+        const p = pts0.slice(), gd = gd0.slice();
+        for (const [a, b, l1, l2] of games) { const x = rpois(l1), y = rpois(l2); gd[a] += x - y; gd[b] += y - x; if (x > y) p[a] += 3; else if (x < y) p[b] += 3; else { p[a]++; p[b]++; } }
+        const order = ids.map((_, i) => i).sort((i, j) => p[j] - p[i] || gd[j] - gd[i] || Math.random() - 0.5);
+        order.forEach((t, k) => { pos[t][k]++; sumPts[t] += p[t]; });
+      }
+      onProgress(done / SIMS);
+      if (done < SIMS) setTimeout(chunk, 0);
+      else resolve(ids.map((id, i) => ({ id, row: table[i], pts: sumPts[i] / SIMS, pos: Array.from(pos[i], v => v / SIMS) })));
+    };
+    chunk();
+  });
+}
+const pct = v => (v >= 0.995 ? '>99' : v > 0 && v < 0.005 ? '<1' : Math.round(v * 100)) + '%';
+const heat = (v, col) => h('span', { class: 'pg-p mono', style: `--v:${v};--c:${col}` }, v < 0.005 ? '–' : pct(v));
+
+async function league({ league: start }) {
+  let lg = start, view = 'live', timer = 0, seq = 0;
+  const tabs = h('div', { class: 'fx-tabs' }), seg = h('div', { class: 'fx-seg mono' }), body = h('div', { class: 'fx-body' });
+  const el = card('fx lg', '// FUSSBALL · BUNDESLIGA', tabs, seg, body, foot('OPENLIGADB · SAISON ' + season() + '/' + String(season() + 1).slice(2)));
+  const cache = {};
+  const load = async (key, url) => (cache[key] ||= get(url).catch(e => { delete cache[key]; throw e; }));
+  const tableOf = l => load('t' + l, `https://api.openligadb.de/getbltable/${l}/${season()}`).catch(() => []);
+  const paint = () => {
+    tabs.replaceChildren(...Object.keys(LEAGUES).map((k, i) => h('button', { class: k === lg ? 'on' : '', onclick: () => { if (lg !== k) { lg = k; render(); } } }, h('b', {}, String(i + 1) + '.'), k === 'bl3' ? ' LIGA' : ' BUNDESLIGA')));
+    seg.replaceChildren(...[['live', 'SPIELTAG & TABELLE'], ['prog', '✦ PROGNOSE']].map(([k, t]) => h('button', { class: k === view ? 'on' : '', onclick: () => { if (view !== k) { view = k; render(); } } }, t)));
+  };
+  /* Nur die neueste Ansicht darf schreiben: schnelles Umschalten überholt sonst alte Antworten */
+  const put = (my, ...n) => { if (my === seq) body.replaceChildren(...n); return my === seq; };
+  const busy = (my, t) => put(my, h('div', { class: 'fx-busy mono' }, h('i'), t));
+  async function renderLive(my, stale) {
+    const [matches, table] = await Promise.all([stale ? get('https://api.openligadb.de/getmatchdata/' + lg) : load('m' + lg, 'https://api.openligadb.de/getmatchdata/' + lg), tableOf(lg)]);
+    if (!Array.isArray(matches) || !matches.length) return put(my, h('p', { class: 'fx-none' }, 'Gerade keine Spiele gefunden.'));
+    const live = matches.some(m => state(m) === 'live'), md = matches[0].group && matches[0].group.groupName;
+    if (!put(my,
       h('div', { class: 'fx-head' }, h('h2', {}, LEAGUES[lg][0]), h('span', { class: 'mono' + (live ? ' live' : '') }, live ? '● LIVE · ' + (md || '') : (md || '').toUpperCase())),
       h('ul', { class: 'fx-ms' }, matches.slice().sort((a, b) => Date.parse(a.matchDateTimeUTC) - Date.parse(b.matchDateTimeUTC)).map(m => matchRow(m))),
-      Array.isArray(table) && table.length ? tableEl(table, lg) : null,
-      foot('OPENLIGADB · SAISON ' + season() + '/' + String(season() + 1).slice(2)));
-    return autoRefresh(el, make, live);
-  };
-  return make();
+      ...(Array.isArray(table) && table.length ? tableEl(table, lg) : []))) return;
+    /* Live: jede Minute frisch, solange die Karte zu sehen ist */
+    clearInterval(timer);
+    if (live) timer = setInterval(() => { if (!el.isConnected) return clearInterval(timer); if (!document.hidden && view === 'live') renderLive(seq, true).catch(() => {}); }, 60000);
+  }
+  async function renderProg(my) {
+    busy(my, 'LADE SPIELPLAN …');
+    const [all, table] = await Promise.all([load('s' + lg, `https://api.openligadb.de/getmatchdata/${lg}/${season()}`), tableOf(lg)]);
+    if (!Array.isArray(all) || !all.length || !table.length) return put(my, h('p', { class: 'fx-none' }, 'Für diese Liga gibt es noch keinen Spielplan.'));
+    const M = strengths(table), rest = all.filter(m => !m.matchIsFinished);
+    /* Nächster Spieltag: Tipp mit wahrscheinlichstem Ergebnis und 1/X/2 */
+    const nextMd = Math.min(...rest.map(m => (m.group && m.group.groupOrderID) || 99));
+    const tips = rest.filter(m => (m.group && m.group.groupOrderID) === nextMd).sort((a, b) => Date.parse(a.matchDateTimeUTC) - Date.parse(b.matchDateTimeUTC));
+    const tipEl = h('ul', { class: 'pg-tips' }, tips.map((m, i) => {
+      const p = predict(M, m.team1.teamId, m.team2.teamId), nm = t => t.shortName || t.teamName;
+      return h('li', { style: `--i:${i}` },
+        h('div', { class: 'pg-m' }, h('span', { class: 't a' }, h('span', {}, nm(m.team1)), img(m.team1.teamIconUrl, 'crest')), h('b', { class: 'mono pg-s' }, p.score[0] + ':' + p.score[1]), h('span', { class: 't b' }, img(m.team2.teamIconUrl, 'crest'), h('span', {}, nm(m.team2)))),
+        h('div', { class: 'pg-bar' }, h('i', { class: 'h', style: `flex:${p.p1}` }), h('i', { class: 'x', style: `flex:${p.px}` }), h('i', { class: 'g', style: `flex:${p.p2}` })),
+        h('div', { class: 'pg-lbl mono' }, h('span', {}, '1 · ' + pct(p.p1)), h('span', {}, 'X · ' + pct(p.px)), h('span', {}, '2 · ' + pct(p.p2))));
+    }));
+    /* Saisonende: Simulation mit Fortschrittsbalken */
+    const prog = h('i'), simBox = h('div', { class: 'pg-sim' }, h('div', { class: 'fx-busy mono' }, h('span', { class: 'pg-run' }, prog), 'SIMULIERE ' + nf(SIMS, 0) + ' SAISONS …'));
+    if (!put(my,
+      h('div', { class: 'fx-head' }, h('h2', {}, 'Prognose'), h('span', { class: 'mono' }, LEAGUES[lg][0].toUpperCase())),
+      tips.length ? h('div', { class: 'fx-sec mono' }, 'TIPPS ' + ((tips[0].group && tips[0].group.groupName) || 'NÄCHSTER SPIELTAG').toUpperCase()) : null, tips.length ? tipEl : null,
+      h('div', { class: 'fx-sec mono' }, 'WAHRSCHEINLICHSTE ABSCHLUSSTABELLE ' + season() + '/' + String(season() + 1).slice(2)), simBox)) return;
+    const res = await simulate(table, rest, M, f => { prog.style.width = (f * 100).toFixed(0) + '%'; });
+    if (my !== seq || !simBox.isConnected) return;
+    res.sort((a, b) => b.pts - a.pts);
+    const z = LEAGUES[lg][2], N = res.length, sum = (r, a, b) => r.pos.slice(a, b).reduce((x, y) => x + y, 0);
+    const cols = lg === 'bl1'
+      ? [['MEISTER', r => r.pos[0], '#ffd24d'], ['CL', r => sum(r, 0, z.cl), '#4da3ff'], ['ABSTIEG', r => sum(r, z.rel - 1, N), '#ff4d6d']]
+      : [['MEISTER', r => r.pos[0], '#ffd24d'], ['AUFSTIEG', r => sum(r, 0, z.up), '#3ddc97'], ['ABSTIEG', r => sum(r, z.down - 1, N), '#ff4d6d']];
+    simBox.replaceChildren(
+      h('div', { class: 'pg-th mono' }, h('span', {}, '#'), h('span'), h('span', {}, 'VEREIN'), h('span', {}, 'Ø PKT'), ...cols.map(c => h('span', {}, c[0]))),
+      h('ol', { class: 'pg-table' }, res.map((r, i) => h('li', { style: `--i:${i}` }, h('span', { class: 'pos mono' }, i + 1), img(r.row.teamIconUrl, 'crest'), h('span', { class: 'nm' }, r.row.shortName || r.row.teamName),
+        h('b', { class: 'mono' }, Math.round(r.pts)), ...cols.map(c => heat(c[1](r), c[2]))))),
+      h('p', { class: 'pg-note' }, `Statistik, keine Garantie: Stärke aus Toren und Gegentoren dieser Saison (Poisson-Modell mit Heimvorteil), ${rest.length} offene Spiele ${nf(SIMS, 0)}-mal durchgespielt. Relegation zählt als Abstieg.`));
+  }
+  async function render() {
+    paint(); clearInterval(timer);
+    const my = ++seq;
+    try { if (view === 'live') { busy(my, 'LADE …'); await renderLive(my); } else await renderProg(my); }
+    catch { put(my, h('p', { class: 'fx-none' }, 'Die Daten kamen gerade nicht an. Nochmal antippen?')); }
+  }
+  /* Erste Ansicht muss klappen, sonst gar keine Karte */
+  paint(); await renderLive(++seq);
+  return el;
 }
 async function team({ filter, name }) {
   const make = async () => {

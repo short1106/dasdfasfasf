@@ -80,7 +80,9 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   padding:16px 28px 80px var(--left,84px)}
 .meta{grid-area:meta;font-size:10px;letter-spacing:.18em;color:var(--dim);margin-bottom:14px;min-height:14px}
 .list{grid-area:list;display:flex;flex-direction:column;gap:10px;min-width:0}
-.side{grid-area:side;display:flex;flex-direction:column;gap:14px;align-self:start;position:sticky;top:150px}
+.side{grid-area:side;display:flex;flex-direction:column;gap:14px;align-self:start;position:sticky;top:150px;
+  /* Hohe Karten (Prognose-Tabelle, Wetter) dürfen nicht unter dem Fensterrand verschwinden: eigene Scrollleiste */
+  max-height:calc(100vh - 165px);overflow-y:auto;overscroll-behavior:contain;padding:0 8px 24px;margin:0 -8px;scrollbar-width:thin;scrollbar-color:rgba(var(--mag-rgb),.5) transparent}
 .side:empty{display:none}
 .more{grid-area:more;text-align:center;font-size:10px;letter-spacing:.2em;color:var(--dim);padding:28px 0;min-height:60px}
 .more.busy{color:var(--pink);animation:blink 1s ease-in-out infinite}
@@ -312,10 +314,57 @@ h3 mark{color:inherit;text-shadow:none}
   .cv-out{font-size:32px}
 }
 
+/* Liga-Schalter 1./2./3., Ansicht Spieltag ↔ Prognose */
+.fx-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:10px 0 6px;padding:4px;border-radius:14px;background:rgba(7,6,11,.6);border:1px solid var(--line)}
+.fx-tabs button{padding:7px 4px;border-radius:10px;font:600 10px var(--mono);letter-spacing:.06em;color:var(--muted);transition:background .3s,color .3s,transform .45s var(--spring)}
+.fx-tabs button b{font:800 16px var(--sans);letter-spacing:-.02em;margin-right:2px}
+.fx-tabs button:hover{color:var(--text)}
+.fx-tabs button.on{color:#fff;background:var(--grad);box-shadow:0 0 16px rgba(var(--mag-rgb),.5);transform:scale(1.03)}
+.fx-seg{display:flex;gap:6px;margin-bottom:6px}
+.fx-seg button{flex:1;padding:7px 6px;border-radius:999px;font-size:9.5px;letter-spacing:.14em;color:var(--muted);border:1px solid var(--line);transition:all .3s}
+.fx-seg button.on{color:var(--pink);border-color:rgba(var(--pink-rgb),.5);background:rgba(var(--pink-rgb),.08)}
+.fx-body{animation:rise .45s var(--spring) both}
+.fx-busy{display:flex;align-items:center;gap:10px;padding:18px 4px;font-size:10px;letter-spacing:.16em;color:var(--muted)}
+.fx-busy>i{width:14px;height:14px;border-radius:50%;border:2px solid rgba(var(--pink-rgb),.25);border-top-color:var(--pink);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fx-none{padding:14px 2px;color:var(--muted);font-size:13px}
+/* Tipps: wahrscheinlichstes Ergebnis + 1/X/2 */
+.pg-tips{list-style:none;display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
+.pg-tips li{padding:8px 8px 6px;border-radius:12px;background:rgba(255,255,255,.035);animation:rise .45s var(--spring) both;animation-delay:calc(var(--i) * 40ms)}
+.pg-m{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.pg-m .t{display:flex;align-items:center;gap:7px;min-width:0;font-size:13px;font-weight:600}
+.pg-m .t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-m .t.a{justify-content:flex-end;text-align:right}
+.pg-s{min-width:52px;text-align:center;padding:4px 8px;border-radius:8px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,rgba(var(--vio-rgb),.6),rgba(var(--mag-rgb),.6));border:1px dashed rgba(var(--pink-rgb),.5)}
+.pg-bar{display:flex;gap:2px;height:5px;margin-top:7px;border-radius:9px;overflow:hidden}
+.pg-bar i{min-width:2px;transform-origin:left;animation:f1Grow .9s var(--ease) both}
+.pg-bar .h{background:#3ddc97}.pg-bar .x{background:#a49cb6}.pg-bar .g{background:#4da3ff}
+.pg-lbl{display:flex;justify-content:space-between;margin-top:4px;font-size:9px;letter-spacing:.08em;color:var(--dim)}
+.pg-lbl span:first-child{color:#3ddc97}.pg-lbl span:last-child{color:#4da3ff}
+/* Simulation und Abschlusstabelle */
+.pg-run{position:relative;flex:0 0 120px;height:6px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden}
+.pg-run i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--grad-x);box-shadow:0 0 10px var(--pink);transition:width .1s linear}
+.pg-th{display:grid;grid-template-columns:22px 22px 1fr 34px 46px 46px 46px;gap:4px;padding:8px 4px 4px;font-size:8.5px;letter-spacing:.1em;color:var(--dim)}
+.pg-th span:nth-child(n+4){text-align:right}
+.pg-table{list-style:none;display:flex;flex-direction:column;gap:2px}
+.pg-table li{display:grid;grid-template-columns:22px 22px 1fr 34px 46px 46px 46px;align-items:center;gap:4px;padding:4px 4px;border-radius:9px;font-size:12.5px;animation:rise .4s var(--spring) both;animation-delay:calc(var(--i) * 30ms)}
+.pg-table li:nth-child(odd){background:rgba(255,255,255,.025)}
+.pg-table .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-table b{text-align:right;font-size:12.5px}
+.pg-table .pos{color:var(--dim);font-size:11px}
+.pg-p{position:relative;text-align:right;font-size:11px;padding:2px 4px;border-radius:6px;color:#fff;overflow:hidden;isolation:isolate}
+.pg-p::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--c);opacity:calc(var(--v) * .85);border-radius:inherit}
+.pg-note{margin-top:10px;font-size:11px;line-height:1.5;color:var(--dim)}
+@media (max-width:640px){
+  .pg-th{grid-template-columns:20px 20px 1fr 30px 40px 40px 40px}
+  .pg-table li{grid-template-columns:20px 20px 1fr 30px 40px 40px 40px;font-size:12px}
+  .fx-tabs button{font-size:8.5px}
+}
+
 /* ---------- Mittlere Breite: Wissen über den Ergebnissen ---------- */
 @media (max-width:1100px){
   .wrap{grid-template-columns:minmax(0,720px);grid-template-areas:"meta" "side" "list" "more";padding-left:28px}
-  .side{position:static;margin-bottom:14px}
+  .side{position:static;margin-bottom:14px;max-height:none;overflow:visible;padding:0;margin-left:0;margin-right:0}
   .wiki{display:flex}
   .wiki-img{width:200px;height:auto;flex-shrink:0}
   .top{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"brand bar" "tabs tabs"}

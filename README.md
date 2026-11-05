@@ -119,6 +119,9 @@ Eine einzige Leiste für Adressen und Suche. Eingaben ohne Domain landen auf der
   - **Währungen** (`100 usd in eur`, `50€ in pfund`, `dollar kurs`): EZB-Kurs, Betrag direkt in der Karte änderbar, Tauschen-Knopf, Verlauf der letzten 30 Tage.
   - **Einheiten** (`5 meilen in km`, `30 °c in f`, `2 gb in mb`, `100 km/h in mph`): Länge, Gewicht, Volumen, Tempo, Daten, Zeit, Fläche, Temperatur.
   - **Fußball** (`bundesliga`, `2. liga`, `3. liga`, `bvb`, `fc bayern`, `schalke`, `msv duisburg` …): Spieltag mit Live-Ergebnissen, die sich jede Minute selbst aktualisieren, Tabelle, beim Verein Form, nächste Spiele und Tabellenplatz. Daten: OpenLigaDB.
+    - Oben in der Karte schaltest du zwischen **1., 2. und 3. Liga** um.
+    - **Prognose:** Für jedes Spiel des nächsten Spieltags gibt es das wahrscheinlichste Ergebnis und die Chancen für Heimsieg, Remis und Auswärtssieg (1/X/2). Dazu wird der Rest der Saison 5.000-mal durchgespielt. Das ergibt die wahrscheinlichste Abschlusstabelle mit Punkten und den Chancen auf Meisterschaft, Champions League bzw. Aufstieg und Abstieg.
+    - Das ist Statistik aus den Toren und Gegentoren der laufenden Saison, keine Garantie.
   - **Formel 1** (`f1`, `formel 1`): Fahrer-WM mit Teamfarben und Countdown zum nächsten Rennen. Daten: Jolpica.
 - **Woher die Treffer kommen:** Die App holt sie im Hintergrund von DuckDuckGo, also ohne Tracking und ohne API-Schlüssel, dazu Wikipedia. Angezeigt wird alles nur in der eigenen Seite.
   - Der Abruf läuft über einen kleinen Proxy in der App. Er spricht ausschließlich diese festen Quellen an und ist nur für die Ergebnisseite selbst nutzbar, fremde Webseiten kommen nicht an ihn heran.

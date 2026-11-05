@@ -112,6 +112,8 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Bilder/Videos/News: JSON-Endpunkte `i.js`/`v.js`/`news.js` mit `vqd`-Schlüssel aus `duckduckgo.com/?q=`.
   - Wissen: Wikipedia-API (de), nur wenn der Titel zur Suche passt.
   - **Sofort-Antworten `answers.js`** (`detect(q)` → Karte oder `null`, Fehler bleiben still): Wetter (Open-Meteo Forecast + Geocoding, ohne Ort IP-Standort), Währung (Frankfurter `api.frankfurter.dev/v1`, EZB, plus 30-Tage-Verlauf), Einheiten (lokal), Fußball (OpenLigaDB: `getmatchdata/bl1|bl2|bl3`, `getbltable/<liga>/<saison>`, `getmatchesbyteam/<filter>/4/3`; Live-Spiele → Karte lädt jede Minute neu), Formel 1 (Jolpica `ergast/f1/current/driverstandings/` und `/races/`).
+    - Liga-Karte: Schalter 1./2./3. Liga und Ansicht „Spieltag & Tabelle“ ↔ „Prognose“ (`seq` verhindert, dass alte Antworten neue überschreiben). Prognose: Poisson-Modell (Angriff/Abwehr aus Toren/Gegentoren je Spiel, früh in der Saison zum Mittel gezogen, Heimvorteil 1,12), Tipp = wahrscheinlichstes Ergebnis plus 1/X/2; Rest der Saison (`getmatchdata/<liga>/<saison>`) 5.000-mal simuliert in Häppchen → Ø Punkte, Meister, CL/Aufstieg, Abstieg (Relegation zählt als Abstieg).
+    - Die Seitenspalte am Desktop ist sticky und scrollt deshalb selbst (`max-height`), sonst wären hohe Karten unten abgeschnitten.
     - Vereine nur über eindeutige Namen (`bvb`, `fc bayern`, `msv duisburg` …), Städte allein bleiben normale Suchen.
     - Formate aus der Doku nachgebaut (Container ohne Zugriff), Nachbau in `tests/fixtures/search-server.js`, Test `tests/e2e/answers.js`. **Gegen die echten APIs ungetestet.**
 - `search.js` rendert alles mit `textContent`, nie fremdes HTML. Weitere Teile:
@@ -375,6 +377,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `adtest.js`, `looptest.js`
   - `calcui.js`, `updui.js`
   - `searchtest.js`: Ergebnisseite, braucht `DW_PROXY_BASE`
+  - `prognose.js`: Liga-Schalter und Prognose (Tipps, Simulation, Abschlusstabelle)
   - `answers.js`: Sofort-Antworten (Wetter, Währung, Einheiten, Bundesliga, Verein, F1) und Inkognito (Cookies weg nach Schließen, kein Verlauf)
   - `mobilesearch.js`: Ergebnisseite im Handy-Format
   - `discotest.js video.html|audio.html`: Disko inklusive Esc, Drops und Screenshots
