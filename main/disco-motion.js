@@ -3,11 +3,12 @@
    Acht Welten (Dulidan, Neon-City, Inferno, Galaxie, Japan, Ozean, Synthwave, Weihnachten) mit eigenem Himmel, Boden, Requisiten,
    Partikeln, Schrift und Lieblings-Effekten; disco-page.js wählt die Welt nach Sprache, Thema und Genre (setWorld).
    Text erscheint in 15 Arten (Slam, Fly-Through, Shatter, Glitch, Stack, Ring, Split, Welle, Regen, Burn-in, Sternbild,
-   Slice, Flip, Typo-Wand), dazu Echo-Trails. Schlüsselwörter bekommen ein Symbol (Welt → drehende Weltkugel, Herz, Feuer …),
-   Farbwörter (rot, blau, gold …) erscheinen in genau dieser Farbe. Die Kamera wechselt zwischen Push, Spirale, Orbit, Seitenfahrt, Draufsicht,
+   Slice, Flip, Typo-Wand), dazu Echo-Trails. Schlüsselwörter bauen hinter dem Wort eine Partikel-Figur auf (Welt → drehende
+   Weltkugel aus Punkten, Herz schlägt im Bass, Krone, Diamant, Blitz …) oder lösen Effekte aus (Feuer, Goldregen, Rauch, Konfetti …).
+   Farbwörter (rot, blau, gold …) erscheinen in genau dieser Farbe. Text bleibt immer waagerecht und lesbar, die Kamera kippt nur leicht. Die Kamera wechselt zwischen Push, Spirale, Orbit, Seitenfahrt, Draufsicht,
    Dolly-Zoom und Froschperspektive, mit harten Schnitten bei neuen Abschnitten. Erster Refrain: Zeitlupe, dann Explosion.
    Bass = Kamera-Punch und Lichtfächer, Stimme = Wortglühen, Melodie = Farbfluss, Drop = Kamerarolle, Explosion, Invert.
-   Aufbau: Mathe · Welten · Schlüsselwörter · Shader · Texte (Texturen, Layout) · Partikel · Requisiten · Symbole · Wörter (Stile) · Kamera · Frame */
+   Aufbau: Mathe · Welten · Schlüsselwörter · Shader · Texte (Texturen, Layout) · Partikel · Requisiten · Schlüsselwort-Animationen · Wörter (Stile) · Kamera · Frame */
 (() => {
   'use strict';
   if (window.__dwMotion) return;
@@ -32,7 +33,7 @@
   const WORLDS = {
     dulidan: { n: 0, C: ['#1a0a2e', '#c020b8', '#ff7ae6'], floor: 0, amb: 'spark', props: null, burst: 'spark',
       calm: ['fly', 'ring', 'wave', 'flip'], hot: ['glitch', 'stack', 'split', 'slice'], chorus: ['slam', 'shatter', 'typo', 'split'] },
-    neon: { n: 1, C: ['#0e0626', '#ff2fb3', '#2ff3ff'], floor: 1, amb: 'rain', props: 'tower', burst: 'glitch',
+    neon: { n: 1, C: ['#0e0626', '#ff2fb3', '#2ff3ff'], floor: 1, amb: 'rain', props: null, burst: 'glitch',
       calm: ['flip', 'slice', 'fly', 'glitch'], hot: ['glitch', 'slice', 'stack', 'split'], chorus: ['slam', 'typo', 'glitch', 'shatter'] },
     inferno: { n: 2, C: ['#2a0400', '#ff4a0a', '#ffc24a'], floor: 2, amb: 'ember', props: 'spike', burst: 'ember',
       calm: ['burn', 'rain', 'fly'], hot: ['slam', 'burn', 'shatter', 'glitch'], chorus: ['shatter', 'slam', 'typo', 'burn'] },
@@ -47,55 +48,115 @@
     weihnachten: { n: 7, C: ['#061233', '#e3262f', '#ffd36b'], floor: 6, amb: 'snow', props: 'tree', burst: 'snow',
       calm: ['wave', 'flip', 'fly', 'constellation'], hot: ['split', 'rain', 'slice'], chorus: ['slam', 'typo', 'shatter', 'split'] }
   };
-  /* ===================== Schlüsselwörter: Symbole und Farben (de/en/es) ===================== */
-  /* Geprüft wird der Wortanfang (ohne Satzzeichen, klein). Mehrere Bilder = Animation (die Weltkugel dreht sich). */
-  const ICONS = [
-    [/^(welt|world|erde$|earth|globe|globus|mundo|planet)/, ['🌍', '🌎', '🌏']],
-    [/^(gebrochen|broken|heartbreak|herzschmerz)/, ['💔']],
-    [/^(herz|heart|love|liebe|lieb(st|e$)|amor|coraz|cora[cç]|loving)/, ['❤️']],
-    [/^(feuer|fire|flame|flamm|burn|brenn|fuego|lit$)/, ['🔥']],
-    [/^(sterne?$|stars?$|estrella|sternen)/, ['⭐']],
-    [/^(mond|moon|luna$)/, ['🌙']],
-    [/^(sonne|sun$|sunshine|sol$|sunny)/, ['☀️']],
-    [/^(geld|money|cash|para$|dinero|dollar|euro|reich$|rich$|bands$)/, ['💸']],
-    [/^(könig|koenig|king|queen|krone|crown|rey$|reina)/, ['👑']],
-    [/^(diamant|diamond|ice$|bling)/, ['💎']],
-    [/^(blitz|lightning|thunder|donner|rayo)/, ['⚡']],
-    [/^(musik|music|melod|beat$|beats$|song$|lied$|música|musica)/, ['🎵']],
-    [/^(rose|rosen|blume|flower|flor$|flores)/, ['🌹']],
-    [/^(tod$|tot$|death|dead$|skull|muerte|sterben|die$)/, ['💀']],
-    [/^(schnee|snow|nieve)/, ['❄️']],
-    [/^(regen$|rain|lluvia|sturm|storm)/, ['🌧️']],
-    [/^(träne|traene|tears?$|cry|crying|weinen|wein(st|t)$|llor)/, ['😢']],
-    [/^(auge|eyes?$|ojos)/, ['👁️']],
-    [/^(auto$|car$|cars$|benz|ferrari|lambo|porsche|wagen|coche)/, ['🏎️']],
-    [/^(flugzeug|plane|airplane|flieg|fly$|flying|volar|vuelo)/, ['✈️']],
-    [/^(rakete|rocket|cohete)/, ['🚀']],
-    [/^(zeit$|time$|uhr$|clock|tiempo|forever|für ?immer|ewig)/, ['⏳']],
-    [/^(telefon|phone|handy|anruf|call$|llam)/, ['📱']],
-    [/^(engel|angel|ángel)/, ['👼']],
-    [/^(teufel|devil|demon|dämon|diablo|hell$|hölle)/, ['😈']],
-    [/^(meer$|ocean|ozean|sea$|wave|welle|mar$|beach|strand)/, ['🌊']],
-    [/^(party|feier|fiesta|celebrat)/, ['🎉']],
-    [/^(himmel|sky$|cielo|heaven)/, ['☁️']],
-    [/^(haus$|home$|house|zuhause|casa$)/, ['🏠']],
-    [/^(kuss|küss|kiss|beso)/, ['💋']],
-    [/^(schlüssel|key$|keys$|llave)/, ['🔑']],
-    [/^(gott$|god$|dios$|pray|beten|bete$)/, ['🙏']],
-    [/^(tanz|dance|danc|bail)/, ['💃']],
-    [/^(weihnacht|christmas|xmas|navidad|tannenbaum)/, ['🎄']],
-    [/^(geschenk|gifts?$|presents?$|regalo)/, ['🎁']],
-    [/^(santa|weihnachtsmann|nikolaus)/, ['🎅']],
-    [/^(glocke|bells?$|jingle)/, ['🔔']],
-    [/^(sakura|kirschblüt|cherry)/, ['🌸']],
-    [/^(nacht$|night|noche|tonight)/, ['🌃']],
-    [/^(krieg|war$|guerra|kampf|fight)/, ['⚔️']],
-    [/^(champagner|champagne|drink|drunk|betrunken|shot$|shots$|wodka|vodka|bier$|beer)/, ['🥂']],
-    [/^(gun$|guns$|waffe|pistol|bullet|kugel$)/, ['💥']],
-    [/^(lachen|laugh|smile|lächel|sonrisa)/, ['😄']],
-    [/^(regenbogen|rainbow|arco)/, ['🌈']],
-    [/^(blut$|blood|sangre)/, ['🩸']]
+  /* ===================== Schlüsselwörter: Partikel-Animationen und Farben (de/en/es) ===================== */
+  /* Keine Bilder: Schlüsselwörter bauen hinter dem Wort eine leuchtende Partikel-Figur auf (Vektor-Look wie das Dulidan-Logo)
+     oder lösen einen Partikel-Effekt aus. Geprüft wird der Wortanfang (ohne Satzzeichen, klein).
+     shape = Figur aus Punkten (fliegt zusammen, dreht/pulsiert, zerspringt mit der Zeile), fx = Effekt im Raum. */
+  const KEYFX = [
+    [/^(welt|world|erde$|earth|globe|globus|mundo|planet)/, { shape: 'globe' }],
+    [/^(gebrochen|broken|heartbreak|herzschmerz)/, { shape: 'heart', broken: true }],
+    [/^(herz|heart|love|liebe|lieb(st|e$)|amor|coraz|cora[cç]|loving)/, { shape: 'heart' }],
+    [/^(feuer|fire|flame|flamm|burn|brenn|fuego|lit$)/, { fx: 'fire' }],
+    [/^(sterne?$|stars?$|estrella|sternen)/, { shape: 'star' }],
+    [/^(mond|moon|luna$)/, { shape: 'moon' }],
+    [/^(sonne|sun$|sunshine|sol$|sunny)/, { shape: 'sun' }],
+    [/^(geld|money|cash|para$|dinero|dollar|euro|reich$|rich$|bands$)/, { fx: 'money' }],
+    [/^(könig|koenig|king|queen|krone|crown|rey$|reina)/, { shape: 'crown' }],
+    [/^(diamant|diamond|ice$|bling)/, { shape: 'diamond' }],
+    [/^(blitz|lightning|thunder|donner|rayo)/, { shape: 'bolt' }],
+    [/^(musik|music|melod|beat$|beats$|song$|lied$|música|musica|glocke|bells?$|jingle)/, { shape: 'rings' }],
+    [/^(rose|rosen|blume|flower|flor$|flores|sakura|kirschblüt|cherry)/, { shape: 'flower' }],
+    [/^(tod$|tot$|death|dead$|skull|muerte|sterben|die$|krieg|war$|guerra)/, { fx: 'smoke' }],
+    [/^(schnee|snow|nieve|santa|weihnachtsmann|nikolaus)/, { fx: 'snow' }],
+    [/^(regen$|rain|lluvia|sturm|storm)/, { fx: 'rain' }],
+    [/^(träne|traene|tears?$|cry|crying|weinen|wein(st|t)$|llor|blut$|blood|sangre)/, { fx: 'drops' }],
+    [/^(auge|eyes?$|ojos)/, { shape: 'eye' }],
+    [/^(auto$|car$|cars$|benz|ferrari|lambo|porsche|wagen|coche|flugzeug|plane|airplane|flieg|fly$|flying|volar|vuelo|rakete|rocket|cohete|fast|schnell|speed)/, { fx: 'speed' }],
+    [/^(zeit$|time$|uhr$|clock|tiempo|forever|für ?immer|ewig)/, { shape: 'clock' }],
+    [/^(engel|angel|ángel|wings?$|flügel)/, { shape: 'wings' }],
+    [/^(teufel|devil|demon|dämon|diablo|hell$|hölle)/, { fx: 'fire', red: true }],
+    [/^(meer$|ocean|ozean|sea$|wave|welle|mar$|beach|strand)/, { shape: 'wave' }],
+    [/^(party|feier|fiesta|celebrat|tanz|dance|danc|bail)/, { fx: 'confetti' }],
+    [/^(gott$|god$|dios$|pray|beten|bete$|himmel|heaven|cielo)/, { fx: 'beam' }],
+    [/^(weihnacht|christmas|xmas|navidad|tannenbaum)/, { shape: 'tree' }],
+    [/^(geschenk|gifts?$|presents?$|regalo|box$)/, { shape: 'cube' }],
+    [/^(nacht$|night|noche|tonight)/, { fx: 'twinkle' }],
+    [/^(champagner|champagne|drink|drunk|betrunken|shot$|shots$|wodka|vodka|bier$|beer)/, { fx: 'bubbles' }],
+    [/^(gun$|guns$|waffe|pistol|bullet|kugel$|bang|boom)/, { fx: 'blast' }],
+    [/^(regenbogen|rainbow|arco)/, { shape: 'rainbow' }]
   ];
+  /* ===== Figuren als Punktwolken: p = Positionen (Einheit ≈ 1), c = Farbe je Punkt ===== */
+  function figure(kind) {
+    const P = [], Cc = [];
+    const put = (x, y, z, c) => { P.push(x, y, z); Cc.push(c[0], c[1], c[2]); };
+    const path = (pts, n, c, closed) => {   /* Linienzug gleichmäßig mit Punkten belegen */
+      const segs = []; let L = 0;
+      for (let i = 0; i < pts.length - (closed ? 0 : 1); i++) { const a = pts[i], b = pts[(i + 1) % pts.length], l = Math.hypot(b[0] - a[0], b[1] - a[1], (b[2] || 0) - (a[2] || 0)); segs.push([a, b, l]); L += l; }
+      for (const [a, b, l] of segs) { const m = Math.max(2, Math.round(n * l / L)); for (let k = 0; k < m; k++) { const t = k / m; put(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (a[2] || 0) + ((b[2] || 0) - (a[2] || 0)) * t, typeof c === 'function' ? c(t) : c); } }
+    };
+    const circle = (r, n, c, y = 0, z = 0, flat = true) => { for (let k = 0; k < n; k++) { const a = k / n * 6.2832; put(Math.cos(a) * r, y + Math.sin(a) * r * (flat ? 1 : 0), z + (flat ? 0 : Math.sin(a) * r), c); } };
+    const gold = [1, 0.8, 0.3], white = [1, 1, 1];
+    if (kind === 'globe') {
+      /* Breitenkreise und Meridiane, Land grün, Wasser blau (grobe Kontinente über ein Rauschen) */
+      const land = (la, lo) => Math.sin(lo * 2.1 + 1.3) * Math.cos(la * 2.7) + Math.sin(lo * 4.3 - la * 1.7) * 0.6 > 0.35;
+      for (let la = -60; la <= 60; la += 20) { const r = Math.cos(la * Math.PI / 180), y = Math.sin(la * Math.PI / 180); for (let k = 0; k < 60 * r + 10; k++) { const lo = k / (60 * r + 10) * 6.2832; put(Math.cos(lo) * r, y, Math.sin(lo) * r, land(la * Math.PI / 180, lo) ? [0.3, 1, 0.5] : [0.25, 0.65, 1]); } }
+      for (let m = 0; m < 10; m++) { const lo = m / 10 * 6.2832; for (let k = 0; k < 40; k++) { const la = (k / 40 - 0.5) * Math.PI; put(Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo), land(la, lo) ? [0.3, 1, 0.5] : [0.25, 0.65, 1]); } }
+      circle(1.35, 90, [0.6, 0.85, 1], 0, 0, false);   /* Umlaufbahn */
+    } else if (kind === 'heart') {
+      const hp = t => [16 * Math.pow(Math.sin(t), 3) / 16, (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16];
+      for (const sc of [1, 0.72, 0.45]) for (let k = 0; k < 150 * sc; k++) { const [x, y] = hp(k / (150 * sc) * 6.2832); put(x * sc, y * sc + 0.1, 0, sc === 1 ? [1, 0.25, 0.4] : [1, 0.5, 0.7]); }
+    } else if (kind === 'star') {
+      const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.42 : 1; pts.push([Math.cos(a) * r, -Math.sin(a) * r]); }
+      path(pts, 260, gold, true); path(pts.map(([x, y]) => [x * 0.6, y * 0.6]), 140, [1, 0.95, 0.7], true);
+    } else if (kind === 'moon') {
+      for (let k = 0; k < 200; k++) { const a = Math.PI * (0.5 + k / 200); put(Math.cos(a), Math.sin(a), 0, [0.85, 0.9, 1]); }
+      for (let k = 0; k < 160; k++) { const a = Math.PI * (0.62 + k / 160 * 0.76); put(Math.cos(a) * 0.75 - 0.42, Math.sin(a) * 0.82, 0, [0.7, 0.8, 1]); }
+    } else if (kind === 'sun') {
+      circle(0.62, 120, [1, 0.75, 0.2]); circle(0.42, 70, [1, 0.9, 0.5]);
+      for (let r = 0; r < 14; r++) { const a = r / 14 * 6.2832; path([[Math.cos(a) * 0.78, Math.sin(a) * 0.78], [Math.cos(a) * 1.25, Math.sin(a) * 1.25]], 14, [1, 0.6, 0.1]); }
+    } else if (kind === 'crown') {
+      path([[-1, -0.5], [-1, 0.45], [-0.5, 0.05], [0, 0.7], [0.5, 0.05], [1, 0.45], [1, -0.5]], 260, gold, true);
+      path([[-1, -0.25], [1, -0.25]], 60, [1, 0.95, 0.6]);
+      for (const x of [-1, 0, 1]) circle(0.07, 12, [1, 0.3, 0.4], x === 0 ? 0.78 : 0.53, 0);
+    } else if (kind === 'diamond') {
+      const top = [0, 0.75, 0], bot = [0, -1.05, 0], G = [], T = [];
+      for (let i = 0; i < 8; i++) { const a = i / 8 * 6.2832; G.push([Math.cos(a), 0.25, Math.sin(a)]); T.push([Math.cos(a) * 0.55, 0.75, Math.sin(a) * 0.55]); }
+      const ice = [0.75, 0.95, 1];
+      path(G, 120, ice, true); path(T, 70, white, true);
+      for (let i = 0; i < 8; i++) { path([T[i], G[i]], 10, ice); path([G[i], bot], 22, ice); }
+    } else if (kind === 'bolt') {
+      path([[0.25, 1.2], [-0.35, 0.15], [0.1, 0.12], [-0.3, -1.2], [0.45, 0.3], [0.0, 0.32], [0.35, 1.2]], 300, [0.8, 0.9, 1], true);
+    } else if (kind === 'rings') {
+      for (const r of [0.45, 0.8, 1.15]) circle(r, Math.round(90 * r), [0.7, 0.5, 1]);
+    } else if (kind === 'flower') {
+      for (let k = 0; k < 420; k++) { const a = k / 420 * 6.2832, r = Math.abs(Math.cos(2.5 * a)); put(Math.cos(a) * r, Math.sin(a) * r, 0, [1, 0.3 + 0.4 * (1 - r), 0.55]); }
+      circle(0.12, 24, [1, 0.9, 0.4]);
+    } else if (kind === 'eye') {
+      for (let k = 0; k < 200; k++) { const t = k / 200 * 6.2832; put(Math.cos(t) * 1.2, Math.sin(t) * 0.5 * Math.abs(Math.cos(t * 0.5)) * 1.3 * Math.sign(Math.sin(t)), 0, white); }
+      circle(0.36, 70, [0.6, 0.4, 1]); circle(0.14, 30, [0.2, 0.9, 1]);
+    } else if (kind === 'clock') {
+      circle(1, 150, [0.8, 0.95, 1]);
+      for (let h = 0; h < 12; h++) { const a = h / 12 * 6.2832; path([[Math.cos(a) * 0.82, Math.sin(a) * 0.82], [Math.cos(a) * 0.95, Math.sin(a) * 0.95]], 5, white); }
+    } else if (kind === 'wings') {
+      for (const s of [-1, 1]) for (let f = 0; f < 5; f++) { const pts = []; for (let k = 0; k <= 12; k++) { const t = k / 12; pts.push([s * (0.25 + t * (1.4 - f * 0.12)), 0.55 - f * 0.22 + Math.sin(t * 3) * 0.35 - t * t * 0.5]); } path(pts, 50, [1, 0.97, 0.9]); }
+    } else if (kind === 'wave') {
+      for (let l = 0; l < 3; l++) for (let k = 0; k < 120; k++) { const x = (k / 120 - 0.5) * 3; put(x, Math.sin(x * 2.2) * 0.35 - l * 0.35 + 0.3, 0, [0.3, 0.8 + l * 0.07, 1]); }
+    } else if (kind === 'tree') {
+      path([[0, 1.25], [-0.55, 0.45], [-0.3, 0.45], [-0.85, -0.35], [-0.45, -0.35], [-1, -1.05], [1, -1.05], [0.45, -0.35], [0.85, -0.35], [0.3, 0.45], [0.55, 0.45]], 320, [0.3, 1, 0.45], true);
+      const lc = [[1, 0.3, 0.3], [1, 0.85, 0.3], [0.4, 0.8, 1], [1, 0.5, 0.9]]; for (let i = 0; i < 26; i++) { const y = rnd(-1, 1.1), w = (1.25 - y) * 0.42; put(rnd(-w, w), y, 0, lc[i % 4]); }
+      circle(0.12, 20, [1, 0.9, 0.4], 1.35);
+    } else if (kind === 'cube') {
+      const V = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]].map(v => v.map(x => x * 0.7));
+      for (const [i, j] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) path([V[i], V[j]], 30, [1, 0.3, 0.35]);
+      path([[0, 0.7, -0.7], [0, 0.7, 0.7]], 30, gold); path([[-0.7, 0.7, 0], [0.7, 0.7, 0]], 30, gold); path([[0, -0.7, 0.7], [0, 0.7, 0.7]], 30, gold);
+    } else if (kind === 'rainbow') {
+      const RB = [[1, 0.2, 0.2], [1, 0.55, 0.15], [1, 0.9, 0.2], [0.3, 1, 0.4], [0.3, 0.7, 1], [0.45, 0.35, 1], [0.8, 0.35, 1]];
+      RB.forEach((c, i) => { const r = 1.3 - i * 0.1; for (let k = 0; k < 90; k++) { const a = Math.PI * k / 89; put(Math.cos(a) * r, Math.sin(a) * r - 0.5, 0, c); } });
+    }
+    return { p: new Float32Array(P), c: new Float32Array(Cc), n: P.length / 3 };
+  }
+  const FIGS = new Map();
+  const figOf = k => { if (!FIGS.has(k)) FIGS.set(k, figure(k)); return FIGS.get(k); };
   /* Farbwörter → Farbe der Schrift (und der Funken) */
   const COLORS = [
     [/^(rot$|rote[nrsm]?$|red$|rojo|roja|crimson)/, '#ff2a3d'], [/^(blau|blue|azul)/, '#2f7bff'], [/^(grün|gruen|green|verde)/, '#2bff6e'],
@@ -105,7 +166,7 @@
     [/^(braun|brown|marrón)/, '#a0622d'], [/^(grau|grey|gray|gris)/, '#9aa0ae']
   ];
   const wkey = t => String(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-  const iconOf = t => { const k = wkey(t); if (k.length < 2) return null; for (const [re, f] of ICONS) if (re.test(k)) return f; return null; };
+  const keyfxOf = t => { const k = wkey(t); if (k.length < 2) return null; for (const [re, f] of KEYFX) if (re.test(k)) return f; return null; };
   const colorOf = t => { const k = wkey(t); for (const [re, c] of COLORS) if (re.test(k)) return c; return null; };
 
   const CAMS_CALM = ['push', 'side', 'low', 'dolly', 'orbit'], CAMS_HOT = ['spiral', 'orbit', 'top', 'push', 'side', 'low'];
@@ -195,8 +256,8 @@
       if(W<2.5||W>3.5) c*=mix(.1,1.,smoothstep(-.3,.01,y));
       /* Lichtfächer vom Horizont, pumpen mit Kick und Bass */
       float ang=atan(uv.x*AS+YAW*.3,y+.25);
-      float bm=pow(max(0.,sin(ang*7.+T*1.3)),28.)*smoothstep(0.,1.2,y)*(K*1.4+B*.35)*E;
-      c+=C3*bm*.55+vec3(D*.28+K*.03);
+      float bm=pow(max(0.,sin(ang*7.+T*1.3)),70.)*smoothstep(0.,1.2,y)*(K*.8+B*.15)*E;
+      c+=C3*bm*.35+vec3(D*.22+K*.02);
       gl_FragColor=vec4(c,1.);}`;
   const FLOOR_VS = `attribute vec2 p;uniform mat4 PV;uniform float Z;varying vec3 w;
     void main(){ w=vec3(p.x*80.,-2.2,Z-p.y*130.+24.); gl_Position=PV*vec4(w,1.);}`;
@@ -282,7 +343,7 @@
     /* Zustand: z = Position des Kamera-Rigs auf dem Flugweg; Wörter mit rel=true fahren mit dem Rig mit */
     const S = { z: 0, speed: 4, kick: 0, drop: 0, roll: 0, rollT: -1, inv: 0, flash: 0, shake: [0, 0], hue: Math.random(), last: performance.now(), t0: performance.now(),
       rip: [], style: 'fly', words: [], line: null, ringA: 0, lay: null, trail: 0, trailK: 0, ts: 1, slowT: 0, boomDone: true,
-      world: WORLDS.dulidan, worldId: 'dulidan', props: [], cam: { mode: 'push', from: null, t0: 0 }, camLines: 0, inChorus: false, energy: 0, T: 0, camPose: null, icons: [] };
+      world: WORLDS.dulidan, worldId: 'dulidan', props: [], cam: { mode: 'push', from: null, t0: 0 }, camLines: 0, inChorus: false, energy: 0, T: 0, camPose: null, fx: [] };
     let C = S.world.C.map(hex);
     for (let i = 0; i < NS; i++) resetStar(i, true);
     function resetStar(i, any) {
@@ -505,20 +566,81 @@
       for (const p of S.props) if (p.z > cam[2] + 6 && p.z > S.z + 6) { far -= d.gap; Object.assign(p, d.make(far, p.i + S.props.length)); p.i += S.props.length; }
     }
 
-    /* ===================== Symbole zu Schlüsselwörtern ===================== */
-    const iconTex = new Map();
-    function emojiTex(e) {
-      if (iconTex.has(e)) return iconTex.get(e);
-      const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
-      x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '170px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
-      x.shadowColor = 'rgba(255,255,255,.55)'; x.shadowBlur = 30; x.fillText(e, 128, 138); x.shadowBlur = 0; x.fillText(e, 128, 138);
-      const t = { tex: upload(c), aspect: 1 }; iconTex.set(e, t); return t;
+    /* ===================== Schlüsselwort-Animationen (Partikel-Figuren hinter dem Wort, Effekte im Raum) ===================== */
+    const MAXFX = 4000, FXP = new Float32Array(MAXFX * 4), FXH = new Float32Array(MAXFX), FXK = new Float32Array(MAXFX).fill(5), FXC = new Float32Array(MAXFX * 3);
+    const FB = gl.createBuffer(), FHB = gl.createBuffer(), FKB = gl.createBuffer(), FCB = gl.createBuffer();
+    const SPIN3D = new Set(['globe', 'diamond', 'cube']);
+    function spawnC(x, y, z, vx, vy, vz, rgb, kind = 5, grav = 1, dec = 0.8, life = 1) {
+      const k = pHead; spawn(x, y, z, vx, vy, vz, 0, kind, grav, dec, life);
+      pcol[k * 3] = rgb[0]; pcol[k * 3 + 1] = rgb[1]; pcol[k * 3 + 2] = rgb[2];
     }
-    /* Symbol erscheint groß hinter/über dem Wort, federt ein, schwebt, pulsiert mit dem Bass und geht mit der Zeile */
-    function addIcon(frames, wd) {
-      const side = wd.x > 0.5 ? 1 : wd.x < -0.5 ? -1 : (wd.k % 2 ? 1 : -1);
-      S.icons.push({ frames: frames.map(emojiTex), wd, line: S.line, born: performance.now(), dx: side * rnd(0.6, 1.4), dy: rnd(1.1, 1.6), dz: -1.6, sz: frames.length > 1 ? 2.6 : 2, a: 0, spin: rnd(-0.3, 0.3), globe: frames.length > 1 });
-      const P0 = wpos(wd); emit(Math.round(60 * getAmp()), P0[0], P0[1] + 1.2, P0[2] - 1.5, 1, 4, S.hue);
+    function addKeyFx(def, wd) {
+      const now = performance.now(), P0 = wpos(wd), amp = getAmp();
+      if (def.shape) {
+        const f = figOf(def.shape), from = new Float32Array(f.n * 3);
+        for (let i = 0; i < f.n; i++) { const a = Math.random() * 6.283, b = Math.acos(2 * Math.random() - 1), r = rnd(4, 8); from[i * 3] = Math.sin(b) * Math.cos(a) * r; from[i * 3 + 1] = Math.cos(b) * r; from[i * 3 + 2] = Math.sin(b) * Math.sin(a) * r; }
+        const size = clamp(wd.w * wd.sc * 0.42, 1.25, 2.4) * (def.shape === 'globe' ? 1.15 : 1);
+        S.fx.push({ shape: def.shape, f, from, wd, line: S.line, t: 0, size, broken: def.broken, end: -1 });
+        if (def.shape === 'bolt') { S.flash = Math.max(S.flash, 0.55); S.kick = Math.max(S.kick, 1); const a = Math.random() * 6.28; S.shake = [Math.cos(a) * 0.25 * amp, Math.sin(a) * 0.18 * amp]; }
+      } else {
+        S.fx.push({ fx: def.fx, red: def.red, wd, line: S.line, t: 0, end: -1 });
+        if (def.fx === 'blast') { S.flash = Math.max(S.flash, 0.6); S.kick = 1; S.inv = Math.max(S.inv, 0.35); for (let i = 0; i < 220 * amp; i++) { const a = Math.random() * 6.283, b = rnd(-1, 1), v = rnd(5, 14); spawnC(P0[0], P0[1], P0[2] - 0.5, Math.cos(a) * v, b * v * 0.6, Math.sin(a) * v * 0.4, [1, rnd(0.5, 0.9), 0.3], 0, 0.3, 1.4); } }
+        if (def.fx === 'confetti') { const CF = [[1, 0.3, 0.5], [0.3, 0.8, 1], [1, 0.9, 0.3], [0.5, 1, 0.5], [0.8, 0.4, 1]]; for (let i = 0; i < 260 * amp; i++) { const a = Math.random() * 6.283, v = rnd(3, 10); spawnC(P0[0], P0[1], P0[2], Math.cos(a) * v, Math.abs(Math.sin(a)) * v + 2, rnd(-2, 2), CF[i % 5], 5, 0.7, 0.45); } }
+        if (def.fx === 'beam') S.flash = Math.max(S.flash, 0.25);
+      }
+    }
+    /* Effekte, die laufen, solange das Wort steht (höchstens 4 s) */
+    function runFx(e, P0, dt, amp, w) {
+      const n = v => { let k = Math.floor(v); if (Math.random() < v - k) k++; return k; };
+      const W = Math.max(1, w), X = () => P0[0] + rnd(-W / 2, W / 2);
+      switch (e.fx) {
+        case 'fire': for (let i = n(dt * 90 * amp); i > 0; i--) spawnC(X(), P0[1] - 0.45, P0[2] + rnd(-0.3, 0.3), rnd(-0.4, 0.4), rnd(1.5, 3.8), rnd(-0.2, 0.2), e.red ? [1, rnd(0.05, 0.3), 0.1] : [1, rnd(0.35, 0.85), 0.1], 0, -0.35, 1.25); break;
+        case 'money': for (let i = n(dt * 70 * amp); i > 0; i--) spawnC(P0[0] + rnd(-4, 4), P0[1] + rnd(3.5, 5), P0[2] + rnd(-1, 1), rnd(-0.3, 0.3), rnd(-2.5, -1), 0, Math.random() < 0.6 ? [1, 0.8, 0.25] : [0.35, 1, 0.5], 5, 0.4, 0.45); break;
+        case 'smoke': for (let i = n(dt * 40); i > 0; i--) spawnC(X(), P0[1] - 0.3, P0[2] - 0.6, rnd(-0.5, 0.5), rnd(0.4, 1.2), rnd(-0.3, 0.3), Math.random() < 0.85 ? [0.32, 0.22, 0.42] : [1, 0.2, 0.15], 0, -0.06, 0.55); break;
+        case 'snow': for (let i = n(dt * 70 * amp); i > 0; i--) spawn(P0[0] + rnd(-5, 5), P0[1] + rnd(2.5, 4.5), P0[2] + rnd(-2, 1), rnd(-0.3, 0.5), rnd(-1.4, -0.6), 0, Math.random(), 4, 0.02, 0.3, 1); break;
+        case 'rain': for (let i = n(dt * 160 * amp); i > 0; i--) spawn(P0[0] + rnd(-6, 6), P0[1] + rnd(3, 5), P0[2] + rnd(-3, 1), -0.4, -16, 0, Math.random(), 3, 0, 1.4, 0.8); break;
+        case 'drops': { const red = /^(blut|blood|sangre)/.test(wkey(e.wd.text)); for (let i = n(dt * 30 * amp); i > 0; i--) spawnC(X(), P0[1] - 0.45, P0[2] + 0.1, 0, rnd(-0.3, 0), 0, red ? [0.9, 0.05, 0.1] : [0.4, 0.75, 1], 5, 1.2, 0.6); break; }
+        case 'speed': for (let i = n(dt * 120 * amp); i > 0; i--) { const y = P0[1] + rnd(-2.5, 2.5); spawnC(P0[0] + 9, y, P0[2] + rnd(-2, 2), -rnd(25, 40), 0, 0, [0.85, 0.95, 1], 0, 0, 2.2, 0.8); } S.trail = Math.max(S.trail, 0.9); break;
+        case 'beam': for (let i = n(dt * 90 * amp); i > 0; i--) spawnC(P0[0] + rnd(-0.6, 0.6), P0[1] + rnd(-1, 0), P0[2] - 1, 0, rnd(3, 6), 0, [1, 0.95, 0.75], 0, 0, 0.6); break;
+        case 'twinkle': for (let i = n(dt * 30); i > 0; i--) spawnC(P0[0] + rnd(-5, 5), P0[1] + rnd(-1, 3), P0[2] - rnd(1, 4), 0, 0, 0, [1, 1, 0.9], 0, 0, 2, 0.9); break;
+        case 'bubbles': for (let i = n(dt * 40); i > 0; i--) spawn(X(), P0[1] - 0.5, P0[2] + rnd(-0.4, 0.4), rnd(-0.2, 0.2), rnd(1, 2.4), 0, Math.random(), 2, -0.1, 0.5, 1); break;
+        case 'confetti': for (let i = n(dt * 30); i > 0; i--) spawnC(P0[0] + rnd(-4, 4), P0[1] + 4, P0[2], rnd(-0.5, 0.5), -1, 0, [Math.random(), Math.random(), 1 - Math.random() * 0.5], 5, 0.4, 0.4); break;
+      }
+    }
+    /* Pro Frame: Figuren aufbauen (Punkte fliegen zusammen), bewegen, mit der Zeile zersprengen; Effekte laufen lassen */
+    function stepFx(dt, A, amp) {
+      let j = 0;
+      for (const e of S.fx) {
+        e.t += dt;
+        const P0 = wpos(e.wd), gone = e.line !== S.line || e.wd.dead;
+        if (gone && e.end < 0) e.end = e.t;
+        if (!e.shape) { if (!gone && e.t < 4) runFx(e, P0, dt, amp, e.wd.w * e.wd.sc); continue; }
+        const f = e.f, t = e.t, sc = e.size * ease.el(clamp(t / 0.9, 0, 1)) * (e.shape === 'heart' ? 1 + S.kick * 0.22 + 0.05 * Math.sin(t * 8) : 1 + A.b * 0.08);
+        const ry = SPIN3D.has(e.shape) ? t * 0.9 : Math.sin(t * 0.8) * 0.45, rz = e.shape === 'clock' ? -t * 0.6 : e.shape === 'rings' ? 0 : Math.sin(t * 1.1) * 0.08;
+        const cy = Math.cos(ry), sy = Math.sin(ry), cz = Math.cos(rz), sz = Math.sin(rz);
+        const dd = e.end >= 0 ? t - e.end : -1, out = dd >= 0 ? Math.max(0, 1 - dd * 1.7) : 1;
+        const split = e.broken && t > 1.4 ? Math.min(1, (t - 1.4) * 1.5) : 0;
+        for (let i = 0; i < f.n && j < MAXFX; i++) {
+          let x = f.p[i * 3], y = f.p[i * 3 + 1], z = f.p[i * 3 + 2];
+          if (e.shape === 'wave') y += Math.sin(x * 2.2 - t * 3) * 0.35 - Math.sin(x * 2.2) * 0.35;
+          if (e.shape === 'rings') { const r = Math.hypot(x, y), g = 1 + ((t * 0.6 + r) % 1) * 0.35; x *= g; y *= g; }
+          if (split) { const s2 = x < 0 ? -1 : 1; x += s2 * split * 0.35; y -= split * 0.25 * Math.abs(x); }
+          /* Drehung: erst um Y (3D), dann leicht um Z */
+          let X = x * cy + z * sy, Z = -x * sy + z * cy, Y = y;
+          const X2 = X * cz - Y * sz; Y = X * sz + Y * cz; X = X2;
+          const k = clamp((t - (i / f.n) * 0.7) / 0.55, 0, 1), ek = ease.out(k);
+          X = lerp(e.from[i * 3], X, ek); Y = lerp(e.from[i * 3 + 1], Y, ek); Z = lerp(e.from[i * 3 + 2], Z, ek);
+          if (dd >= 0) { const l = Math.hypot(X, Y, Z) || 1, m = dd * 5 + dd * dd * 6; X += X / l * m; Y += Y / l * m; Z += Z / l * m; }
+          const tw = 0.6 + 0.4 * Math.sin(t * 5 + i * 0.37);
+          FXP[j * 4] = P0[0] + X * sc; FXP[j * 4 + 1] = P0[1] + Y * sc; FXP[j * 4 + 2] = P0[2] - 2.2 + Z * sc;
+          FXP[j * 4 + 3] = (k > 0 ? tw : 0) * out * (e.shape === 'bolt' ? 0.6 + 0.4 * (Math.random() < 0.85) : 1);
+          const g = 1.35 + A.b * 0.45 + A.v * 0.25;
+          FXC[j * 3] = f.c[i * 3] * g; FXC[j * 3 + 1] = f.c[i * 3 + 1] * g; FXC[j * 3 + 2] = f.c[i * 3 + 2] * g;
+          j++;
+        }
+      }
+      S.fx = S.fx.filter(e => (e.end < 0 || e.t - e.end < 0.75) && e.t < 30);
+      return j;
     }
     function colorSpark(P0, rgb) {
       /* Funken in der Farbe des Worts: Farbton aus dem Dulidan-Rad passt nicht, darum eigene Art 5 mit fester Farbe */
@@ -582,8 +704,8 @@
       if (wd.ty == null) wd.ty = wd.y;
       wd.line = S.line;
       S.words.push(wd);
-      const ic = iconOf(text);
-      if (ic && S.line && (S.line.icons || 0) < 2) { S.line.icons = (S.line.icons || 0) + 1; addIcon(ic, wd); }
+      const kf = keyfxOf(text);
+      if (kf && S.line && (S.line.fx || 0) < 2) { S.line.fx = (S.line.fx || 0) + 1; addKeyFx(kf, wd); }
       if (color) { const P0 = wpos(wd), rgb = hex(color); for (let i = 0; i < 40 * getAmp(); i++) colorSpark(P0, rgb); }
       if (S.line && S.line.chorus && k === 0) { const F = focus(); ripple(0, F[2], 1.3); }
       return wd;
@@ -663,7 +785,7 @@
     /* ===================== Kamera: Fahrten mit weichen Übergängen oder harten Schnitten ===================== */
     function poseOf(mode, T, F) {
       switch (mode) {
-        case 'spiral': { const a = T * 0.85; return { p: [F[0] + Math.cos(a) * 3.4, F[1] + Math.sin(a) * 2 + 0.3, F[2] + 7.8], l: F, roll: Math.sin(a * 0.5) * 0.55 + a * 0.12, fov: 62 }; }
+        case 'spiral': { const a = T * 0.85; return { p: [F[0] + Math.cos(a) * 3.4, F[1] + Math.sin(a) * 2 + 0.3, F[2] + 7.8], l: F, roll: Math.sin(a * 0.5) * 0.22, fov: 62 }; }
         case 'orbit': { const a = T * 0.45; return { p: [F[0] + Math.sin(a) * 8.5, F[1] + 1.4 + Math.sin(T * 0.3) * 0.6, F[2] + Math.cos(a) * 8.5], l: F, roll: 0, fov: 58 }; }
         case 'side': { return { p: [F[0] - 7 + Math.sin(T * 0.4) * 1.5, F[1] + 0.9, F[2] + 4], l: [F[0] + 0.8, F[1], F[2]], roll: -0.06, fov: 60 }; }
         case 'top': { return { p: [F[0] + Math.sin(T * 0.25) * 1.2, F[1] + 7.5, F[2] + 4.5], l: F, roll: Math.sin(T * 0.2) * 0.1, fov: 64 }; }
@@ -744,7 +866,7 @@
         const push = S.cam.mode === 'push';
         S.speed += (((push ? 3 + A.b * 14 * amp : 0.7 + A.b * 2.5) + S.drop * 30) - S.speed) * (1 - Math.pow(0.05, rdt));
         S.z -= S.speed * dt;
-        if (S.rollT > 0) { const t = (now - S.rollT) / 1200; S.roll = t < 1 ? ease.out(t) * Math.PI * 2 : 0; if (t >= 1) S.rollT = -1; }
+        if (S.rollT > 0) { const t = (now - S.rollT) / 900; S.roll = t < 1 ? Math.sin(t * Math.PI * 2) * 0.28 * (1 - t) : 0; if (t >= 1) S.rollT = -1; }   /* Drop: kurzes Kippen, nie über Kopf */
         /* Kamera */
         const pose = camNow(now, T); S.camPose = pose;
         const pp = pose.p.slice();
@@ -774,6 +896,7 @@
         const PV = mul(Pm, V);
         /* Rechts/Oben der Kamera (ohne Rolle): Wörter und Requisiten schauen zur Kamera, rollen aber mit ins Bild */
         const RV = [R[0], R[4], R[8]], UV = [R[1], R[5], R[9]];
+        const RR = mul(rotZ(-roll), R), TRV = [RR[0], RR[4], RR[8]], TUV = [RR[1], RR[5], RR[9]];   /* Text: dreht die Rolle mit zurück → bleibt lesbar */
         gl.viewport(0, 0, cv.width, cv.height);
         gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
         const cols = p => { gl.uniform3fv(p.U.C1, C[0]); gl.uniform3fv(p.U.C2, C[1]); gl.uniform3fv(p.U.C3, C[2]); };
@@ -824,6 +947,12 @@
         pts(stars, shue, skind, NS, (S.world.n === 3 ? 1.3 : 0.9) + A.h * 0.8, SB, SHB, SKB);
         gl.bindBuffer(gl.ARRAY_BUFFER, CB); gl.bufferData(gl.ARRAY_BUFFER, pcol, gl.DYNAMIC_DRAW); gl.enableVertexAttribArray(p.A.col); gl.vertexAttribPointer(p.A.col, 3, gl.FLOAT, false, 0, 0);
         pts(parts, phue, pkind, NP, 1.4, PB, HB, KB);
+        /* Schlüsselwort-Figuren aus Punkten */
+        const nfx = stepFx(dt, A, amp);
+        if (nfx) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, FCB); gl.bufferData(gl.ARRAY_BUFFER, FXC.subarray(0, nfx * 3), gl.DYNAMIC_DRAW); gl.vertexAttribPointer(p.A.col, 3, gl.FLOAT, false, 0, 0);
+          pts(FXP.subarray(0, nfx * 4), FXH.subarray(0, nfx), FXK.subarray(0, nfx), nfx, 1.7, FB, FHB, FKB);
+        }
         gl.disableVertexAttribArray(p.A.col);
         gl.disableVertexAttribArray(p.A.hue); gl.disableVertexAttribArray(p.A.kind);
         /* Sternbild-Linien zwischen den Buchstaben */
@@ -841,17 +970,7 @@
         /* Wörter, von hinten nach vorne, mit Echo-Trails */
         p = P.word; gl.useProgram(p.p); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.bindBuffer(gl.ARRAY_BUFFER, WQ); gl.enableVertexAttribArray(p.A.p); gl.vertexAttribPointer(p.A.p, 2, gl.FLOAT, false, 0, 0);
-        /* Symbole hinter den Wörtern */
-        for (const ic of S.icons) {
-          const age = (now - ic.born) / 1000 * S.ts, P0 = wpos(ic.wd), gone = ic.line !== S.line || ic.wd.dead;
-          ic.a = gone ? Math.max(0, ic.a - rdt * 2.5) : Math.min(1, age / 0.25);
-          if (ic.a <= 0.002) continue;
-          const sz = ic.sz * ease.el(clamp(age / 0.7, 0, 1)) * (1 + A.b * 0.18 * amp) * (gone ? 1 + (1 - ic.a) * 0.6 : 1);
-          const fr = ic.frames[ic.globe ? Math.floor(T * 4) % ic.frames.length : 0];
-          const y = P0[1] + ic.dy * (ic.wd.sc || 1) + Math.sin(T * 1.8 + ic.dx) * 0.12;
-          quad(fr.tex, P0[0] + ic.dx, y, P0[2] + ic.dz, sz, sz, ic.globe ? Math.sin(T * 0.8) * 0.08 : Math.sin(T * 1.5 + ic.spin * 9) * 0.12, ic.a, 0, A.v * 0.6 + A.b * 0.4, S.hue, 1, 0, 0, 0);
-        }
-        S.icons = S.icons.filter(ic => ic.a > 0.002 || (now - ic.born) < 300);
+        gl.uniform3fv(p.U.RV, TRV); gl.uniform3fv(p.U.UV, TUV);   /* Text bleibt waagerecht im Bild */
         const ord = [...S.words].sort((a, b) => wpos(a)[2] - wpos(b)[2]);
         const tr = S.trailK * amp;
         for (const w of ord) {

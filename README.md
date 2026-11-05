@@ -188,7 +188,7 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
     - **15 Textarten:** Slam, Fly-Through, Shatter, Glitch, Stack, Ring, Split (Buchstaben fliegen von überall rein), Welle, Regen, Burn-in, Sternbild, Slice, Flip, Typo-Wand. Dazu **Echo-Trails** (leuchtende Nachbilder), im Refrain voll.
     - **Kamera:** Push, Spirale, Orbit, Seitenfahrt, Draufsicht, Dolly-Zoom, Froschperspektive. Neue Abschnitte bekommen einen harten Schnitt.
     - **Erster Refrain:** Zeitlupe, dann eine Explosion in der Art der Welt (Blütensturm, Glutwelle, Supernova …).
-    - **Schlüsselwörter:** „Welt“ bringt eine drehende Weltkugel 🌍, dazu rund 45 weitere Begriffe mit Symbol (Herz, Feuer, Stern, Mond, Geld, Krone, Diamant, Blitz, Rose, Schnee, Rakete, Engel, Teufel, Meer …). Farbwörter wie rot, blau, gold oder pink erscheinen in genau dieser Farbe.
+    - **Schlüsselwörter:** Hinter bestimmten Wörtern baut sich eine leuchtende Partikel-Figur auf. „Welt“ wird zur drehenden Weltkugel aus Punkten, ein Herz schlägt im Bass, dazu Krone, Diamant, Blitz, Stern, Sonne, Mond, Uhr, Flügel, Welle, Tannenbaum und mehr. Andere Wörter lösen Effekte aus: Feuer, Goldregen bei Geld, Rauch, Schnee, Regen, Tränen, Konfetti bei Party, Lichtstrahl, Geschwindigkeits-Streifen. Farbwörter wie rot, blau, gold oder pink erscheinen in genau dieser Farbe.
     - Beim Drop rollt die Kamera und das Bild invertiert kurz. Die Disko startet immer in Lyric Motion, `V` holt das Video in die Mitte.
   - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.).
     - Zuerst kommen die **YouTube-Untertitel** des Videos, wenn es welche gibt. Die sind exakt auf das Video getimt, Intro inklusive.

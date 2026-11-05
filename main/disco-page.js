@@ -703,7 +703,7 @@
       if (ev.drop) { H.dataset.drops = (+H.dataset.drops || 0) + 1; pill('▲ DROP'); }
       if (mode === 'motion' && motion) motion.frame(now, A, ev); else if (gl) draw(now, ev);
       lyricsTick(now);
-    } catch (e) { console.warn('[disco]', e); }
+    } catch (e) { console.warn('[disco]', e && e.stack ? e.stack.slice(0, 400) : e); }
     raf = requestAnimationFrame(loop);
   }
   /* BPM aus den Abständen der letzten Kicks (Median, auf 70–180 gefaltet) */
