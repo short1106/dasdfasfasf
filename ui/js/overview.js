@@ -43,14 +43,25 @@ void main(){
 }`;
 const CARD_FS = `precision highp float;
 varying vec2 vL; varying float vDist;
-uniform sampler2D uTex, uLbl; uniform float uAsp, uHot, uT, uAu, uFade, uSolid;
+uniform sampler2D uTex, uLbl; uniform float uAsp, uHot, uT, uAu, uFade, uSolid, uHex, uSeed;
 uniform vec3 uG1, uG2;
 float box(vec2 p, vec2 b, float r){ vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+/* Sechseck (spitze Seite oben), Radius 1 */
+float hexd(vec2 p){ p = abs(p); return max(p.x*0.8660254 + p.y*0.5, p.y) - 0.92; }
 void main(){
-  float d = box(vL, vec2(uAsp, 1.0), 0.07*(1.0 - uSolid) + 0.0005);
+  float h = uHex * (1.0 - uSolid);
+  /* Wabe: Quadrat-Quad, Sechseck-Maske, Bild mittig zugeschnitten */
+  vec2 hp = vec2(vL.x / uAsp, vL.y);
+  float d = mix(box(vL, vec2(uAsp, 1.0), 0.07*(1.0 - uSolid) + 0.0005), hexd(hp), h);
   float inside = smoothstep(0.012, -0.012, d);
   vec2 uv = vL / vec2(uAsp, 1.0) * 0.5 + 0.5;
-  vec3 tex = texture2D(uTex, uv).rgb;
+  vec2 uvh = vec2(0.5 + (uv.x - 0.5) * 0.62, uv.y);
+  /* Hologramm: Zeilen zittern kurz seitlich, Farbkanäle versetzt */
+  float gl1 = step(0.985, fract(sin(floor(uv.y*40.0 + uT*7.0) * 91.7 + uSeed) * 4375.5)) * h;
+  uvh.x += gl1 * 0.03 * sin(uT*40.0);
+  vec2 tuv = mix(uv, uvh, h);
+  vec3 tex = texture2D(uTex, tuv).rgb;
+  tex = mix(tex, vec3(texture2D(uTex, tuv + vec2(0.006, 0.0)).r, tex.g, texture2D(uTex, tuv - vec2(0.006, 0.0)).b), h);
   float fog = clamp((vDist - 7.0) / 34.0, 0.0, 0.85) * (1.0 - uSolid);
   float scan = smoothstep(0.0, 0.04, abs(fract(uv.y*1.2 - uT*0.25) - 0.5) - 0.44) * 0.12 * (1.0 - uSolid);
   vec3 g = mix(uG1, uG2, uv.x);
@@ -58,8 +69,12 @@ void main(){
   vec3 col = mix(tex, lbl.rgb, lbl.a) * (1.0 - fog) + g*scan + g*uHot*0.08*(1.0 - uSolid);
   float rim = exp(-abs(d)*40.0) * (0.45 + uHot*1.6 + uAu*1.2) * (1.0 - uSolid);
   float halo = exp(-max(d, 0.0)*9.0) * (0.18 + uHot*0.55 + uAu*0.6) * (1.0 - inside) * (1.0 - uSolid);
-  vec3 c = col*inside + g*(rim + halo);
-  float a = max(inside, clamp(rim + halo, 0.0, 1.0)) * uFade;
+  /* Hologramm-Tönung: kühl, Scanlinien, leichtes Flackern */
+  float lines = 0.75 + 0.25 * sin(uv.y * 260.0 + uT * 6.0);
+  float flick = 0.92 + 0.08 * sin(uT * 23.0 + uSeed * 7.0);
+  col = mix(col, (col * 0.55 + vec3(0.25, 0.85, 1.0) * dot(col, vec3(0.3, 0.5, 0.2)) * 0.9) * lines * flick + vec3(0.2, 0.9, 1.0) * uHot * 0.12, h);
+  vec3 c = col*inside + g*(rim + halo) + vec3(0.3, 0.95, 1.0) * exp(-abs(d)*30.0) * (0.5 + uHot) * h;
+  float a = max(inside * mix(1.0, 0.9, h), clamp(rim + halo, 0.0, 1.0)) * uFade;
   gl_FragColor = vec4(c*uFade, a);
 }`;
 const PT_VS = `attribute vec3 aP; uniform mat4 uPV; uniform vec3 uEye; uniform float uSz, uSpd;
@@ -79,6 +94,31 @@ void main(){ gl_Position = uPV * vec4(aP, 1.0); vA = clamp(1.0 - distance(aP, uE
 const LN_FS = `precision mediump float; varying float vA; uniform vec3 uCol; uniform float uA;
 void main(){ gl_FragColor = vec4(uCol*vA*uA, vA*uA); }`;
 
+/* Galaxie: jeder Tab eine Kugel (Billboard + Kugel im Fragment-Shader), Seite als Oberfläche, Licht von der Sonne.
+   uSun = 1 zeichnet stattdessen die Dulidan-Sonne mit wabernder Oberfläche und Korona. */
+const PL_VS = `attribute vec2 aV; uniform mat4 uPV; uniform vec3 uC, uR, uU; uniform float uS; varying vec2 vL;
+void main(){ vec2 lp = aV * 1.45; vL = lp; vec3 w = uC + (uR*lp.x + uU*lp.y) * uS; gl_Position = uPV * vec4(w, 1.0); }`;
+const PL_FS = `precision highp float;
+varying vec2 vL; uniform sampler2D uTex; uniform float uT, uSpin, uHot, uSun, uFade, uAu; uniform vec3 uG1, uG2, uL;
+void main(){
+  float r = length(vL); vec3 gc = mix(uG1, uG2, 0.5);
+  if (uSun > 0.5) {
+    float core = smoothstep(1.0, 0.0, r);
+    float n = sin(vL.x*7.0 + uT*1.7 + sin(vL.y*5.0 - uT)) * sin(vL.y*8.0 - uT*1.3 + sin(vL.x*4.0 + uT*0.7)) * 0.5 + 0.5;
+    vec3 c = mix(uG2, vec3(1.0, 0.92, 0.97), core*core*0.9) * core * (1.0 + 0.35*n) + gc * exp(-max(r - 0.6, 0.0) * 3.2) * (0.9 + uAu);
+    gl_FragColor = vec4(c, 1.0) * clamp(1.45 - r, 0.0, 1.0) * uFade; return;
+  }
+  float atm = r > 1.0 ? exp(-(r - 1.0) * 10.0) * (0.45 + uHot * 0.9 + uAu) : 0.0;
+  if (r > 1.0) { gl_FragColor = vec4(gc * atm, atm) * uFade; return; }
+  vec3 n = vec3(vL, sqrt(1.0 - r*r));
+  float lon = atan(n.x, n.z) / 6.2832 + 0.5 + uSpin, lat = acos(clamp(n.y, -1.0, 1.0)) / 3.1416;
+  vec3 tex = texture2D(uTex, vec2(fract(lon * 2.0), 1.0 - lat)).rgb;
+  float diff = max(dot(n, normalize(uL)), 0.0);
+  float rim = pow(1.0 - n.z, 3.0);
+  vec3 c = tex * (0.42 + diff * 0.85) + gc * rim * (0.7 + uHot * 1.2) + vec3(1.0) * pow(max(dot(reflect(-normalize(uL), n), vec3(0.0, 0.0, 1.0)), 0.0), 24.0) * 0.35;
+  float edge = smoothstep(1.0, 0.97, r);
+  gl_FragColor = vec4(c * edge, edge) * uFade;
+}`;
 function prog(gl, vs, fs) {
   const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
   const p = gl.createProgram();
@@ -148,8 +188,8 @@ export function createOverview(ctx) {
   const api2 = { ok: false, open: () => ctx.fallback(), close() {}, isOpen: () => false, toggle: () => ctx.fallback() };
   const gl = cv.getContext('webgl', { alpha: false, antialias: true });
   if (!gl) return api2;
-  let CP, SP, LP;
-  try { CP = prog(gl, CARD_VS, CARD_FS); SP = prog(gl, PT_VS, PT_FS); LP = prog(gl, LN_VS, LN_FS); } catch (e) { console.warn('Orbit-Shader', e); return api2; }
+  let CP, SP, LP, PL;
+  try { CP = prog(gl, CARD_VS, CARD_FS); SP = prog(gl, PT_VS, PT_FS); LP = prog(gl, LN_VS, LN_FS); PL = prog(gl, PL_VS, PL_FS); } catch (e) { console.warn('Orbit-Shader', e); return api2; }
 
   const quad = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -167,17 +207,36 @@ export function createOverview(ctx) {
   const layoutPos = i => [Math.sin(i * 0.85) * 2.5, Math.cos(i * 0.85) * 0.85 - 0.15, -i * 4.8];
 
   /* ===== Stile: Platz jeder Karte (Mitte, Drehung, Sichtbarkeit), Ruhe-Kamera, Boden ===== */
-  const STYLES = ['spirale', 'karussell', 'coverflow'], STYLE_NAME = { spirale: 'SPIRALE', karussell: 'KARUSSELL', coverflow: 'COVERFLOW' };
+  const STYLES = ['spirale', 'karussell', 'coverflow', 'galaxie', 'wabe'], STYLE_NAME = { spirale: 'SPIRALE', karussell: 'KARUSSELL', coverflow: 'COVERFLOW', galaxie: 'GALAXIE', wabe: 'WABE' };
   let style = STYLES.includes(store.get('dw_orbit_style', 'spirale')) ? store.get('dw_orbit_style', 'spirale') : 'spirale';
   let prevStyle = style, morphT0 = -1e9;
   const MORPH = 900;
   const ringN = () => Math.max(cards.length, 7), ringStep = () => (Math.PI * 2) / ringN(), ringR = () => Math.max(6.5, ringN() * 1.05);
+  /* Galaxie: Umlaufbahnen um die Sonne im Ursprung; die Bahnen stehen still, solange hineingezoomt wird */
+  let orbT = 0;
+  const orbitR = i => 3.4 + i * 1.35;
+  const planetPos = i => { const r = orbitR(i), a = i * 2.39996 + orbT * 0.2 / Math.sqrt(r); return [Math.cos(a) * r, 0, Math.sin(a) * r]; };
+  const planetAt = x => { const a = clamp(Math.floor(x), 0, Math.max(0, cards.length - 1)), b = clamp(a + 1, 0, Math.max(0, cards.length - 1)); return mix3(planetPos(a), planetPos(b), clamp(x - a, 0, 1)); };
+  /* Wabe: Sechseck-Raster, Spalten passend zur Tab-Zahl */
+  const hexCols = () => Math.max(2, Math.ceil(Math.sqrt(cards.length * 1.7))), hexRows = () => Math.ceil(cards.length / hexCols());
+  const hexPos = i => { const C = hexCols(), R = hexRows(), col = i % C, row = Math.floor(i / C); return [(col + (row & 1) * 0.5 - (C - 1) / 2) * 1.64, ((R - 1) / 2 - row) * 1.44, 0]; };
   /* Karten, an denen die Kamera vorbeigeflogen ist, weichen zur Seite und verblassen (nur Spirale) */
   const passed = i => clamp((f - i - 0.2) * 1.4, 0, 1);
   function place(st, i, t) {
     if (st === 'karussell') {
       const th = (i - f) * ringStep(), R = ringR();
       return { c: [Math.sin(th) * R, 0, -R + Math.cos(th) * R], yaw: th, vis: clamp((Math.cos(th) + 0.25) * 1.6, 0, 1), side: 0 };
+    }
+    if (st === 'galaxie') {
+      const c = planetPos(i), e = camOf('galaxie', t).e;
+      return { c, yaw: Math.atan2(e[0] - c[0], e[2] - c[2]), vis: 1, side: 0, sc: 0.62 };
+    }
+    if (st === 'wabe') {
+      /* Lupe: Waben in der Nähe des Mauszeigers werden größer und kommen nach vorn */
+      const c = hexPos(i), ce = camOf('wabe', t).e, hw = ce[2] * Math.tan(FOV / 2);
+      const mxw = ce[0] + mx * hw * asp, myw = ce[1] - my * hw;
+      const k = Math.exp(-((c[0] - mxw) ** 2 + (c[1] - myw) ** 2) / 2.6);
+      return { c: [c[0], c[1], k * 0.9], yaw: (c[0] - mxw) * -0.03 * k, vis: 1, side: 0, sc: 0.84 + 0.36 * k };
     }
     if (st === 'coverflow') {
       const d = i - f, s = clamp(d, -1, 1), a = Math.abs(d);
@@ -193,7 +252,7 @@ export function createOverview(ctx) {
     const b = place(style, i, t), k = morphK();
     if (k >= 1 || prevStyle === style) return b;
     const a = place(prevStyle, i, t);
-    return { c: mix3(a.c, b.c, k), yaw: lerp(a.yaw, b.yaw, k), vis: lerp(a.vis, b.vis, k), side: lerp(a.side, b.side, k) };
+    return { c: mix3(a.c, b.c, k), yaw: lerp(a.yaw, b.yaw, k), vis: lerp(a.vis, b.vis, k), side: lerp(a.side, b.side, k), sc: lerp(a.sc || 1, b.sc || 1, k) };
   }
   const vis = (i, t) => placed(i, t).vis;
   function cardXf(card, i, t, zAmt) {
@@ -204,12 +263,23 @@ export function createOverview(ctx) {
     const pitch = (1 - z) * Math.sin(t * 0.7 + i * 2.1) * 0.03;
     const s = 1 + (i === hot ? 0.06 : 0) * (1 - z);
     card.sc = lerp(card.sc || 1, s, 0.15);
+    const S = card.sc * lerp(p.sc || 1, 1, z), hx = lerp(1, 1 / asp, styleW('wabe') * (1 - z));
     const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), spp = Math.sin(pitch);
-    const X = [cy * card.sc, 0, -sy * card.sc], Y = [sy * spp * card.sc, cp * card.sc, cy * spp * card.sc], N = [sy * cp, -spp, cy * cp];
+    const X = [cy * S * hx, 0, -sy * S * hx], Y = [sy * spp * S, cp * S, cy * spp * S], N = [sy * cp, -spp, cy * cp];
     return { c: [base[0], base[1] + bob, base[2]], X, Y, N };
   }
 
   function camOf(st, t) {
+    if (st === 'galaxie') {
+      const P = planetAt(f), o = Math.hypot(P[0], P[2]) > 0.1 ? norm([P[0], 0, P[2]]) : [0, 0, 1], side = [-o[2], 0, o[0]];
+      /* Schräg von der Seite: so sieht man die beleuchtete Seite der Planeten und die Sonne dahinter */
+      return { e: add(add(P, mulS(o, 2.6)), add([0, 1.9 - my * 1.2, 0], mulS(side, 3.4 + mx * 2.2))), c: add(mix3(P, [0, 0, 0], 0.06), [0, -0.25, 0]) };
+    }
+    if (st === 'wabe') {
+      const F = hexPos(clamp(Math.round(f), 0, Math.max(0, cards.length - 1))), hwid = hexCols() * 0.82 + 1, hh = hexRows() * 0.72 + 1;
+      const dist = Math.max(hh, hwid / asp) / Math.tan(FOV / 2) * 1.02;
+      return { e: [F[0] * 0.18 + mx * 1.1, F[1] * 0.18 - my * 0.8, dist], c: [F[0] * 0.18 + mx * 0.3, F[1] * 0.18 - my * 0.2, 0] };
+    }
     if (st === 'karussell') return { e: [mx * 2.2 + Math.sin(t * 0.25) * 0.3, 1.25 - my * 1.1, 7.4], c: [mx * 0.6, -0.25 - my * 0.3, -1.6] };
     if (st === 'coverflow') return { e: [mx * 1.3, 0.3 - my * 0.55, 6.1], c: [mx * 0.35, -0.15, -0.7] };
     const c = layoutPos(f);
@@ -230,7 +300,10 @@ export function createOverview(ctx) {
     sfx('fire');
   }
   const cycleStyle = () => setStyle(STYLES[(STYLES.indexOf(style) + 1) % STYLES.length]);
-  function fillCam(xf) { return { e: add(xf.c, mulS(xf.N, D_FILL)), c: xf.c }; }
+  /* Abstand passend zur Kartengröße, damit sie die Seite genau füllt (Planeten sind kleiner) */
+  function fillCam(xf) { return { e: add(xf.c, mulS(xf.N, D_FILL * Math.hypot(...xf.Y))), c: xf.c }; }
+  /* Gewicht eines Stils im laufenden Wechsel (0…1) */
+  function styleW(s) { const k = morphK(); return style === s ? (prevStyle === s ? 1 : k) : prevStyle === s ? 1 - k : 0; }
 
   function buildCards() {
     const old = new Map(cards.map(c => [c.id, c]));
@@ -315,6 +388,7 @@ export function createOverview(ctx) {
     const steps = lastNow ? clamp(Math.round((now - lastNow) / 16.67), 1, 10) : 1;
     lastNow = now;
     for (let k = 0; k < steps; k++) { fVel = (fVel + (fT - f) * 0.08) * 0.72; f += fVel; }
+    if (zoom.v < 0.3) orbT += steps / 60;
     if (zoom.dur) {
       const k = clamp((now - zoom.t0) / zoom.dur, 0, 1);
       zoom.v = lerp(zoom.from, zoom.to, easeIO(k));
@@ -335,8 +409,8 @@ export function createOverview(ctx) {
 
     /* Boden je Stil: Gitter (Spirale), Neon-Ringe mit Speichen (Karussell), Spiegel-Horizont (Coverflow) */
     gl.blendFunc(gl.ONE, gl.ONE);
-    const L = [], mk = morphK(), wS = (s) => (style === s ? (prevStyle === s ? 1 : mk) : prevStyle === s ? 1 - mk : 0);
-    const floorA = { spirale: wS('spirale'), karussell: wS('karussell'), coverflow: wS('coverflow') };
+    const L = [];
+    const floorA = { spirale: styleW('spirale'), karussell: styleW('karussell'), coverflow: styleW('coverflow'), galaxie: styleW('galaxie'), wabe: styleW('wabe') };
     if (floorA.spirale > 0.01) {
       const y = -3.2, z0 = Math.floor(cam.e[2] / 3) * 3;
       for (let k = -2; k < 26; k++) L.push(-40, y, z0 - k * 3, 40, y, z0 - k * 3);
@@ -356,6 +430,21 @@ export function createOverview(ctx) {
       const y = -1.12;
       for (let k = 0; k < 14; k++) { const z = 3 - k * k * 0.32; L.push(-30, y, z, 30, y, z); }
     }
+    const nFlow = L.length;
+    if (floorA.galaxie > 0.01) {
+      for (let i = 0; i < cards.length; i++) { const r = orbitR(i), seg = 96; for (let k = 0; k < seg; k++) { const a1 = (k / seg) * 6.2832, a2 = ((k + 1) / seg) * 6.2832; L.push(Math.cos(a1) * r, 0, Math.sin(a1) * r, Math.cos(a2) * r, 0, Math.sin(a2) * r); } }
+    }
+    const nGal = L.length;
+    if (floorA.wabe > 0.01) {
+      /* Sechseck-Wand hinter den Waben, zwei Ringe größer als das Raster, dazu ein wandernder Scan-Strahl */
+      const C = hexCols() + 4, Rw = hexRows() + 4;
+      for (let row = 0; row < Rw; row++) for (let col = 0; col < C; col++) {
+        const x = (col + (row & 1) * 0.5 - (C - 1) / 2) * 1.64, y = ((Rw - 1) / 2 - row) * 1.44, z = -0.7, R = 0.95;
+        for (let k = 0; k < 6; k++) { const a1 = Math.PI / 6 + k * Math.PI / 3, a2 = a1 + Math.PI / 3; L.push(x + Math.cos(a1) * R, y + Math.sin(a1) * R, z, x + Math.cos(a2) * R, y + Math.sin(a2) * R, z); }
+      }
+      const sy = ((t * 0.35) % 1) * Rw * 1.44 - Rw * 0.72;
+      L.push(-C * 0.9, sy, -0.6, C * 0.9, sy, -0.6, -C * 0.9, sy - 0.05, -0.6, C * 0.9, sy - 0.05, -0.6);
+    }
     gl.useProgram(LP.p);
     gl.bindBuffer(gl.ARRAY_BUFFER, lines); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(L), gl.DYNAMIC_DRAW);
     const la = LP.a('aP'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 3, gl.FLOAT, false, 0, 0);
@@ -363,7 +452,9 @@ export function createOverview(ctx) {
     const baseA = (0.55 + audio.bass * 0.9) * (1 - zoom.v);
     if (nGrid) { gl.uniform1f(LP.u.uA, baseA * floorA.spirale); gl.drawArrays(gl.LINES, 0, nGrid / 3); }
     if (nRing > nGrid) { gl.uniform3fv(LP.u.uCol, mix3(g2, g3, 0.5 + 0.5 * Math.sin(t * 1.3))); gl.uniform1f(LP.u.uA, baseA * 2.6 * floorA.karussell); gl.drawArrays(gl.LINES, nGrid / 3, (nRing - nGrid) / 3); }
-    if (L.length > nRing) { gl.uniform3fv(LP.u.uCol, mix3(g3, [1, 1, 1], 0.3)); gl.uniform1f(LP.u.uA, baseA * 0.6 * floorA.coverflow); gl.drawArrays(gl.LINES, nRing / 3, (L.length - nRing) / 3); }
+    if (nFlow > nRing) { gl.uniform3fv(LP.u.uCol, mix3(g3, [1, 1, 1], 0.3)); gl.uniform1f(LP.u.uA, baseA * 0.6 * floorA.coverflow); gl.drawArrays(gl.LINES, nRing / 3, (nFlow - nRing) / 3); }
+    if (nGal > nFlow) { gl.uniform3fv(LP.u.uCol, mix3(g2, g3, 0.4)); gl.uniform1f(LP.u.uA, baseA * 0.9 * floorA.galaxie); gl.drawArrays(gl.LINES, nFlow / 3, (nGal - nFlow) / 3); }
+    if (L.length > nGal) { gl.uniform3fv(LP.u.uCol, [0.25, 0.85, 1.0]); gl.uniform1f(LP.u.uA, baseA * 0.8 * floorA.wabe); gl.drawArrays(gl.LINES, nGal / 3, (L.length - nGal) / 3); }
     gl.disableVertexAttribArray(la);
 
     /* Sterne */
@@ -405,12 +496,42 @@ export function createOverview(ctx) {
       gl.uniform3fv(CP.u.uC, xf.c); gl.uniform3fv(CP.u.uX, xf.X); gl.uniform3fv(CP.u.uY, xf.Y);
       gl.uniform1f(CP.u.uHot, c.hot); gl.uniform1f(CP.u.uAu, c.tab && audio.tabId === c.id ? audio.level : 0);
       gl.uniform1f(CP.u.uSolid, isZ ? zoom.v : 0);
-      gl.uniform1f(CP.u.uFade, isZ ? 1 : solidT ? 0 : vis(i, t));
+      const wG = floorA.galaxie, cardFade = isZ ? Math.max(1 - wG, zoom.v * zoom.v) : solidT ? 0 : vis(i, t) * (1 - wG);
+      if (cardFade < 0.005) continue;
+      gl.uniform1f(CP.u.uFade, cardFade); gl.uniform1f(CP.u.uHex, floorA.wabe); gl.uniform1f(CP.u.uSeed, i * 1.37);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.tex);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, c.lbl);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     gl.disableVertexAttribArray(ca);
+
+    /* Galaxie: Sonne und Planeten von hinten nach vorne (eigene Kugel-Shader) */
+    if (floorA.galaxie > 0.01 && !solidT) {
+      const fw = norm(sub(cam.c, cam.e)), Rv = norm(cross(fw, [0, 1, 0])), Uv = cross(Rv, fw);
+      gl.useProgram(PL.p);
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      const pa = PL.a('aV'); gl.enableVertexAttribArray(pa); gl.vertexAttribPointer(pa, 2, gl.FLOAT, false, 0, 0);
+      gl.uniformMatrix4fv(PL.u.uPV, false, PV); gl.uniform3fv(PL.u.uR, Rv); gl.uniform3fv(PL.u.uU, Uv);
+      gl.uniform3fv(PL.u.uG1, g2); gl.uniform3fv(PL.u.uG2, g3); gl.uniform1f(PL.u.uT, t); gl.uniform1i(PL.u.uTex, 0);
+      const items = cards.map((c, i) => [Math.hypot(...sub(planetPos(i), cam.e)), i]);
+      items.push([Math.hypot(...cam.e), -1]);
+      items.sort((a, b) => b[0] - a[0]);
+      for (const [, i] of items) {
+        if (i < 0) {
+          gl.uniform3fv(PL.u.uC, [0, 0, 0]); gl.uniform1f(PL.u.uS, 1.5 + audio.bass * 0.25); gl.uniform1f(PL.u.uSun, 1); gl.uniform1f(PL.u.uAu, audio.level);
+          gl.uniform1f(PL.u.uFade, floorA.galaxie * (1 - zoom.v)); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); continue;
+        }
+        const c = cards[i], P = planetPos(i), isZ = i === zoom.idx && zoom.v > 0.02;
+        const d = norm(sub([0, 0, 0], P)), Lv = [dot(d, Rv), dot(d, Uv), -dot(d, fw)];
+        gl.uniform3fv(PL.u.uC, P); gl.uniform1f(PL.u.uS, 0.62 * (1 + c.hot * 0.35)); gl.uniform1f(PL.u.uSun, 0);
+        gl.uniform3fv(PL.u.uL, Lv); gl.uniform1f(PL.u.uSpin, t * 0.03 + i * 0.37); gl.uniform1f(PL.u.uHot, c.hot);
+        gl.uniform1f(PL.u.uAu, c.tab && audio.tabId === c.id ? audio.level : 0);
+        gl.uniform1f(PL.u.uFade, floorA.galaxie * (isZ ? 1 - zoom.v : 1));
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.tex);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      gl.disableVertexAttribArray(pa);
+    }
 
     /* HUD: Titel der fokussierten Karte */
     const fi = clamp(Math.round(f), 0, cards.length - 1);
