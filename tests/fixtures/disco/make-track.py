@@ -28,8 +28,11 @@ bass = np.where(((t >= 6) & (t < 14)) | (t >= 16), 0.25 * np.sin(2 * np.pi * 55 
 L += bass; R += bass
 
 # "Stimme": exakt in der Mitte, harmonisch mit Vibrato
+# Standard: zwei lange Gesangsblöcke. Variante "phrases": einzelne gesungene Zeilen mit Pausen (für den Lyrics-Abgleich)
+import sys
+PHRASES = 'phrases' in sys.argv
 v = np.zeros(n)
-for a, b in [(8, 13.5), (18, 26)]:
+for a, b in ([(s, s + 1.9) for s in (8, 10.5, 16, 18, 20.5, 23)] if PHRASES else [(8, 13.5), (18, 26)]):
     m = (t >= a) & (t < b)
     f0 = 220 * (1 + 0.02 * np.sin(2 * np.pi * 5.5 * t[m]))
     ph = 2 * np.pi * np.cumsum(f0) / sr
@@ -41,7 +44,14 @@ w = wave.open('track.wav', 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setfra
 w.writeframes((np.stack([L, R], 1) * 32767).astype('<i2').tobytes()); w.close()
 
 ff = ['ffmpeg', '-loglevel', 'error', '-y']
-subprocess.run(ff + ['-f', 'lavfi', '-i', 'testsrc2=size=960x540:rate=30:duration=32', '-i', 'track.wav',
-                     '-c:v', 'libvpx', '-b:v', '1500k', '-c:a', 'libopus', '-b:a', '128k', '-shortest', 'track.webm'], check=True)
-subprocess.run(ff + ['-i', 'track.wav', '-c:a', 'libopus', '-b:a', '128k', 'track-audio.webm'], check=True)
-print('track.webm + track-audio.webm erzeugt')
+if PHRASES:
+    import os
+    os.replace('track.wav', 'phrases.wav')
+    subprocess.run(ff + ['-f', 'lavfi', '-i', 'testsrc2=size=960x540:rate=30:duration=32', '-i', 'phrases.wav',
+                         '-c:v', 'libvpx', '-b:v', '1500k', '-c:a', 'libopus', '-b:a', '128k', '-shortest', 'phrases.webm'], check=True)
+    print('phrases.webm erzeugt')
+else:
+    subprocess.run(ff + ['-f', 'lavfi', '-i', 'testsrc2=size=960x540:rate=30:duration=32', '-i', 'track.wav',
+                         '-c:v', 'libvpx', '-b:v', '1500k', '-c:a', 'libopus', '-b:a', '128k', '-shortest', 'track.webm'], check=True)
+    subprocess.run(ff + ['-i', 'track.wav', '-c:a', 'libopus', '-b:a', '128k', 'track-audio.webm'], check=True)
+    print('track.webm + track-audio.webm erzeugt')

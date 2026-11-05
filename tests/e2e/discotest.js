@@ -29,7 +29,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await wait(1200);
   const full = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFullScreen());
   console.log('Vollbild:', full, 'Host im Tab:', await js('!!document.querySelector("dulidan-disco")'));
-  for (const [ms, name] of [[2500, 'd1.png'], [3500, 'd2-voice.png'], [3200, 'd3.png'], [3000, 'd4-drop.png'], [3500, 'd5-lyrics.png']]) { await wait(ms); await shot(name); console.log('t=', ((await js('document.querySelector("video,audio").currentTime')) || 0).toFixed(1), name); }
+  for (const [ms, name] of [[2500, 'd1.png'], [3500, 'd2-voice.png'], [3200, 'd3.png'], [3000, 'd4-drop.png'], [3500, 'd5-lyrics.png']]) { await wait(ms); await shot(name); console.log('t=', ((await js('document.querySelector("video,audio").currentTime')) || 0).toFixed(1), name, await js('(() => { const h = document.querySelector("dulidan-disco"); return h ? h.dataset.sync + " | " + h.dataset.line : "-"; })()')); }
   console.log('Drops:', await js('document.querySelector("dulidan-disco").dataset.drops || 0'));
   /* Esc im Tab beendet */
   await app.evaluate(({ BrowserWindow }) => { const v = BrowserWindow.getAllWindows()[0].contentView.children.find(c => c.getVisible()); v.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); v.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); });

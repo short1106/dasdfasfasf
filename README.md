@@ -158,13 +158,20 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
     - Beim Drop zerfällt es in Glitch-Streifen.
     - Dazu kommen Lichtfächer, Tunnel, eine Spiegelung und Partikelstürme.
   - **Ohne Video:** Ein Spektrum-Ring pulsiert um einen leuchtenden Kern, dazu ein eigener Ring für die Stimme.
-  - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.). Synchronisierte Texte kommen von [LRCLIB](https://lrclib.net).
-    - Die Wörter ploppen nacheinander rein, große Wörter wackeln, die Zeile springt auf den Beat und blendet dann aus.
-    - Musikvideos mit Intro werden automatisch angeglichen. Feinjustieren kannst du mit `+`/`−`.
+  - **Lyric Motion** (`V` schaltet live um): ohne Video, nur die Wörter im 3D-Raum wie im Orbit, mit Sternen, Gitterboden und fliegender Kamera.
+    - Die Wörter knallen aus der Tiefe (Slam), fliegen vorbei, stapeln sich, glitchen, kreisen oder zerfallen in Partikel.
+    - Der Refrain bekommt automatisch die krassesten Effekte. Beim Drop rollt die Kamera und das Bild invertiert kurz.
+    - Läuft nur Audio, startet Lyric Motion von selbst.
+  - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.).
+    - Zuerst kommen die **YouTube-Untertitel** des Videos, wenn es welche gibt. Die sind exakt auf das Video getimt, Intro inklusive.
+    - Sonst kommen synchronisierte Texte von [LRCLIB](https://lrclib.net). Die werden **am echten Gesang ausgerichtet**: Bis der Gesang einsetzt, steht „♪ warte auf Gesang …“ da, danach rutscht der Text auf die gesungenen Zeilen.
+    - Die Wörter ploppen auf die Silben der Stimme rein, die Zeile springt auf den Beat.
+    - Passt es trotzdem nicht: `S` drücken, wenn eine Zeile einsetzt. Das wird **für dieses Video gemerkt**, ebenso `+`/`−`.
   - **Steuerung:**
     - `Esc` beendet, Leertaste pausiert, `←`/`→` spult 5 s.
     - `1`/`2`/`3` wechselt zwischen Chill, Party und Eskalation.
-    - `L` schaltet die Lyrics ein und aus.
+    - `L` schaltet die Lyrics ein und aus, `V` wechselt Video ↔ Lyric Motion, `S` synchronisiert.
+    - Oben steht live das Tempo (BPM).
   - **Grenzen:**
     - Kopiergeschützte Inhalte (DRM, etwa Netflix oder Spotify Web) lassen sich nicht abgreifen.
     - Für Nischen-Songs gibt es manchmal keine Lyrics. Dann laufen nur die Effekte.

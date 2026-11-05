@@ -59,4 +59,22 @@ async function find(raw) {
   return res;
 }
 
-module.exports = { find, clean, parseLrc };
+/* ===== Gemerkte Versätze (Sync-Taste im Disko-Modus), pro Video bzw. Titel ===== */
+const fs = require('node:fs');
+const path = require('node:path');
+let syncFile = null, sync = null, saveT = 0;
+function initSync(userData) { syncFile = path.join(userData, 'lyrics-sync.json'); }
+function loadSync() {
+  if (sync) return sync;
+  try { sync = JSON.parse(fs.readFileSync(syncFile, 'utf8')); } catch { sync = {}; }
+  return sync;
+}
+function getOffset(key) { if (!key || !syncFile) return null; const v = loadSync()[key]; return typeof v === 'number' ? v : null; }
+function setOffset(key, v) {
+  if (!key || !syncFile || !isFinite(v) || Math.abs(v) > 600) return;
+  const s = loadSync(); s[key] = Math.round(v * 10) / 10;
+  const keys = Object.keys(s); if (keys.length > 3000) for (const k of keys.slice(0, keys.length - 3000)) delete s[k];
+  clearTimeout(saveT); saveT = setTimeout(() => fs.promises.writeFile(syncFile, JSON.stringify(s)).catch(() => {}), 500);
+}
+
+module.exports = { find, clean, parseLrc, initSync, getOffset, setOffset };

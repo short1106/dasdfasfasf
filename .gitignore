@@ -11,3 +11,5 @@ android/DulidanWeb.apk
 tests/out/
 tests/fixtures/disco/track*.wav
 tests/fixtures/disco/track*.webm
+tests/fixtures/disco/phrases*.wav
+tests/fixtures/disco/phrases*.webm

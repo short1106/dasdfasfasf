@@ -244,8 +244,13 @@ function wire(t, wc) {
   /* Disko-Modus: Lyrics holt der Main-Prozess (nur Titel/Künstler/Länge kommen aus der Seite) */
   wc.ipc.handle('lyrics', (e, info) => {
     if (e.senderFrame !== wc.mainFrame || discoId !== t.id || !info || typeof info !== 'object') return { lines: [] };
-    return lyrics.find({ title: String(info.title || '').slice(0, 300), artist: String(info.artist || '').slice(0, 200), duration: Number(info.duration) || 0 });
+    const key = String(info.key || '').slice(0, 300);
+    return lyrics.find({ title: String(info.title || '').slice(0, 300), artist: String(info.artist || '').slice(0, 200), duration: Number(info.duration) || 0 })
+      .then(r => ({ ...r, offset: lyrics.getOffset(key) }));
   });
+  /* Sync-Taste: Versatz pro Video merken, damit er beim nächsten Mal sofort stimmt */
+  wc.ipc.handle('lyrics:offset', (e, key) => (e.senderFrame === wc.mainFrame ? lyrics.getOffset(String(key || '').slice(0, 300)) : null));
+  wc.ipc.on('lyrics:offset:set', (e, key, offset) => { if (e.senderFrame === wc.mainFrame && discoId === t.id) lyrics.setOffset(String(key || '').slice(0, 300), Number(offset)); });
   wc.ipc.on('disco:exit', e => { if (e.senderFrame === wc.mainFrame && discoId === t.id) discoStop(); });
   wc.on('did-navigate', () => { if (discoId === t.id) discoStop(); });
 }
@@ -257,7 +262,8 @@ async function discoStart(id) {
   const t = tabs.get(id);
   if (!t || !t.view || id !== activeId || discoId === id) return false;
   if (discoId != null) discoStop();
-  discoCode = discoCode || await fs.promises.readFile(path.join(ROOT, 'main/disco-page.js'), 'utf8');
+  /* Lyric-Motion-Engine zuerst, dann die Disko-Ebene – beide laufen in derselben isolierten Welt */
+  discoCode = discoCode || (await fs.promises.readFile(path.join(ROOT, 'main/disco-motion.js'), 'utf8')) + '\n' + (await fs.promises.readFile(path.join(ROOT, 'main/disco-page.js'), 'utf8'));
   discoId = id;
   const wc = t.view.webContents;
   wc.send('disco', true);
@@ -687,6 +693,7 @@ app.on('web-contents-created', (_, wc) => {
 
 app.whenReady().then(() => {
   serveApp(session.defaultSession);
+  lyrics.initSync(app.getPath('userData'));
   translateModels.init(app.getPath('userData'), url => proxySession().fetch(url, { signal: AbortSignal.timeout(180000) }));
   ipc();
   /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */

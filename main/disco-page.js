@@ -10,7 +10,12 @@
   let H = null, root = null, cv = null, gl = null, P = null, raf = 0, on = false;
   const A = { b: 0, m: 0, v: 0, h: 0, l: 0, k: 0, drop: 0, spec: [], t: 0, paused: true };
   const FX = { kick: 0, drop: 0, sw: 1, swA: 0, shake: [0, 0], hue: Math.random(), t0: performance.now(), last: performance.now(), gl: 0 };
-  const L = { lines: [], idx: -2, offset: 0, manual: false, auto: false, vOn: 0, vAcc: 0, title: '', artist: '', show: true, dur: 0 };
+  /* Lyrics-Zustand: exact = YouTube-Untertitel (kein Versatz nötig), locked = Stimm-Abgleich hat den Versatz sicher,
+     gate = Text noch zurückhalten („warte auf Gesang“), live = Untertitel werden live aus dem Player gelesen */
+  const L = { lines: [], idx: -2, offset: 0, manual: false, exact: false, locked: false, gate: true, live: false, dur: 0, show: true,
+    chorus: new Set(), onsets: [], bins: null, seen: null, quiet: 0, sustain: 0, pulse: 0, prevV: 0, lastAlign: 0, score: 0, cur: null, energy: 0, key: '' };
+  let mode = 'video', motion = null;
+  const kicks = [];
   const $ = (s, r = root) => r.querySelector(s);
   const amp = () => LEVELS[level][2];
 
@@ -61,6 +66,11 @@
   .center span{font:600 12px ui-monospace,monospace;letter-spacing:.2em;color:#ff7ae6}
   .pill{position:absolute;left:50%;top:22px;transform:translate(-50%,-80px);padding:10px 16px;border-radius:14px;background:rgba(20,16,32,.85);border:1px solid rgba(255,122,230,.35);font:700 11px ui-monospace,monospace;letter-spacing:.12em;transition:transform .6s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
   .pill.on{transform:translate(-50%,0)}
+  .wait{position:absolute;left:0;right:0;bottom:14vh;text-align:center;font:700 clamp(14px,1.6vw,22px) ui-monospace,monospace;letter-spacing:.3em;color:#ff7ae6;text-shadow:0 0 18px rgba(255,122,230,.8);pointer-events:none;display:none;animation:pulse 1.4s ease-in-out infinite}
+  .waiting .wait{display:block}
+  .bpm{font:700 10.5px ui-monospace,monospace;letter-spacing:.12em;color:#ff7ae6;min-width:62px;text-align:center}
+  .motion > canvas:first-child,.motion .center,.motion .lyr,.motion .wait{display:none!important}
+  .src{font:600 9.5px ui-monospace,monospace;letter-spacing:.16em;color:#8a83a0;margin-top:6px}
   .pause{position:absolute;inset:0;display:grid;place-items:center;font:700 13px ui-monospace,monospace;letter-spacing:.4em;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;background:rgba(5,4,10,.35)}
   .paused .pause{opacity:1}
   .intro{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-size:clamp(40px,9vw,150px);font-weight:800;letter-spacing:-.06em;
@@ -83,11 +93,15 @@
       h('canvas'),
       h('div', { class: 'center' }, h('span', {}, '// JETZT LÄUFT'), h('b', { class: 'ct' })),
       h('div', { class: 'lyr' }, h('div', { class: 'prev' }), h('div', { class: 'cur' })),
+      h('div', { class: 'wait' }, '♪ WARTE AUF GESANG …'),
       h('div', { class: 'hud' },
-        h('div', {}, h('div', { class: 'tag' }, '// DULIDAN DISCO'), h('div', { class: 'ti' }), h('div', { class: 'ar' })),
+        h('div', {}, h('div', { class: 'tag' }, '// DULIDAN DISCO'), h('div', { class: 'ti' }), h('div', { class: 'ar' }), h('div', { class: 'src' })),
         h('div', { class: 'ctl' },
+          h('span', { class: 'bpm' }, '— BPM'),
+          h('button', { class: 'mode', title: 'Video / Lyric Motion (V)' }, '◐ MOTION · V'),
           h('div', { class: 'grp lv' }, ...LEVELS.map((l, i) => h('button', { 'data-lv': i }, l[1]))),
           h('button', { 'data-off': '-0.5', title: 'Lyrics früher' }, '−'), h('span', { class: 'off' }, 'LYRICS ±0.0'), h('button', { 'data-off': '0.5', title: 'Lyrics später' }, '+'),
+          h('button', { class: 'sync', title: 'Drücken, wenn eine Zeile gesungen wird (S)' }, '⟳ SYNC · S'),
           h('button', { class: 'lyt' }, 'LYRICS AN'),
           h('button', { class: 'x' }, '✕ BEENDEN · ESC'))),
       h('div', { class: 'pause' }, '⏸ PAUSE'),
@@ -101,6 +115,8 @@
       if (b.dataset.lv) setLevel(+b.dataset.lv);
       else if (b.dataset.off) nudge(+b.dataset.off);
       else if (b.classList.contains('lyt')) toggleLyrics();
+      else if (b.classList.contains('sync')) syncNow();
+      else if (b.classList.contains('mode')) setMode(mode === 'video' ? 'motion' : 'video');
       else if (b.classList.contains('x')) cmd('exit');
     });
     setLevel(level);
@@ -117,9 +133,12 @@
     level = Math.max(0, Math.min(2, i));
     root.querySelectorAll('[data-lv]').forEach(b => b.classList.toggle('sel', +b.dataset.lv === level));
   }
+  const showOff = () => { $('.off').textContent = 'LYRICS ' + (L.offset >= 0 ? '+' : '−') + Math.abs(L.offset).toFixed(1); };
+  let saveOffT = 0;
+  const saveOff = () => { clearTimeout(saveOffT); saveOffT = setTimeout(() => cmd('sync ' + L.offset), 800); };
   function nudge(d) {
-    L.offset = Math.round((L.offset + d) * 10) / 10; L.manual = true; L.idx = -2;
-    $('.off').textContent = 'LYRICS ' + (L.offset >= 0 ? '+' : '−') + Math.abs(L.offset).toFixed(1);
+    L.offset = Math.round((L.offset + d) * 10) / 10; L.manual = true; L.gate = false; L.idx = -2;
+    showOff(); saveOff(); updateWait();
   }
   function toggleLyrics() {
     L.show = !L.show; $('.lyt').textContent = L.show ? 'LYRICS AN' : 'LYRICS AUS'; $('.lyr').style.display = L.show ? '' : 'none';
@@ -260,19 +279,18 @@
     try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, v); return true; } catch { videoOk = false; return false; }   // fremdes Video ohne Freigabe
   }
 
-  function draw(now) {
+  function draw(now, ev) {
     const dt = Math.min(0.05, (now - FX.last) / 1000); FX.last = now;
     const T = (now - FX.t0) / 1000, AMP = amp();
     const dpr = size();
     /* Ereignisse → Effekte */
-    if (A.k) {
-      FX.kick = Math.max(FX.kick, A.k); FX.sw = 0; FX.swA = A.k;
-      const a = Math.random() * 6.28; FX.shake = [Math.cos(a) * 0.012 * A.k * AMP, Math.sin(a) * 0.012 * A.k * AMP];
-      emit(Math.round(40 * AMP * A.k + 8), 0, 0, hasVideo ? 0.36 : 0.22, 0.9 + A.b, FX.hue);
+    if (ev.kick) {
+      FX.kick = Math.max(FX.kick, ev.kick); FX.sw = 0; FX.swA = ev.kick;
+      const a = Math.random() * 6.28; FX.shake = [Math.cos(a) * 0.012 * ev.kick * AMP, Math.sin(a) * 0.012 * ev.kick * AMP];
+      emit(Math.round(40 * AMP * ev.kick + 8), 0, 0, hasVideo ? 0.36 : 0.22, 0.9 + A.b, FX.hue);
       const ly = $('.lyr'); ly.style.setProperty('--k', 1); setTimeout(() => ly.style.setProperty('--k', 0), 110);
-      A.k = 0;
     }
-    if (A.drop) { H.dataset.drops = (+H.dataset.drops || 0) + 1; FX.drop = 1; FX.gl = 1; FX.hue += 0.33; emit(Math.round(520 * AMP), 0, 0, 0.1, 2.2, FX.hue + 0.4); pill('▲ DROP'); A.drop = 0; }
+    if (ev.drop) { FX.drop = 1; FX.gl = 1; FX.hue += 0.33; emit(Math.round(520 * AMP), 0, 0, 0.1, 2.2, FX.hue + 0.4); }
     if (A.m > 0.35) emit(Math.round(A.m * 3 * AMP), (Math.random() - 0.5) * 1.6, -0.6, 0.02, 0.25, FX.hue + 0.2);
     FX.kick *= Math.pow(0.02, dt); FX.drop *= Math.pow(0.08, dt); FX.gl *= Math.pow(0.015, dt);
     FX.sw = Math.min(1, FX.sw + dt * 1.6); FX.swA *= Math.pow(0.05, dt);
@@ -316,63 +334,185 @@
   function setVideo(v) { if (v === hasVideo) return; hasVideo = v; root.classList.toggle('novideo', !v); }
 
   /* ===================== Lyrics ===================== */
+  /* Reihenfolge der Quellen (im Tab-Preload): YouTube-Untertitel (exakt) → live mitgelesen → LRCLIB.
+     Für LRCLIB wird der Versatz am Gesang ausgerichtet: Zeilenstarts sollen auf Stimm-Einsätze fallen,
+     Textpausen auf Stellen ohne Stimme. Bis das sicher ist, wartet der Text („warte auf Gesang“). */
   function lineAt(t) {
     const ls = L.lines; let lo = 0, hi = ls.length - 1, ans = -1;
     while (lo <= hi) { const mid = (lo + hi) >> 1; if (ls[mid].t <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1; }
     return ans;
   }
-  function renderLine(i) {
-    const cur = $('.cur'), prev = $('.prev');
-    const old = cur.firstElementChild;
+  const BIN = 0.1;
+  function resetVoice() {
+    L.onsets = []; L.quiet = 0; L.sustain = 0; L.score = 0; L.lastAlign = 0;
+    L.bins = new Uint8Array(24000); L.seen = new Uint8Array(24000);   /* 0,1-s-Raster bis 40 Minuten */
+  }
+  let lastV = performance.now();
+  /* Stimme verfolgen: Einsätze (nach ≥ 0,3 s Ruhe) und ein Raster „Stimme ja/nein“ über die Medienzeit */
+  function trackVoice(now) {
+    const dt = Math.min(0.1, (now - lastV) / 1000); lastV = now;
+    if (A.paused || !L.bins) return;
+    const b = Math.floor(A.t / BIN);
+    if (b >= 0 && b < L.bins.length) { L.seen[b] = 1; if (A.v > 0.35) L.bins[b] = 1; }
+    if (A.v - L.prevV > 0.1 && A.v > 0.3) L.pulse = now;   /* Silben-Impuls für die Wörter */
+    L.prevV = A.v;
+    if (A.v < 0.22) L.quiet += dt;
+    else if (A.v > 0.45) {
+      if (L.quiet > 0.3) {
+        const t = A.t, o = L.onsets;
+        if (!o.some(x => Math.abs(x - t) < 0.25)) { o.push(t); o.sort((x, y) => x - y); }
+      }
+      L.quiet = 0;
+    }
+    L.sustain = A.v > 0.4 ? L.sustain + dt : Math.max(0, L.sustain - dt * 0.5);
+  }
+  function offsetRange() {
+    const m = media(), md = m && isFinite(m.duration) ? m.duration : 0, diff = md && L.dur ? md - L.dur : 0;
+    return [-5, Math.max(8, Math.min(150, diff + 6))];
+  }
+  const firstText = () => L.lines.find(l => l.text.trim());
+  function hasOnset(a, b) {
+    const o = L.onsets; let lo = 0, hi = o.length - 1;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (o[mid] < a) lo = mid + 1; else hi = mid - 1; }
+    return lo < o.length && o[lo] <= b;
+  }
+  /* Wie gut passt Versatz c? +1 je Zeile mit Stimm-Einsatz am Anfang, −0,35 ohne, −1 je Textpause mit viel Stimme */
+  function scoreAt(c) {
+    let s = 0, n = 0;
+    for (let i = 0; i < L.lines.length; i++) {
+      const ln = L.lines[i], st = ln.t + c, sb = Math.floor(st / BIN);
+      if (sb < 0 || sb >= L.seen.length || !L.seen[sb]) continue;   /* nur gehörte Stellen zählen */
+      if (ln.text.trim()) { n++; s += hasOnset(st - 0.7, st + 0.5) ? 1 : -0.35; }
+      else {
+        const nx = L.lines[i + 1], eb = Math.min(L.seen.length, Math.floor(((nx ? nx.t : ln.t + 4) + c) / BIN));
+        let v = 0, k = 0;
+        for (let j = sb + 3; j < eb - 3; j++) if (L.seen[j]) { k++; v += L.bins[j]; }
+        if (k > 15 && v / k > 0.5) s -= 1;
+      }
+    }
+    return { s, n };
+  }
+  function align(now) {
+    if (L.exact || L.manual || L.live || !L.lines.length || A.paused || now - L.lastAlign < 1000) return;
+    L.lastAlign = now;
+    const [lo, hi] = offsetRange();
+    let best = { c: 0, s: -1e9, n: 0 }; const all = [];
+    for (let c = lo; c <= hi; c += 0.1) { const r = scoreAt(c); all.push([c, r.s]); if (r.s > best.s) best = { c, ...r }; }
+    const far = Math.max(-1e9, ...all.filter(([c]) => Math.abs(c - best.c) > 1.2).map(([, v]) => v));
+    if (!L.locked) {
+      if (best.n >= 3 && best.s >= 2.5 && best.s - far >= 1.5) {
+        L.locked = true; L.gate = false; L.score = best.s; setOffset(best.c);
+        pill('✓ Lyrics am Gesang ausgerichtet (' + (L.offset >= 0 ? '+' : '−') + Math.abs(L.offset).toFixed(1) + ' s)');
+      }
+    } else if (best.s >= L.score + 1.2 && Math.abs(best.c - L.offset) > 0.3) { L.score = best.s; setOffset(best.c); pill('Timing nachgeführt'); }
+    else L.score = Math.max(L.score, scoreAt(L.offset).s);
+  }
+  /* Lyric Motion ohne Lyrics: Titel und „DULIDAN DISCO“ wechseln sich ab, damit der Raum nicht leer bleibt */
+  const idle = { t: 0, k: 0, n: 0, words: [] };
+  function idleMotion(now) {
+    if (mode !== 'motion' || !motion || A.paused) return;
+    if (!idle.words.length || now - idle.t > 7000) {
+      const ti = ($('.ti').textContent || '').replace(/\(.*?\)|\[.*?\]/g, '').trim();
+      const text = (idle.n++ % 2 === 0 && ti) ? ti : 'DULIDAN DISCO';
+      idle.words = text.split(/\s+/).filter(Boolean).slice(0, 6); idle.k = 0; idle.t = now;
+      motion.line(text, { chorus: L.energy > 0.5, energy: L.energy });
+    }
+    if (idle.k < idle.words.length && now - idle.t > 300 + idle.k * 380) { motion.reveal(idle.words[idle.k], idle.k, idle.words.length); idle.k++; }
+  }
+  function setOffset(c) { L.offset = Math.round(c * 10) / 10; L.idx = -2; showOff(); }
+  /* Bis zum sicheren Abgleich: erster stabiler Gesang legt die erste Zeile vorläufig fest */
+  function gateCheck() {
+    if (!L.gate || L.exact || L.live || L.manual || !L.lines.length) return;
+    const f = firstText(); if (!f) return;
+    const [lo, hi] = offsetRange();
+    if (L.sustain > 0.6 && L.onsets.length) {
+      const on = L.onsets.filter(t => t <= A.t).pop();
+      setOffset(Math.max(lo, Math.min(hi, on - f.t)));
+      L.gate = false; pill('♪ Gesang erkannt');
+    } else if (A.t > f.t + hi + 4) { L.gate = false; }   /* nie Gesang erkannt: Text trotzdem zeigen */
+    updateWait();
+  }
+  function updateWait() { root.classList.toggle('waiting', !!(L.lines.length && L.gate && !L.exact && !L.live && L.show)); }
+
+  /* ===== Wörter: Ausgabe an den aktiven Modus (Video-Lyrics im DOM oder Lyric Motion) ===== */
+  const big = w => w.length > 6 || (w === w.toUpperCase() && /[A-ZÄÖÜ]{2}/.test(w)) || /!$/.test(w);
+  function activeLine(text, words, meta) {
+    if (mode === 'motion' && motion) { if (text) motion.line(text, meta); else motion.clear(); return; }
+    const cur = $('.cur'), old = cur.firstElementChild;
     if (old) { old.classList.add('out'); setTimeout(() => old.remove(), 650); }
-    prev.textContent = i > 0 ? L.lines[i - 1].text : '';
-    if (i < 0) return;
-    const ln = L.lines[i], text = ln.text.trim();
-    const el = document.createElement('div');
-    if (!text) { el.className = 'line'; el.append(h('span', { class: 'w on note' }, '♪')); cur.appendChild(el); return; }
-    el.className = 'line';
-    const words = text.split(/\s+/);
-    const next = L.lines[i + 1], dur = Math.min(6, Math.max(0.6, (next ? next.t : ln.t + 4) - ln.t));
-    const span = Math.min(dur * 0.72, words.length * 0.42);
-    words.forEach((w, k) => {
-      const s = document.createElement('span');
-      s.className = 'w' + (w.length > 6 || (w === w.toUpperCase() && /[A-ZÄÖÜ]{2}/.test(w)) || /!$/.test(w) ? ' big' : '');
-      s.textContent = w;
-      s.dataset.at = (ln.t + (k / words.length) * span).toFixed(3);
-      el.appendChild(s);
-    });
+    $('.prev').textContent = meta.prev || '';
+    const el = h('div', { class: 'line' });
+    if (!text) el.append(h('span', { class: 'w on note' }, '♪'));
+    else for (const w of words) el.append(h('span', { class: 'w' + (big(w) ? ' big' : '') }, w));
     cur.appendChild(el);
   }
-  function lyricsTick() {
-    if (!L.lines.length) return;
-    const t = A.t - L.offset;
-    autoAlign();
-    const i = lineAt(t + 0.15);
-    if (i !== L.idx) { L.idx = i; renderLine(i); }
-    const el = $('.cur').lastElementChild;
-    if (el) for (const w of el.querySelectorAll('.w:not(.on)')) if (+w.dataset.at <= t + 0.12) w.classList.add('on');
+  function revealWord(k) {
+    const c = L.cur; if (!c) return;
+    if (mode === 'motion' && motion) { motion.reveal(c.words[k], k, c.words.length); return; }
+    const el = $('.cur').lastElementChild, w = el && el.children[k];
+    if (w) w.classList.add('on');
   }
-  /* Musikvideos haben oft ein Intro: erste erkannte Stimme gegen die erste Textzeile legen */
-  function autoAlign() {
-    if (L.manual || L.auto || !L.lines.length) return;
-    if (A.v > 0.5 && A.l > 0.2 && !A.paused) L.vAcc += 1 / 60; else L.vAcc = Math.max(0, L.vAcc - 1 / 120);
-    if (L.vAcc < 0.5) return;
-    L.auto = true;
-    const vOn = A.t - 0.5, first = L.lines.find(l => l.text.trim());
-    if (!first) return;
-    const m = media(), diff = m && isFinite(m.duration) && L.dur ? m.duration - L.dur : 0;
-    const cands = [0]; if (diff > 2 && diff < 120) cands.push(Math.round(diff * 10) / 10);
-    let best = 0, err = 1e9;
-    for (const c of cands) { const e = Math.abs(vOn - (first.t + c)); if (e < err) { err = e; best = c; } }
-    if (best && err < 8) { L.offset = best; L.idx = -2; $('.off').textContent = 'LYRICS +' + best.toFixed(1); pill('Lyrics an das Intro angepasst (+' + best.toFixed(1) + ' s)'); }
+  /* Neue Zeile: Wortzeiten planen (exakt aus YouTube, sonst verteilt; gepoppt wird auf Silben-Impulse) */
+  function startLine(i, te) {
+    const ln = L.lines[i], text = ln.text.trim(), words = text ? text.split(/\s+/) : [];
+    const next = L.lines[i + 1], dur = Math.min(6, Math.max(0.6, (next ? next.t : ln.t + 4) - ln.t));
+    const span = Math.min(dur * 0.72, words.length * 0.42);
+    const exactW = ln.w && ln.w.length === words.length;
+    const times = words.map((_, k) => (exactW ? ln.w[k].t : ln.t + (k / Math.max(1, words.length)) * span));
+    const meta = { chorus: L.chorus.has(norm(text)), energy: L.energy, prev: i > 0 ? L.lines[i - 1].text : '' };
+    L.cur = { text, words, times, popped: 0, lastPop: 0, exactW: exactW || L.exact && words.length < 2, meta };
+    activeLine(text, words, meta);
   }
+  function wordTick(te, now) {
+    const c = L.cur; if (!c) return;
+    while (c.popped < c.words.length) {
+      const at = c.times[c.popped];
+      const ok = c.exactW ? te >= at - 0.05
+        : te >= at + 0.3 || (te >= at - 0.25 && (now - L.pulse < 90 || now - c.lastPop > 380));
+      if (!ok) break;
+      revealWord(c.popped); c.popped++; c.lastPop = now;
+    }
+  }
+  let dbgT = 0;
+  function lyricsTick(now) {
+    trackVoice(now);
+    /* Zustand am Host-Element (für Tests und Fehlersuche, enthält nur Zahlen/Zeile) */
+    if (now - dbgT > 400) { dbgT = now; H.dataset.sync = [L.offset.toFixed(1), L.locked ? 'L' : '', L.gate ? 'G' : '', L.exact ? 'X' : '', mode, 'v' + A.v.toFixed(2), 'o' + L.onsets.length, 's' + L.sustain.toFixed(1)].join(' '); H.dataset.line = L.cur ? L.cur.words.slice(0, L.cur.popped).join(' ') : ''; }
+    L.energy += (A.l - L.energy) * 0.01;
+    if (L.live || !L.lines.length) { if (L.cur && L.live) wordTick(A.t, now); else if (!L.live) idleMotion(now); return; }
+    align(now); gateCheck();
+    if (L.gate || !L.show) return;
+    const te = A.t - L.offset;
+    const i = lineAt(te + 0.15);
+    if (i !== L.idx) { L.idx = i; if (i >= 0) startLine(i, te); else { L.cur = null; activeLine('', [], {}); } }
+    wordTick(te, now);
+  }
+  /* Sync-Taste: die Zeile, deren Start am nächsten liegt, beginnt jetzt – und wird für dieses Video gemerkt */
+  function syncNow() {
+    if (!L.lines.length) return pill(L.live ? 'Live-Untertitel sind schon synchron' : 'Keine Lyrics zum Synchronisieren');
+    let best = null, err = 1e9;
+    /* Zeile aus der aktuellen Zeit bestimmen, nicht aus L.idx: der hinkt nach einem Spulen kurz hinterher */
+    let at = -1; for (let j = 0; j < L.lines.length; j++) if (L.lines[j].t + L.offset <= A.t) at = j;
+    const from = L.gate ? 0 : Math.max(0, at - 1), to = L.gate ? L.lines.length - 1 : Math.min(L.lines.length - 1, at + 2);
+    for (let j = from; j <= to; j++) {
+      const ln = L.lines[j]; if (!ln.text.trim()) continue;
+      const e = Math.abs(ln.t + L.offset - A.t); if (e < err) { err = e; best = ln; }
+      if (L.gate) break;   /* noch nichts gezeigt: erste Textzeile */
+    }
+    if (!best) return;
+    setOffset(A.t - best.t + 0.1);
+    L.manual = true; L.locked = true; L.gate = false; updateWait();
+    cmd('sync ' + L.offset);
+    pill('✓ Synchron – für dieses Video gemerkt');
+  }
+  const norm = t => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
 
   /* ===================== Steuerung ===================== */
   let idleT = 0;
   function wake() { root.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => root && root.classList.add('idle'), 2600); }
   function onKey(e) {
     const k = e.key;
-    const handled = ['Escape', ' ', 'ArrowLeft', 'ArrowRight', '+', '-', '1', '2', '3', 'l', 'L'].includes(k);
+    const handled = ['Escape', ' ', 'ArrowLeft', 'ArrowRight', '+', '-', '1', '2', '3', 'l', 'L', 's', 'S', 'v', 'V'].includes(k);
     if (!handled || e.ctrlKey || e.metaKey || e.altKey) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (e.type !== 'keydown') return;
@@ -385,6 +525,8 @@
     else if (k === '-') nudge(-0.5);
     else if (k >= '1' && k <= '3') setLevel(+k - 1);
     else if (k === 'l' || k === 'L') toggleLyrics();
+    else if (k === 's' || k === 'S') syncNow();
+    else if (k === 'v' || k === 'V') setMode(mode === 'video' ? 'motion' : 'video');
     wake();
   }
 
@@ -397,27 +539,78 @@
   }
   function onTrack(e) {
     let d; try { d = JSON.parse(e.detail); } catch { return; }
-    L.lines = []; L.idx = -2; L.auto = false; L.vAcc = 0; if (!L.manual) L.offset = 0;
-    $('.cur').replaceChildren(); $('.prev').textContent = '';
+    Object.assign(L, { lines: [], idx: -2, offset: 0, manual: false, exact: false, locked: false, gate: true, live: false, cur: null, key: d.key || '' });
+    resetVoice(); updateWait();
+    $('.cur').replaceChildren(); $('.prev').textContent = ''; $('.src').textContent = 'SUCHE LYRICS …';
+    if (motion) motion.clear();
     const t = String(d.title || '').replace(/\s*[-–|]\s*YouTube.*$/i, '');
     $('.ti').textContent = t; $('.ar').textContent = d.artist || ''; $('.ct').textContent = t;
   }
   function onLyrics(e) {
     let d; try { d = JSON.parse(e.detail); } catch { return; }
-    L.lines = Array.isArray(d.lines) ? d.lines.filter(l => l && typeof l.t === 'number' && typeof l.text === 'string').map(l => ({ t: l.t, text: l.text.slice(0, 200) })) : [];
-    L.dur = +d.duration || 0; L.idx = -2; L.auto = false; L.vAcc = 0;
+    L.lines = Array.isArray(d.lines) ? d.lines.filter(l => l && typeof l.t === 'number' && typeof l.text === 'string')
+      .map(l => ({ t: l.t, text: l.text.slice(0, 200), w: Array.isArray(l.w) ? l.w.filter(x => x && typeof x.t === 'number').slice(0, 40) : null })) : [];
+    L.dur = +d.duration || 0; L.idx = -2; L.cur = null;
+    L.exact = !!d.exact; L.live = !!d.live; L.locked = L.exact; L.gate = !L.exact && !L.live;
+    if (typeof d.offset === 'number') { L.manual = true; L.gate = false; L.locked = true; setOffset(d.offset); }
+    else setOffset(0);
+    /* Refrain = Zeilen, die mehrfach vorkommen */
+    const cnt = new Map(); for (const l of L.lines) { const n = norm(l.text); if (n) cnt.set(n, (cnt.get(n) || 0) + 1); }
+    L.chorus = new Set([...cnt].filter(([, c]) => c >= 2).map(([n]) => n));
     if (d.title) { $('.ti').textContent = d.title; $('.ct').textContent = d.title; }
     if (d.artist) $('.ar').textContent = d.artist;
-    root.classList.toggle('haslyr', L.lines.length > 0);
-    pill(L.lines.length ? '♪ Lyrics gefunden' : 'Keine Lyrics gefunden – nur Effekte');
+    root.classList.toggle('haslyr', L.lines.length > 0 || L.live);
+    $('.src').textContent = L.exact ? 'LYRICS: YOUTUBE-UNTERTITEL · EXAKT' : L.live ? 'LYRICS: LIVE AUS DEM PLAYER' : L.lines.length ? (L.manual ? 'LYRICS: LRCLIB · GEMERKTER SYNC' : 'LYRICS: LRCLIB · WIRD AM GESANG AUSGERICHTET') : 'KEINE LYRICS';
+    pill(L.exact ? '♪ Lyrics aus den YouTube-Untertiteln' : L.live ? '♪ Live-Untertitel' : L.lines.length ? '♪ Lyrics gefunden' : 'Keine Lyrics gefunden – nur Effekte');
+    updateWait();
+  }
+  /* Live-Untertitel aus dem Player: jede neue Zeile sofort zeigen, Wörter schnell nacheinander */
+  function onLive(e) {
+    let d; try { d = JSON.parse(e.detail); } catch { return; }
+    if (!L.live || !L.show) return;
+    const text = String(d.text || '').slice(0, 200), words = text ? text.split(/\s+/) : [];
+    const meta = { chorus: false, energy: L.energy, prev: L.cur ? L.cur.text : '' };
+    L.cur = { text, words, times: words.map((_, k) => A.t + k * 0.09), popped: 0, lastPop: 0, exactW: true, meta };
+    activeLine(text, words, meta);
   }
 
   /* ===================== Start / Stopp ===================== */
   let prevOverflow = '';
   function loop(now) {
     if (!on) return;
-    try { if (gl) draw(now); lyricsTick(); } catch (e) { console.warn('[disco]', e); }
+    try {
+      /* Ereignisse einmal abholen und an den aktiven Modus geben */
+      const ev = { kick: A.k, drop: A.drop }; A.k = 0; A.drop = 0;
+      if (ev.kick) beat(now);
+      if (ev.drop) { H.dataset.drops = (+H.dataset.drops || 0) + 1; pill('▲ DROP'); }
+      if (mode === 'motion' && motion) motion.frame(now, A, ev); else if (gl) draw(now, ev);
+      lyricsTick(now);
+    } catch (e) { console.warn('[disco]', e); }
     raf = requestAnimationFrame(loop);
+  }
+  /* BPM aus den Abständen der letzten Kicks (Median, auf 70–180 gefaltet) */
+  function beat(now) {
+    kicks.push(now); if (kicks.length > 14) kicks.shift();
+    if (kicks.length < 6) return;
+    const d = kicks.slice(1).map((t, i) => t - kicks[i]).filter(x => x > 250 && x < 1500).sort((a, b) => a - b);
+    if (d.length < 4) return;
+    let bpm = 60000 / d[d.length >> 1];
+    while (bpm < 70) bpm *= 2; while (bpm > 180) bpm /= 2;
+    $('.bpm').textContent = Math.round(bpm) + ' BPM';
+  }
+  /* Video ↔ Lyric Motion */
+  function setMode(m) {
+    if (m === 'motion' && !motion) {
+      motion = window.__dwMotion ? window.__dwMotion(root, amp) : null;
+      if (!motion) { pill('Lyric Motion braucht WebGL'); return; }
+    }
+    mode = m;
+    root.classList.toggle('motion', m === 'motion');
+    if (motion) motion.show(m === 'motion');
+    $('.mode').textContent = m === 'motion' ? '◑ VIDEO · V' : '◐ MOTION · V';
+    pill(m === 'motion' ? '✦ LYRIC MOTION' : '▶ VIDEO-MODUS');
+    /* Aktuelle Zeile im neuen Modus weiterspielen */
+    if (L.cur) { const c = L.cur; activeLine(c.text, c.words, c.meta); for (let k = 0; k < c.popped; k++) revealWord(k); }
   }
   /* Das Host-Element legt der Tab-Preload an; die Nachricht dorthin kann nach diesem Code ankommen */
   function start(tries = 0) {
@@ -427,13 +620,16 @@
     on = true;
     build();
     if (!initGL()) pill('WebGL nicht verfügbar – nur Lyrics');
-    H.addEventListener('dw:a', onAudio); H.addEventListener('dw:track', onTrack); H.addEventListener('dw:lyrics', onLyrics); H.addEventListener('dw:off', stop);
+    H.addEventListener('dw:a', onAudio); H.addEventListener('dw:track', onTrack); H.addEventListener('dw:lyrics', onLyrics); H.addEventListener('dw:live', onLive); H.addEventListener('dw:off', stop);
+    resetVoice();
     addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true); addEventListener('keypress', onKey, true);
     root.addEventListener('pointermove', wake); wake();
     prevOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';
     emit(400, 0, 0, 0.05, 1.8, FX.hue);
     raf = requestAnimationFrame(loop);
     cmd('ready');
+    /* Ohne Video gleich in Lyric Motion – das passt zu reinem Audio besser */
+    setTimeout(() => { if (on && hasVideo === false && mode === 'video') setMode('motion'); }, 1500);
   }
   function stop() {
     if (!on) return;
@@ -441,8 +637,9 @@
     removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); removeEventListener('keypress', onKey, true);
     document.documentElement.style.overflow = prevOverflow;
     if (gl) { const x = gl.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); }
-    gl = null; root = null; H = null; hasVideo = null; lastVid = null;
-    L.lines = []; L.manual = false; L.offset = 0;
+    if (motion) { motion.destroy(); motion = null; }
+    gl = null; root = null; H = null; hasVideo = null; lastVid = null; mode = 'video';
+    Object.assign(L, { lines: [], manual: false, offset: 0, cur: null, live: false, exact: false });
   }
   window.__dwDisco = { start };
   start();

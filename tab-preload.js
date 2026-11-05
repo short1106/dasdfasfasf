@@ -192,16 +192,93 @@ function trackInfo() {
   const m = pickMedia();
   return { title: (md && md.title) || document.title || '', artist: (md && md.artist) || '', duration: m && isFinite(m.duration) ? m.duration : 0 };
 }
+/* ===== YouTube: Untertitel des Videos selbst – exakt auf genau dieses Video getimt (Intro inklusive) ===== */
+const ytId = () => (/(^|\.)youtube\.com$/.test(location.hostname) && location.pathname === '/watch' ? new URLSearchParams(location.search).get('v') : null);
+/* JSON-Array hinter einem Schlüssel aus dem Seiten-HTML schneiden (Klammern zählen, Strings beachten) */
+function jsonArrayAfter(src, key) {
+  const i = src.indexOf(key); if (i < 0) return null;
+  const s = src.indexOf('[', i); if (s < 0) return null;
+  let depth = 0, inStr = false;
+  for (let j = s; j < src.length && j < s + 200000; j++) {
+    const c = src[j];
+    if (inStr) { if (c === '\\') j++; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true; else if (c === '[') depth++; else if (c === ']' && --depth === 0) { try { return JSON.parse(src.slice(s, j + 1)); } catch { return null; } }
+  }
+  return null;
+}
+const MUSIC_TAG = /^[\s♪♫🎵🎶]*\[?\(?(musik|music|instrumental|applaus|applause)\)?\]?[\s♪♫🎵🎶]*$/i;
+async function ytLyrics(id) {
+  try {
+    const html = await (await fetch('/watch?v=' + encodeURIComponent(id), { credentials: 'include' })).text();
+    const tracks = (jsonArrayAfter(html, '"captionTracks":') || []).filter(t => t && t.baseUrl);
+    /* Automatische Untertitel (asr) sind bei Musik unbrauchbar – nur echte, hochgeladene Spuren */
+    const manual = tracks.filter(t => t.kind !== 'asr');
+    if (!manual.length) return null;
+    const name = t => JSON.stringify(t.name || '').toLowerCase();
+    manual.sort((a, b) => (/lyric|songtext|text/.test(name(b)) - /lyric|songtext|text/.test(name(a))) || (/^(de|en)/.test(b.languageCode) - /^(de|en)/.test(a.languageCode)));
+    const tr = manual[0];
+    const body = await (await fetch(tr.baseUrl + '&fmt=json3', { credentials: 'include' })).text();
+    if (body && body.trim().startsWith('{')) {
+      const j = JSON.parse(body), lines = [];
+      for (const ev of j.events || []) {
+        if (!ev.segs) continue;
+        const t = (ev.tStartMs || 0) / 1000, text = ev.segs.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').replace(/[♪♫]/g, '').trim();
+        if (!text || MUSIC_TAG.test(text)) continue;
+        const w = ev.segs.length > 1 && ev.segs.some(s => s.tOffsetMs) ? ev.segs.filter(s => (s.utf8 || '').trim()).map(s => ({ t: t + (s.tOffsetMs || 0) / 1000, text: s.utf8.trim() })) : null;
+        const prev = lines[lines.length - 1];
+        if (prev && prev.end && t - prev.end > 2.5) lines.push({ t: prev.end, text: '' });   /* Pause: Text ausblenden */
+        lines.push({ t, text, w, end: t + (ev.dDurationMs || 3000) / 1000 });
+      }
+      if (lines.length >= 3) return { lines: lines.map(({ end, ...l }) => l), source: 'youtube', exact: true };
+    }
+    return { live: true };   /* Datei gesperrt: Untertitel live aus dem Player lesen */
+  } catch { return null; }
+}
+/* Live-Untertitel: Untertitel einschalten und mitlesen, was der Player gerade anzeigt */
+let live = null;
+function liveStart() {
+  const btn = document.querySelector('.ytp-subtitles-button'), player = document.querySelector('#movie_player');
+  if (!btn || !player) return false;
+  const turnedOn = btn.getAttribute('aria-pressed') === 'false';
+  if (turnedOn) btn.click();
+  let last = '';
+  const read = () => {
+    const text = [...document.querySelectorAll('.ytp-caption-segment')].map(s => s.textContent).join(' ').replace(/\s+/g, ' ').replace(/[♪♫]/g, '').trim();
+    if (text === last || MUSIC_TAG.test(text)) return;
+    last = text;
+    if (disco) disco.host.dispatchEvent(new CustomEvent('dw:live', { detail: JSON.stringify({ text }) }));
+  };
+  const obs = new MutationObserver(read);
+  obs.observe(player, { childList: true, subtree: true, characterData: true });
+  live = { obs, turnedOn, btn };
+  return true;
+}
+function liveStop() {
+  if (!live) return;
+  live.obs.disconnect();
+  if (live.turnedOn && live.btn.getAttribute('aria-pressed') === 'true') live.btn.click();   /* Untertitel wieder aus, wenn wir sie eingeschaltet haben */
+  live = null;
+}
+
 let lyricKey = '';
 async function loadLyrics(force) {
   if (!disco) return;
-  const info = trackInfo();
-  const key = info.title + '|' + info.artist;
+  const info = trackInfo(), id = ytId();
+  const key = id ? 'yt:' + id : info.title + '|' + info.artist;
   if (!force && key === lyricKey) return;
   lyricKey = key;
-  disco.host.dispatchEvent(new CustomEvent('dw:track', { detail: JSON.stringify(info) }));
+  liveStop();
+  disco.host.dispatchEvent(new CustomEvent('dw:track', { detail: JSON.stringify({ ...info, key }) }));
   let res = null;
-  try { res = await ipcRenderer.invoke('lyrics', info); } catch {}
+  /* Reihenfolge: YouTube-Untertitel → (gesperrt) live mitlesen → LRCLIB mit Stimm-Abgleich */
+  if (id) {
+    const y = await ytLyrics(id);
+    if (lyricKey !== key) return;
+    if (y && y.lines) res = y;
+    else if (y && y.live && liveStart()) res = { lines: [], live: true, source: 'youtube-live' };
+    if (res) { try { const off = await ipcRenderer.invoke('lyrics:offset', key); if (off != null) res.offset = off; } catch {} }
+  }
+  if (!res) { try { res = await ipcRenderer.invoke('lyrics', { ...info, key }); } catch {} }
   if (disco && lyricKey === key) disco.host.dispatchEvent(new CustomEvent('dw:lyrics', { detail: JSON.stringify(res || { lines: [] }) }));
 }
 ipcRenderer.on('disco', (_, on) => {
@@ -214,10 +291,12 @@ ipcRenderer.on('disco', (_, on) => {
       const c = String(e.detail || '');
       if (c === 'exit') ipcRenderer.send('disco:exit');
       else if (c === 'ready') { lyricKey = ''; loadLyrics(true); }
+      else if (c.startsWith('sync ')) { const v = parseFloat(c.slice(5)); if (isFinite(v) && lyricKey) ipcRenderer.send('lyrics:offset:set', lyricKey, v); }
     });
     startSampling();
   } else if (!on && disco) {
     clearInterval(disco.iv);
+    liveStop();
     disco.host.dispatchEvent(new CustomEvent('dw:off'));
     disco.host.remove();
     disco = null; lyricKey = '';

@@ -170,13 +170,27 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Mitte: das **echte Video als Textur** (`texImage2D(video)`) mit Zoom, Shake, Farbversatz, Glitch-Streifen beim Drop, Glühkante und Spiegelung. Bei fremden Videos ohne Freigabe oder bei reinem Audio stattdessen der **Spektrum-Ring** (Balken, Kern, Stimm-Ring).
   - 2200 Partikel (Kick-Bursts, Drop-Explosion, Melodie-Strom).
 - **Stufen:** `1`/`2`/`3` für Chill (0,55), Party (1) und Eskalation (1,65).
-- **Tasten:** Esc beendet, Leertaste pausiert, ←/→ spult 5 s, `+`/`−` verschiebt die Lyrics, `L` schaltet die Lyrics.
-- **Lyrics:**
-  - Der Tab-Preload liest Titel und Künstler aus `navigator.mediaSession.metadata`, sonst aus `document.title`.
-  - Main sucht über **`main/lyrics.js`** bei **LRCLIB** (`/api/search`).
-    - Der Titel wird aufgeräumt: `(Official Video)`, `ft. …`, „Künstler - Titel“, `- Topic`, `VEVO`.
-    - Es werden synchronisierte LRC genommen, beim Treffer mit der passendsten Länge.
-  - Anzeige Wort für Wort (Pop, Blur, große Wörter mit Verlauf, die Zeile springt auf Kicks, Glühen nach Stimme).
+- **Tasten:** Esc beendet, Leertaste pausiert, ←/→ spult 5 s, `+`/`−` verschiebt die Lyrics, `L` schaltet die Lyrics, `V` Video ↔ Lyric Motion, `S` Sync jetzt.
+- **Lyrics-Quellen (in dieser Reihenfolge, `tab-preload.js` `loadLyrics`):**
+  1. **YouTube-Untertitel** (`ytLyrics`): holt `/watch?v=<id>` (gleiche Herkunft), liest `captionTracks` aus dem Seitentext (`jsonArrayAfter`), nimmt **nur manuelle** Tracks (kein `asr`), lädt `baseUrl&fmt=json3` → Zeilen mit Wortzeiten (`w`), Lücken als leere Zeilen. `exact: true`, kein Abgleich. Neu ermittelt bei SPA-Wechsel (Video-ID).
+  2. Ist die json3-Datei gesperrt: **Live-Untertitel** aus dem Player (`liveStart`, MutationObserver auf die Caption-Fenster), `live: true`.
+  3. **LRCLIB** über Main (`main/lyrics.js`): Titel aufräumen (`(Official Video)`, `ft. …`, „Künstler - Titel“, `- Topic`, `VEVO`), synchronisierte LRC mit der passendsten Länge.
+- **Abgleich am Gesang (nur LRCLIB, `disco-page.js`):**
+  - `trackVoice`: Stimm-Einsätze (nach ≥ 0,3 s Ruhe) und ein 0,1-s-Raster „Stimme da / gehört“.
+  - `scoreAt(c)`: +1 je Zeilenstart mit Einsatz in [−0,7; +0,5] s, −0,35 ohne, −1 je Textpause mit viel Stimme. Gesucht in `[−5, Videolänge − LRC-Länge + 6]`.
+  - Festlegen (`L`) erst bei ≥ 3 Zeilen, Score ≥ 2,5 und deutlichem Abstand zum nächstbesten Versatz, danach weich nachführen.
+  - Vorher: Gate. Lyrics versteckt, „♪ WARTE AUF GESANG …“ pulsiert. Stabiler Gesang (> 0,6 s) legt die erste Zeile vorläufig auf den letzten Einsatz.
+  - **Sync pro Video:** `S` legt die nächstliegende Zeile auf jetzt, `+`/`−` ebenso. Gespeichert über `dw:cmd sync <v>` → IPC `lyrics:offset:set` → `userData/lyrics-sync.json`, Schlüssel `yt:<id>` oder `titel|künstler`. Ein gemerkter Versatz gilt sofort (`manual`).
+  - Debug: `H.dataset.sync` (Versatz, L/G/X, Modus, Stimme, Einsätze) und `H.dataset.line`.
+- **Anzeige Video-Modus:** Wort für Wort auf Silben-Impulse der Stimme (oder Wortzeit), Pop, Blur, große Wörter mit Verlauf, Zeile springt auf Kicks. HUD mit BPM, Quelle, Modus, Sync.
+- **Lyric Motion `main/disco-motion.js`** (wird vor `disco-page.js` in dieselbe Welt gesetzt, `window.__dwMotion`):
+  - WebGL1-3D wie Orbit: Himmel, Gitterboden mit Wellen, Sternentunnel, 3200 Partikel, Wörter als Canvas-Texturen.
+  - Stile: Refrain (mehrfach vorkommende Zeilen) → Slam/Shatter, Energie > 0,55 → Glitch/Stack, sonst Fly/Ring.
+  - Bass → Kamera-Punch, Stimme → Leuchten, Melodie → Farbfluss, Drop → Kamera-Rolle, Explosion, kurzer Invert.
+  - Farben über `hsv()` auf Dulidan-Töne gefaltet (Blauviolett bis Pink).
+  - Ohne Video startet der Modus nach 1,5 s selbst. Ohne Lyrics laufen Titel und „DULIDAN DISCO“ (`idleMotion`).
+  - Welcher Modus bei Videos zuerst kommt: noch offen, Standard ist Video.
+- **Test:** `tests/e2e/discosync.js` mit `intro.html` (`phrases.webm`, 6-s-Intro, LRC ohne Intro → erwartet +6 s, Sync-Datei 6).
 
 ### 3.9 Dulidan Maps `shared/maps/` (Desktop)
 - **Aufruf:** `maps …` in der Adressleiste. Der Shortcut zeigt jetzt auf Dulidan Maps statt Google Maps, ebenso die Startseiten-Karte „Dulidan Maps“, Palette und Menü. Die Adressleiste zeigt „Maps · ort“.
@@ -367,7 +381,9 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
 
 ## 7. NÄCHSTE AUFGABEN (vom Nutzer so abgestimmt)
 
-### 7.1 Lyrics-Timing reparieren (Desktop, höchste Priorität)
+### 7.1 Lyrics-Timing reparieren (Desktop) – ERLEDIGT (siehe 3.6)
+> Umgesetzt: C (YouTube-Untertitel + Live-Untertitel), B (Stimm-Abgleich mit Gate), D (Sync-Taste, pro Video gemerkt). Ungetestet gegen echtes YouTube/LRCLIB. Der Plan unten bleibt als Hintergrund.
+
 **Problem laut Nutzer:** Der Anfang von Musikvideos wird komplett ignoriert, die Lyrics fangen zu früh an.
 
 **Ursache im Code:** `autoAlign()` in `main/disco-page.js` probiert nur die Versätze `0` und `Videolänge − LRC-Länge` aus. Es greift erst nach 0,5 s erkannter Stimme und auch nur, wenn der Fehler unter 8 s liegt. Sonst bleibt der Versatz 0, und der Text startet ab Sekunde 0.
@@ -394,7 +410,9 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
 3. **Idee D, Rettung:** eine Taste „Sync jetzt“, die die aktuelle Zeile auf jetzt legt. Den Versatz **pro Video-ID merken** (lokal speichern), damit er beim nächsten Mal sofort stimmt.
 4. Idee E (Whisper/KI-Spracherkennung im Browser) bewusst **nicht**: zu schwer, Gesang wird schlecht erkannt.
 
-### 7.2 Neuer Modus „Lyric Motion“ (Desktop, nach 7.1)
+### 7.2 Neuer Modus „Lyric Motion“ (Desktop) – ERLEDIGT (siehe 3.6)
+> Umgesetzt in `main/disco-motion.js`. Offen: Startmodus bei Videos (jetzt Video) mit dem Nutzer klären; Ideen wie Echo-Trails noch nicht drin.
+
 Der Nutzer findet die Idee „geil“: ein Modus **ohne Video**, nur Motion-Art-Lyrics. Schnell, kraftvoll, mit dem Hintergrund verzahnt, **im Stil von Orbit** (3D-Raum, Sternenfeld, Gitterboden, fliegende Kamera; Technik und Look aus `ui/js/overview.js` übernehmen).
 
 **Wechsel:** `V` schaltet live zwischen Video-Modus und Lyric Motion. Welcher Modus beim Start kommt, hat der Nutzer noch nicht entschieden, also fragen.
