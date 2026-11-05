@@ -234,6 +234,7 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - Bereich ziehen, „Ganze Ansicht“ (Enter) oder „Ganze Seite“ (auch der Teil, den man erst durch Scrollen sieht).
   - Danach markieren: Stift, Marker, Pfeil, Rahmen, Text, Verpixeln (für Namen oder Passwörter), 6 Farben, Rückgängig.
   - **Kopieren** (`Strg+C`, danach mit `Strg+V` überall einfügen) oder **Speichern** (`Strg+S`) nach `Bilder\Dulidan Screenshots`.
+- **Seiten-Wächter** (Rechtsklick → „Bereich beobachten …“, Menü oder Palette): Du fährst mit der Maus über die Seite, das Element darunter leuchtet. Mit dem Mausrad machst du den Bereich größer oder kleiner, ein Klick legt ihn fest (Preis, Ticket, Ergebnis …). Dulidan Web prüft ihn alle 15 Minuten im Hintergrund, mit deinen Anmeldungen. Ändert sich etwas, kommt eine Windows-Benachrichtigung, und im Panel siehst du ein Vorher/Nachher-Bild samt altem und neuem Text.
 - **Design „Japan 和“** (Einstellungen → Design → JAPAN 和): Die ganze Oberfläche wird japanisch, mit Indigo-Nacht, roter Sonne, fallenden Kirschblüten, Mincho-Schrift, senkrechter japanischer Schrift, roten Bändern und dem Japan-Logo in der Mitte.
 - **Inkognito-Tabs** (`Strg+Umschalt+N`, Menü oder Palette): eigener Tab mit Masken-Symbol und kühlem Farbschema.
   - Kein Verlauf, keine gespeicherten Passwörter oder Adressen, wird nicht wiederhergestellt.

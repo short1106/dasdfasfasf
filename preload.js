@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('dulidan', {
   autostart: { get: call('autostart:get'), set: call('autostart:set') },
   wallet: { list: call('wallet:list'), remove: call('wallet:remove'), config: call('wallet:config'), respond: call('wallet:respond') },
   pip: call('pip:toggle'),
+  watch: { pick: call('watch:pick'), list: call('watch:list'), seen: call('watch:seen'), remove: call('watch:remove'), check: call('watch:check') },
   goalTest: call('goal:test'),
   snip: { capture: call('snip:capture'), copy: call('snip:copy'), save: call('snip:save'), show: call('snip:show') },
   suggest: call('suggest'),

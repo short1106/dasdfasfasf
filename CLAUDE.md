@@ -294,6 +294,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `snip:save` → `Bilder\Dulidan Screenshots\Screenshot JJJJ-MM-TT HH-MM-SS.png`, `snip:show` öffnet den Ordner.
 - **Bild-in-Bild** (`Strg+Umschalt+P`, Knopf `#btnPip` neben Disko wenn Ton läuft, Palette, Rechtsklick auf Video): Main `pip:toggle` führt mit Nutzer-Geste `requestPictureInPicture()` am größten laufenden Video aus (erst Hauptrahmen, dann iframes), `disablePictureInPicture` wird entfernt. Das Chromium-PiP-Fenster bleibt über allen Programmen. Test `tests/e2e/pip.js`.
 - **Torjubel `main/goals.js`:** Vereinskarte der Ergebnisseite → „☆ Torjubel für …“ → `/api/club?set=<filter>&name=` (nur Desktop, `x-dw`), gespeichert in `userData/club.json`. Main fragt `getmatchesbyteam/<filter>/1/1` ab (90 s, bei laufendem Spiel 30 s; Test: `DW_GOAL_POLL`). Erster Blick auf ein laufendes Spiel wird nur gemerkt. Eigenes Tor → `celebrateGoal()`: Windows-Benachrichtigung plus `goalFx()` (Konfetti von den Rändern, „TOOOR!“, Spielstand) per `executeJavaScriptInIsolatedWorld(1338)` in der sichtbaren Seite, sonst in der Oberfläche. Gegentor nur kleine Meldung. Palette „Torjubel testen“. Test `tests/e2e/goals.js` (`/__goal` im Nachbau).
+- **Seiten-Wächter `main/watcher.js`:** Rechtsklick „Bereich beobachten …“, Menü, Palette. Markier-Skript in isolierter Welt 1339 (Hover, Rad = Eltern/Kind, Klick, Esc), Selektor aus `#id` bzw. `nth-of-type`-Kette. Gespeichert in `userData/watch.json`, Bilder `userData/watch/<id>-a|b.png`. Prüfung alle 15 min (Test: `DW_WATCH_EVERY`) in unsichtbarem Offscreen-Fenster mit `persist:web` (Anmeldungen gelten), 2,5 s warten, `innerText` vergleichen; bei Änderung Foto „nachher“, Benachrichtigung, UI `watch-changed`. Panel `#watch` mit Vorher/Nachher, „Gesehen“ macht Nachher zum neuen Vorher. Test `tests/e2e/watch.js` (`fixtures/site/preis.html`).
 - **Autostart:** Einstellung „Mit Windows starten“ → `app.setLoginItemSettings`. Geht nur in der installierten App. Der Schalter liest beim Start den echten Zustand.
 - **Tabs robust:**
   - **Übergänge:** `view.transition()` räumt in `finally` immer auf, damit ein Tab nie „im Übergang“ hängen bleibt (sonst bliebe er leer). Notbremse: 8 s.
@@ -396,6 +397,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `calcui.js`, `updui.js`
   - `searchtest.js`: Ergebnisseite, braucht `DW_PROXY_BASE`
   - `mapnews.js`: Maps-News (Globus, Thema, Land → Schlagzeilen, Klick auf der Karte)
+  - `watch.js`: Seiten-Wächter (markieren, Änderung, Vorher/Nachher, Gesehen)
   - `snip.js`: Snipping-Tool (Bereich, Werkzeuge, Speichern, Kopieren, ganze Seite über `fixtures/site/long.html`)
   - `mobileanswers.js`: Sofort-Antworten im Handy-Format
   - `prognose.js`: Liga-Schalter und Prognose (Tipps, Simulation, Abschlusstabelle)

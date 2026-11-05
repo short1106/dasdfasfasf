@@ -14,6 +14,7 @@ const updater = require('./main/updater.js');
 const lyrics = require('./main/lyrics.js');
 const translateModels = require('./main/translate-models.js');
 const goals = require('./main/goals.js');
+const watcher = require('./main/watcher.js');
 const { pageMenu } = require('./main/contextmenu.js');
 
 const ROOT = __dirname;
@@ -245,6 +246,7 @@ function wire(t, wc) {
       passwords: () => { win.webContents.focus(); ui('shortcut', { name: 'passwords' }); },
       snip: () => { win.webContents.focus(); ui('shortcut', { name: 'snip' }); },
       pip: () => ui('shortcut', { name: 'pip' }),
+      watch: () => ui('shortcut', { name: 'watch-pick' }),
       nav: true, inspect: true
     });
     if (m) m.popup({ window: win });
@@ -760,6 +762,12 @@ function ipc() {
   });
   const pngOf = d => (typeof d === 'string' && d.startsWith('data:image/png;base64,') && d.length < 80e6 ? nativeImage.createFromDataURL(d) : null);
   /* ===== Bild-in-Bild für jede Seite: größtes (laufendes) Video ins schwebende Chromium-Fenster, das über allen Programmen bleibt ===== */
+  /* Seiten-Wächter: Bereich im Tab markieren, Liste, Gesehen, Löschen, sofort prüfen */
+  h('watch:pick', async id => { const w = wcOf(id); if (!w) return null; w.focus(); try { const r = await watcher.pick(w); return r && { title: r.title, text: r.text.slice(0, 80) }; } catch { return null; } });
+  h('watch:list', () => watcher.view());
+  h('watch:seen', id => { watcher.seen(String(id)); return watcher.view(); });
+  h('watch:remove', id => { watcher.remove(String(id)); return watcher.view(); });
+  h('watch:check', id => watcher.checkNow(String(id)));
   /* Torjubel vorführen (Palette „Torjubel testen“) */
   h('goal:test', () => { const c = goals.get(); celebrateGoal({ club: c ? c.name : 'Dein Verein', home: c ? c.name : 'Dulidan FC', away: 'Gegner', s1: 1, s2: 0, minute: 90, scorer: 'Test', own: true }); return true; });
   h('pip:toggle', async id => {
@@ -848,6 +856,10 @@ app.whenReady().then(() => {
   chromeUA = webSes.getUserAgent().replace(/ dulidan-web\/\S+/i, '').replace(/ Electron\/\S+/i, '');
   app.userAgentFallback = chromeUA;
   prepareWebSession(webSes);
+  watcher.init(app.getPath('userData'), BrowserWindow, () => webSes, w => {
+    try { if (electron.Notification && electron.Notification.isSupported()) new electron.Notification({ title: '👁 Geändert: ' + (w.title || 'Seite'), body: (w.text || '').slice(0, 140) }).show(); } catch {}
+    ui('watch-changed', { title: w.title, n: watcher.count() });
+  });
   session.defaultSession.setPermissionRequestHandler((_, perm, cb) => cb(PERMS.includes(perm)));
   adblock.init(webSes, {
     blocked: wcId => {

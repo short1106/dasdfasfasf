@@ -50,6 +50,7 @@ function pageMenu(wc, p, actions) {
   }
   if (p.mediaType === 'video' && actions.pip) { T.push({ label: 'Bild-in-Bild (schwebendes Fenster)', click: actions.pip }); sep(); }
   if (actions.snip) T.push({ label: 'Screenshot erstellen …', click: actions.snip });
+  if (actions.watch && !p.isEditable) T.push({ label: 'Bereich beobachten (Seiten-Wächter) …', click: actions.watch });
   if (actions.inspect) T.push({ label: 'Untersuchen', click: () => wc.inspectElement(p.x, p.y) });
   while (T.length && T[T.length - 1].type === 'separator') T.pop();
   return T.length ? Menu.buildFromTemplate(T) : null;

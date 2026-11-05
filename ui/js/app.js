@@ -11,7 +11,7 @@ import { initCalc } from './calcpanel.js';
 import { TabStrip } from './tabs.js';
 import * as view from './view.js';
 import * as pal from './palette.js';
-import { initPanels, openPanel, closePanel, onDownload } from './panels.js';
+import { initPanels, openPanel, closePanel, onDownload, registerPanel } from './panels.js';
 import { runBoot, booted } from './boot.js';
 import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark, history } from './data.js';
 import { sfx } from './sound.js';
@@ -79,6 +79,31 @@ async function togglePip() {
   else toast('Bild-in-Bild ging hier nicht');
 }
 $('#btnPip').addEventListener('click', togglePip);
+/* Seiten-Wächter: Bereich auf der Seite wählen (Markier-Werkzeug läuft im Tab) */
+async function watchPick() {
+  if (!active || active.home) return toast('Öffne erst die Seite, die beobachtet werden soll');
+  toast('👁 Bereich wählen – Rad macht ihn größer oder kleiner, Klick nimmt ihn');
+  const r = await api.watch.pick(active.id);
+  if (r) { toast('👁 Wird beobachtet: ' + (r.text || r.title || 'Bereich').slice(0, 60)); sfx('fire'); }
+}
+const panelIsWatch = () => !$('#watch').hidden;
+async function renderWatch(list) {
+  list = list || await api.watch.list();
+  const body = $('#watchBody'), when = t => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  if (!list.length) return body.replaceChildren(h('div', { class: 'wt-empty' }, h('b', {}, 'Noch nichts beobachtet'), h('span', {}, 'Rechtsklick auf eine Seite → „Bereich beobachten“, dann den Preis, das Ticket oder das Ergebnis anklicken. Dulidan prüft alle 15 Minuten und meldet sich bei jeder Änderung.')));
+  body.replaceChildren(...list.map(w => h('article', { class: 'wt' + (w.changed ? ' hot' : '') },
+    h('div', { class: 'wt-head' }, h('b', {}, w.title || hostOf(w.url)), h('span', { class: 'mono' }, w.changed ? 'GEÄNDERT · ' + when(w.changedAt) : w.err ? w.err.toUpperCase() : 'UNVERÄNDERT · GEPRÜFT ' + when(w.checked))),
+    h('div', { class: 'wt-imgs' + (w.b ? ' two' : '') },
+      w.a ? h('figure', {}, h('img', { src: w.a, alt: '' }), h('figcaption', { class: 'mono' }, w.b ? 'VORHER' : 'BEOBACHTET')) : null,
+      w.b ? h('figure', {}, h('img', { src: w.b, alt: '' }), h('figcaption', { class: 'mono' }, 'NACHHER')) : null),
+    w.changed && w.old ? h('div', { class: 'wt-diff' }, h('s', {}, w.old.slice(0, 120)), h('span', {}, '→ ' + w.text.slice(0, 160))) : h('div', { class: 'wt-txt' }, (w.text || '').slice(0, 160)),
+    h('div', { class: 'wt-acts' },
+      h('button', { class: 'btn fx', onclick: () => { closePanel(); newTab(w.url); } }, 'Öffnen'),
+      h('button', { class: 'btn ghost fx', onclick: async e => { e.currentTarget.textContent = 'Prüfe …'; renderWatch(await api.watch.check(w.id)); } }, 'Jetzt prüfen'),
+      w.changed ? h('button', { class: 'btn ghost fx', onclick: async () => renderWatch(await api.watch.seen(w.id)) }, 'Gesehen') : null,
+      h('button', { class: 'btn ghost fx', onclick: async () => renderWatch(await api.watch.remove(w.id)) }, 'Löschen')))));
+}
+registerPanel('watch', () => renderWatch());
 
 let lastShock = 0;
 onKick(b => {
@@ -454,6 +479,8 @@ const ACTIONS = {
   incognito: () => newTab(null, { incognito: true }),
   snip: () => openSnip(active),
   pip: () => togglePip(),
+  'watch-pick': () => watchPick(),
+  watch: () => openPanel('watch', $('#btnMenu')),
   'close-tab': () => closeTab(active),
   'focus-omnibox': focusBar,
   palette: () => pal.toggle(),
@@ -488,6 +515,8 @@ const COMMANDS = () => [
   { icon: 'snip', name: 'Screenshot / Snipping-Tool', key: 'Strg ⇧ S', run: () => openSnip(active) },
   { icon: 'pip', name: 'Bild-in-Bild (Video schwebt über allem)', key: 'Strg ⇧ P', run: () => togglePip() },
   { icon: 'bolt', name: 'Torjubel testen', key: '', run: () => api.goalTest() },
+  { icon: 'watch', name: 'Seiten-Wächter: Bereich markieren', key: '', run: () => watchPick() },
+  { icon: 'watch', name: 'Seiten-Wächter öffnen', key: '', run: () => ACTIONS.watch() },
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
@@ -644,6 +673,7 @@ api.on(e => {
     case 'html-full': body.classList.toggle('html-full', !!e.on); setTimeout(view.sendBounds, 50); break;
     case 'disco': body.classList.toggle('disco-on', !!e.on); break;
     case 'incognito-wiped': incognitoWiped(); break;
+    case 'watch-changed': toast('👁 Seiten-Wächter: „' + (e.title || 'Seite') + '“ hat sich geändert'); sfx('fire'); if (panelIsWatch()) renderWatch(); break;
     case 'crash':
       /* Abgestürzter Tab lädt sich selbst neu: sofort, wenn er sichtbar ist, sonst beim nächsten Anklicken */
       if (!t || t.home) break;
@@ -786,7 +816,7 @@ async function start() {
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
   initCalc();
-  initPanels({ newTab: () => newTab(), incognito: () => ACTIONS.incognito(), snip: () => ACTIONS.snip(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), incognito: () => ACTIONS.incognito(), snip: () => ACTIONS.snip(), watch: () => ACTIONS.watch(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),
