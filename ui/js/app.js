@@ -19,6 +19,7 @@ import { openSnip } from './snip.js';
 import { applyJapan, refreshJapan } from './japan.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
+import { groups, ensureGroup, layoutGroups, chipBurst, tabMenu, PRESETS } from './groups.js';
 
 const body = document.body, homeEl = $('#home');
 const omniInput = $('#omniInput'), bigInput = $('#bigInput'), omniForm = $('#omni'), bigForm = $('#bigbar');
@@ -26,7 +27,7 @@ const tabs = new Map();
 let active = null;
 
 /* ===== Module ===== */
-const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: () => saveSession() });
+const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: () => { relayout(); saveSession(); }, onMenu: (e, t) => tabMenu(e, t, { assign: setGroup, toggle: toggleGroup, closeGroup }) });
 view.bindActive(() => active);
 const logo = createLogo($('#logoGL'), $('#logoStage'), homeEl);
 const nebula = createNebula($('#nebula'), homeEl);
@@ -40,7 +41,8 @@ const omni = new Suggest({
 const big = new Suggest({ input: bigInput, form: bigForm, chip: $('#bigChip'), offset: 14, onGo: t => submit(t, bigForm) });
 const ov = createOverview({
   tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
-  activate: t => activate(t), closeTab: t => closeTab(t), newTab: () => newTab(), fallback: () => pal.open()
+  activate: t => activate(t), closeTab: t => closeTab(t), newTab: () => newTab(), fallback: () => pal.open(),
+  groups: () => groups, toggleGroup: name => toggleGroup(name)
 });
 
 /* Musik aus den Tabs: Strahl, Equalizer im Tab, Kicks lassen das D beben */
@@ -151,6 +153,7 @@ function activate(t, { fresh = false } = {}) {
   /* Wiederhergestellter oder abgestürzter Tab: nach dem Umschalten (neu) laden */
   const load = t.pending || t.crashed ? t.url : null;
   t.pending = t.crashed = false;
+  if (t.group && groups.get(t.group) && groups.get(t.group).collapsed) { groups.get(t.group).collapsed = false; relayout(); }
   strip.setActive(t);
   body.classList.toggle('inco', !!t.incognito);
   if (!same && !t.home) t.reveal = 'switch';
@@ -171,6 +174,7 @@ async function closeTab(t) {
   if (ids.length === 1) await newTab(null, { focus: true });
   tabs.delete(t.id);
   strip.remove(t);
+  relayout();
   if (active === t) {
     const rest = strip.ids();
     active = null;
@@ -189,6 +193,34 @@ function cycle(d) {
   activate(tabs.get(ids[(i + d + ids.length) % ids.length]));
 }
 const updateCount = () => { $('#tabCount').textContent = tabs.size; };
+
+/* ===== Tab-Gruppen (Chips in der Leiste, Sternbilder im Orbit) ===== */
+const relayout = () => { layoutGroups(strip.wrap, tabs, toggleGroup); strip.narrow(); };
+function setGroup(t, name) {
+  if (!t || t.incognito && name) { if (t && t.incognito) toast('Inkognito-Tabs bleiben ohne Gruppe'); return; }
+  const g = name ? ensureGroup(name) : null;
+  t.group = g ? g.name : null;
+  if (g) g.collapsed = false;
+  relayout(); saveSession();
+  if (g) { chipBurst(strip.wrap, g.name); sfx('fire'); toast(`${g.emoji} Tab ist jetzt in „${g.name}“`); }
+}
+/* Zu-/Aufklappen. Liegt der aktive Tab drin, springt die Auswahl auf den nächsten Tab außerhalb */
+function toggleGroup(name) {
+  const g = groups.get(name); if (!g) return;
+  if (!g.collapsed && active && active.group === name) {
+    const ids = strip.ids(), i = ids.indexOf(active.id);
+    const out = [...ids.slice(i + 1), ...ids.slice(0, i).reverse()].map(id => tabs.get(id)).find(x => x && x.group !== name);
+    if (!out) { toast('Mindestens ein Tab muss offen bleiben'); return; }
+    g.collapsed = true; relayout(); activate(out);
+  } else { g.collapsed = !g.collapsed; relayout(); }
+  chipBurst(strip.wrap, name); sfx(g.collapsed ? 'close' : 'open');
+  saveSession();
+}
+async function closeGroup(name) {
+  const list = [...tabs.values()].filter(t => t.group === name);
+  for (const t of list) await closeTab(t);
+  toast(`Gruppe „${name}“ geschlossen (${list.length} ${list.length === 1 ? 'Tab' : 'Tabs'})`);
+}
 
 /* Letzter Inkognito-Tab zu: Main hat die Session gelöscht → Glitch-Wisch über das Fenster */
 function incognitoWiped() {
@@ -517,6 +549,9 @@ const COMMANDS = () => [
   { icon: 'bolt', name: 'Torjubel testen', key: '', run: () => api.goalTest() },
   { icon: 'watch', name: 'Seiten-Wächter: Bereich markieren', key: '', run: () => watchPick() },
   { icon: 'watch', name: 'Seiten-Wächter öffnen', key: '', run: () => ACTIONS.watch() },
+  ...[...new Set([...groups.keys(), ...PRESETS.map(p => p.name)])].map(n => ({ icon: 'orbit', name: `Tab zur Gruppe: ${n}`, key: '', run: () => setGroup(active, n) })),
+  ...[...groups.keys()].map(n => ({ icon: 'orbit', name: `Gruppe ${groups.get(n).collapsed ? 'aufklappen' : 'zuklappen'}: ${n}`, key: '', run: () => toggleGroup(n) })),
+  ...(active && active.group ? [{ icon: 'x', name: 'Tab aus Gruppe entfernen', key: '', run: () => setGroup(active, null) }] : []),
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
@@ -789,7 +824,8 @@ function saveSession(now = false) {
     const ids = strip.ids();
     /* Inkognito-Tabs werden nie gemerkt */
     const keep = ids.filter(id => { const t = tabs.get(id); return t && !t.incognito; });
-    store.set('dw_session', { tabs: keep.map(id => { const t = tabs.get(id); return !t.home && /^https?:/i.test(t.url) ? t.url : ''; }), active: Math.max(0, keep.indexOf(active && active.id)) });
+    store.set('dw_session', { tabs: keep.map(id => { const t = tabs.get(id); return !t.home && /^https?:/i.test(t.url) ? t.url : ''; }), active: Math.max(0, keep.indexOf(active && active.id)),
+      g: keep.map(id => tabs.get(id).group || ''), groups: [...groups.values()].map(g => ({ name: g.name, color: g.color, emoji: g.emoji, collapsed: g.collapsed })) });
   };
   if (now) write(); else saveT = setTimeout(write, 300);
 }
@@ -799,6 +835,9 @@ async function restoreSession() {
   restoring = true;
   const made = [];
   for (const url of s.tabs.slice(0, 30)) made.push(url ? await newTab(url, { background: true }) : await newTab(null, { focus: false, intro: false }));
+  for (const g of Array.isArray(s.groups) ? s.groups : []) if (g && g.name) ensureGroup(g.name, { color: g.color || undefined, emoji: g.emoji || undefined, collapsed: !!g.collapsed });
+  if (Array.isArray(s.g)) made.forEach((t, i) => { if (t && s.g[i] && groups.has(s.g[i])) t.group = s.g[i]; });
+  relayout();
   restoring = false;
   activate(made[Math.min(s.active || 0, made.length - 1)] || made[0]);
   toast(`↺ ${made.length} ${made.length === 1 ? 'Tab' : 'Tabs'} wiederhergestellt`);

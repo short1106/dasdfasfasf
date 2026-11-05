@@ -1,6 +1,7 @@
 /* Dulidan Web · overview.js – "Orbit": alle Tabs als schwebende Live-Vorschauen im WebGL-Raum
    Maus = fliegen, Rad/Pfeile = durch die Tabs, Klick/Enter = hineinzoomen bis die Karte die Seite exakt füllt.
-   Drei Stile (Taste S / Chip oben): Spirale (Flug durch den Raum), Karussell (Ring mit Neon-Kreisen), Coverflow (Spiegelboden).
+   Stile (Taste S / Chip oben): Spirale (Flug durch den Raum), Karussell (Ring mit Neon-Kreisen), Coverflow (Spiegelboden), Galaxie, Wabe
+   und Sternbilder (Tab-Gruppen als verbundene Sternbilder, Klick auf den Namen klappt die Gruppe zu oder auf).
    Aufbau: Mathe · Shader · Karten-Texturen · Stile (Platz, Kamera, Boden) · Picking · Öffnen/Schließen */
 import { $, api, clamp, lerp, anim, hostOf, scramble, hexToRgb, store } from './util.js';
 import { accentColors } from './settings.js';
@@ -207,7 +208,7 @@ export function createOverview(ctx) {
   const layoutPos = i => [Math.sin(i * 0.85) * 2.5, Math.cos(i * 0.85) * 0.85 - 0.15, -i * 4.8];
 
   /* ===== Stile: Platz jeder Karte (Mitte, Drehung, Sichtbarkeit), Ruhe-Kamera, Boden ===== */
-  const STYLES = ['spirale', 'karussell', 'coverflow', 'galaxie', 'wabe'], STYLE_NAME = { spirale: 'SPIRALE', karussell: 'KARUSSELL', coverflow: 'COVERFLOW', galaxie: 'GALAXIE', wabe: 'WABE' };
+  const STYLES = ['spirale', 'karussell', 'coverflow', 'galaxie', 'wabe', 'sterne'], STYLE_NAME = { spirale: 'SPIRALE', karussell: 'KARUSSELL', coverflow: 'COVERFLOW', galaxie: 'GALAXIE', wabe: 'WABE', sterne: 'STERNBILDER' };
   let style = STYLES.includes(store.get('dw_orbit_style', 'spirale')) ? store.get('dw_orbit_style', 'spirale') : 'spirale';
   let prevStyle = style, morphT0 = -1e9;
   const MORPH = 900;
@@ -220,6 +221,40 @@ export function createOverview(ctx) {
   /* Wabe: Sechseck-Raster, Spalten passend zur Tab-Zahl */
   const hexCols = () => Math.max(2, Math.ceil(Math.sqrt(cards.length * 1.7))), hexRows = () => Math.ceil(cards.length / hexCols());
   const hexPos = i => { const C = hexCols(), R = hexRows(), col = i % C, row = Math.floor(i / C); return [(col + (row & 1) * 0.5 - (C - 1) / 2) * 1.64, ((R - 1) / 2 - row) * 1.44, 0]; };
+  /* Sternbilder: jede Gruppe ein Haufen (Sonnenblumen-Muster), nebeneinander im Raum; zugeklappt = alle Karten in einem Stern.
+     Lose Tabs bilden einen eigenen Haufen ohne Linien. Die Plätze laufen weich nach (sPos), damit Auf-/Zuklappen fliegt. */
+  let consts = [], constW = 1, constH = 1;
+  const hashS = str => { let x = 7; for (const ch of str) x = (x * 31 + ch.charCodeAt(0)) % 9973; return x / 9973; };
+  function buildConst() {
+    const gm = (ctx.groups && ctx.groups()) || new Map();
+    consts = []; let cur = null;
+    cards.forEach((c, i) => {
+      const g = c.kind === 'tab' && c.tab.group ? gm.get(c.tab.group) : null, key = g ? g.name : c.kind === 'plus' ? '+' : '';
+      if (!cur || cur.key !== key) { cur = { key, g, members: [] }; consts.push(cur); }
+      cur.members.push(i); c.ci = consts.length - 1; c.ck = cur.members.length - 1;
+    });
+    let x = 0;
+    consts.forEach((k, j) => {
+      const n = k.members.length, col = k.g && k.g.collapsed;
+      k.R = col ? 0.9 : k.key === '+' ? 0.9 : 2.1 * Math.sqrt(Math.max(0, n - 1)) + 1.15;
+      k.cx = x + k.R; k.cy = (j % 2 ? -0.55 : 0.55) * (consts.length > 1 ? 1 : 0); x += k.R * 2 + 1.1;
+      k.rot = hashS(k.key || 'lose') * 6.28;
+    });
+    const off = x / 2 - 0.55;
+    for (const k of consts) k.cx -= off;
+    constW = Math.max(2, x - 1.1); constH = Math.max(2, ...consts.map(k => k.R * 2 + 1.1));
+  }
+  function starTarget(i) {
+    const c = cards[i], k = c && consts[c.ci];
+    if (!k) return { p: [0, 0, 0], sc: 0.5 };
+    if (k.g && k.g.collapsed) { const a = c.ck * 2.39996; return { p: [k.cx + Math.cos(a) * 0.12 * c.ck ** 0.5, k.cy + Math.sin(a) * 0.1 * c.ck ** 0.5, 0.2 - c.ck * 0.02], sc: 0.14 }; }
+    const a = c.ck * 2.39996 + k.rot, r = 2.1 * Math.sqrt(c.ck);
+    return { p: [k.cx + Math.cos(a) * r, k.cy + Math.sin(a) * r * 0.72, Math.sin(c.ck * 1.9 + k.rot) * 0.5], sc: 0.5 };
+  }
+  function stepStars(steps) {
+    const kk = 1 - Math.pow(1 - 0.1, steps);
+    cards.forEach((c, i) => { const T = starTarget(i); if (!c.sPos) { c.sPos = T.p.slice(); c.sSc = T.sc; } c.sPos = mix3(c.sPos, T.p, kk); c.sSc = lerp(c.sSc, T.sc, kk); });
+  }
   /* Karten, an denen die Kamera vorbeigeflogen ist, weichen zur Seite und verblassen (nur Spirale) */
   const passed = i => clamp((f - i - 0.2) * 1.4, 0, 1);
   function place(st, i, t) {
@@ -237,6 +272,10 @@ export function createOverview(ctx) {
       const mxw = ce[0] + mx * hw * asp, myw = ce[1] - my * hw;
       const k = Math.exp(-((c[0] - mxw) ** 2 + (c[1] - myw) ** 2) / 2.6);
       return { c: [c[0], c[1], k * 0.9], yaw: (c[0] - mxw) * -0.03 * k, vis: 1, side: 0, sc: 0.84 + 0.36 * k };
+    }
+    if (st === 'sterne') {
+      const c = cards[i], P = (c && c.sPos) || [0, 0, 0], e = camOf('sterne', t).e;
+      return { c: [P[0], P[1] + Math.sin(t * 0.6 + i) * 0.04, P[2]], yaw: Math.atan2(e[0] - P[0], e[2] - P[2]) * 0.7, vis: 1, side: 0, sc: (c && c.sSc) || 0.5 };
     }
     if (st === 'coverflow') {
       const d = i - f, s = clamp(d, -1, 1), a = Math.abs(d);
@@ -280,6 +319,13 @@ export function createOverview(ctx) {
       const dist = Math.max(hh, hwid / asp) / Math.tan(FOV / 2) * 1.02;
       return { e: [F[0] * 0.18 + mx * 1.1, F[1] * 0.18 - my * 0.8, dist], c: [F[0] * 0.18 + mx * 0.3, F[1] * 0.18 - my * 0.2, 0] };
     }
+    if (st === 'sterne') {
+      /* Passt alles ins Bild, steht die Kamera mittig, sonst folgt sie dem fokussierten Tab */
+      const fit = Math.max(constH / 2 + 0.6, (constW / 2 + 0.9) / asp) / Math.tan(FOV / 2), dist = Math.min(fit, 18);
+      const fc = cards[clamp(Math.round(f), 0, Math.max(0, cards.length - 1))], F = (fc && fc.sPos) || [0, 0, 0];
+      const cx = fit > 18 ? clamp(F[0], -constW / 2 + dist * Math.tan(FOV / 2) * asp * 0.8, constW / 2 - dist * Math.tan(FOV / 2) * asp * 0.8) : 0;
+      return { e: [cx + mx * 1.6, 0.6 - my * 1.1, dist], c: [cx + mx * 0.4, -my * 0.3, 0] };
+    }
     if (st === 'karussell') return { e: [mx * 2.2 + Math.sin(t * 0.25) * 0.3, 1.25 - my * 1.1, 7.4], c: [mx * 0.6, -0.25 - my * 0.3, -1.6] };
     if (st === 'coverflow') return { e: [mx * 1.3, 0.3 - my * 0.55, 6.1], c: [mx * 0.35, -0.15, -0.7] };
     const c = layoutPos(f);
@@ -320,6 +366,7 @@ export function createOverview(ctx) {
     cards.push(plus);
     for (const c of old.values()) { gl.deleteTexture(c.tex); gl.deleteTexture(c.lbl); }
     cards.forEach(paintTex);
+    buildConst();
     $('#ovCount').textContent = `${cards.length - 1} ${cards.length === 2 ? 'TAB' : 'TABS'}`;
   }
   function upload(tex, src, fmt) {
@@ -389,6 +436,7 @@ export function createOverview(ctx) {
     lastNow = now;
     for (let k = 0; k < steps; k++) { fVel = (fVel + (fT - f) * 0.08) * 0.72; f += fVel; }
     if (zoom.v < 0.3) orbT += steps / 60;
+    stepStars(steps);
     if (zoom.dur) {
       const k = clamp((now - zoom.t0) / zoom.dur, 0, 1);
       zoom.v = lerp(zoom.from, zoom.to, easeIO(k));
@@ -410,7 +458,7 @@ export function createOverview(ctx) {
     /* Boden je Stil: Gitter (Spirale), Neon-Ringe mit Speichen (Karussell), Spiegel-Horizont (Coverflow) */
     gl.blendFunc(gl.ONE, gl.ONE);
     const L = [];
-    const floorA = { spirale: styleW('spirale'), karussell: styleW('karussell'), coverflow: styleW('coverflow'), galaxie: styleW('galaxie'), wabe: styleW('wabe') };
+    const floorA = { spirale: styleW('spirale'), karussell: styleW('karussell'), coverflow: styleW('coverflow'), galaxie: styleW('galaxie'), wabe: styleW('wabe'), sterne: styleW('sterne') };
     if (floorA.spirale > 0.01) {
       const y = -3.2, z0 = Math.floor(cam.e[2] / 3) * 3;
       for (let k = -2; k < 26; k++) L.push(-40, y, z0 - k * 3, 40, y, z0 - k * 3);
@@ -455,6 +503,36 @@ export function createOverview(ctx) {
     if (nFlow > nRing) { gl.uniform3fv(LP.u.uCol, mix3(g3, [1, 1, 1], 0.3)); gl.uniform1f(LP.u.uA, baseA * 0.6 * floorA.coverflow); gl.drawArrays(gl.LINES, nRing / 3, (nFlow - nRing) / 3); }
     if (nGal > nFlow) { gl.uniform3fv(LP.u.uCol, mix3(g2, g3, 0.4)); gl.uniform1f(LP.u.uA, baseA * 0.9 * floorA.galaxie); gl.drawArrays(gl.LINES, nFlow / 3, (nGal - nFlow) / 3); }
     if (L.length > nGal) { gl.uniform3fv(LP.u.uCol, [0.25, 0.85, 1.0]); gl.uniform1f(LP.u.uA, baseA * 0.8 * floorA.wabe); gl.drawArrays(gl.LINES, nGal / 3, (L.length - nGal) / 3); }
+    /* Sternbilder: Linien zwischen den Karten jeder Gruppe (jede an die nächste frühere, wie echte Sternbilder),
+       dazu ein gestrichelter Kreis um die Gruppe und bei zugeklappten Gruppen ein pulsierender Strahlenstern */
+    if (floorA.sterne > 0.01) {
+      for (const k of consts) {
+        if (!k.g) continue;
+        /* Der Stern jeder Karte sitzt über ihrer Oberkante, damit die Linien nicht hinter den Karten verschwinden */
+        const M = [], P = k.members.map(i => { const c = cards[i], p = c.sPos || [0, 0, 0]; return [p[0], p[1] + (c.sSc || 0.5) + 0.16, p[2]]; });
+        if (!k.g.collapsed) for (let a = 1; a < P.length; a++) {
+          let best = 0, bd = 1e9; for (let b = 0; b < a; b++) { const d = Math.hypot(...sub(P[a], P[b])); if (d < bd) { bd = d; best = b; } }
+          M.push(...P[best], ...P[a]);
+        }
+        if (!k.g.collapsed) P.forEach((p, j) => {
+          const tw = 0.13 + 0.06 * Math.sin(t * 4 + j * 1.7) + audio.bass * 0.1;
+          M.push(p[0] - tw * 1.6, p[1], p[2], p[0] + tw * 1.6, p[1], p[2], p[0], p[1] - tw * 1.6, p[2], p[0], p[1] + tw * 1.6, p[2]);
+          M.push(p[0] - tw * 0.6, p[1] - tw * 0.6, p[2], p[0] + tw * 0.6, p[1] + tw * 0.6, p[2], p[0] - tw * 0.6, p[1] + tw * 0.6, p[2], p[0] + tw * 0.6, p[1] - tw * 0.6, p[2]);
+        });
+        const seg = 64, rr = k.R + 0.35 + audio.bass * 0.08, spin = t * 0.08;
+        for (let s2 = 0; s2 < seg; s2 += 2) { const a1 = spin + (s2 / seg) * 6.2832, a2 = spin + ((s2 + 1) / seg) * 6.2832; M.push(k.cx + Math.cos(a1) * rr, k.cy + Math.sin(a1) * rr * 0.8, -0.6, k.cx + Math.cos(a2) * rr, k.cy + Math.sin(a2) * rr * 0.8, -0.6); }
+        if (k.g.collapsed) {
+          const pulse = 0.55 + 0.25 * Math.sin(t * 3) + audio.bass * 0.4;
+          for (let s2 = 0; s2 < 8; s2++) { const a = s2 * Math.PI / 4 + t * 0.4, L2 = (s2 % 2 ? 0.45 : 0.85) * pulse; M.push(k.cx, k.cy, 0.25, k.cx + Math.cos(a) * L2, k.cy + Math.sin(a) * L2, 0.25); }
+        }
+        if (!M.length) continue;
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(M), gl.DYNAMIC_DRAW);
+        gl.vertexAttribPointer(la, 3, gl.FLOAT, false, 0, 0);
+        gl.uniform3fv(LP.u.uCol, hexToRgb(k.g.color).map(v => v / 255));
+        gl.uniform1f(LP.u.uA, (1.3 + audio.level * 0.8) * floorA.sterne * (1 - zoom.v));
+        gl.drawArrays(gl.LINES, 0, M.length / 3);
+      }
+    }
     gl.disableVertexAttribArray(la);
 
     /* Sterne */
@@ -543,7 +621,42 @@ export function createOverview(ctx) {
       sfx('hover');
     }
     hud.classList.toggle('on', zoom.v < 0.4);
+    groupLabels();
     if (now - refreshT > 1500 && zoom.v < 0.5) { refreshT = now; refreshThumbs(); }
+  }
+
+  /* Namen der Sternbilder als Knöpfe über den Gruppen: Klick klappt auf oder zu */
+  let gWrap = null;
+  function groupLabels() {
+    if (!gWrap) { gWrap = document.createElement('div'); gWrap.className = 'ov-groups'; hud.append(gWrap); }
+    const w = styleW('sterne') * (1 - zoom.v);
+    gWrap.style.opacity = w.toFixed(3);
+    gWrap.style.pointerEvents = w > 0.5 ? '' : 'none';
+    const want = w > 0.01 ? consts.filter(k => k.g) : [];
+    while (gWrap.children.length > want.length) gWrap.lastChild.remove();
+    want.forEach((k, j) => {
+      let b = gWrap.children[j];
+      if (!b) { b = document.createElement('button'); b.className = 'ov-grp'; b.addEventListener('click', e => { e.stopPropagation(); toggleConst(b.dataset.g); }); gWrap.append(b); }
+      const txt = `${k.g.emoji} ${k.g.name.toUpperCase()} · ${k.members.length}`;
+      if (b.dataset.g !== k.g.name || b.dataset.t !== txt + k.g.collapsed) {
+        b.dataset.g = k.g.name; b.dataset.t = txt + k.g.collapsed;
+        const s1 = document.createElement('span'); s1.textContent = txt;
+        const s2 = document.createElement('small'); s2.textContent = k.g.collapsed ? 'ZU · KLICK ÖFFNET' : 'KLICK SCHLIESST';
+        b.replaceChildren(s1, s2);
+      }
+      b.style.setProperty('--gc', k.g.color);
+      b.classList.toggle('collapsed', !!k.g.collapsed);
+      const [x, y] = project([k.cx, k.cy + k.R * 0.8 + 0.55, -0.6], PV), r = vp.getBoundingClientRect();
+      b.style.transform = `translate(${(x - r.left).toFixed(1)}px,${(y - r.top).toFixed(1)}px) translate(-50%,-100%)`;
+    });
+  }
+  function toggleConst(name) {
+    if (!ctx.toggleGroup) return;
+    ctx.toggleGroup(name);
+    buildConst();
+    const k = consts.find(x => x.g && x.g.name === name);
+    if (k && PV && anim() !== 'aus') { const [x, y] = project([k.cx, k.cy, 0], PV); burst(x, y, { n: 120, speed: 11, life: 60, size: 3 }); }
+    sfx('fire');
   }
 
   function zoomTo(idx, dir, dur, done) {
@@ -566,7 +679,10 @@ export function createOverview(ctx) {
   const onClick = e => {
     if (zoom.v > 0.2 || zoom.done) return;
     onMove(e);
-    if (hot >= 0) enter(hot);
+    if (hot < 0) return;
+    const hc = cards[hot], hk = hc && consts[hc.ci];
+    if (style === 'sterne' && hk && hk.g && hk.g.collapsed) { toggleConst(hk.g.name); return; }
+    enter(hot);
   };
   const onKey = e => {
     if (!open) return;

@@ -333,3 +333,11 @@ body.orbit .tab-glow{opacity:.3!important}
 .wt-txt{font-size:12px;color:var(--muted)}
 .wt-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .wt-acts .btn{height:32px;font-size:12px;padding:0 12px}
+/* Orbit · Sternbilder: Gruppennamen über den Sternbildern */
+.ov-groups{position:absolute;inset:0;transition:opacity .3s}
+.ov-grp{--gc:var(--pink);position:absolute;left:0;top:0;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);background:color-mix(in srgb,var(--gc) 14%,rgba(7,6,11,.82));color:#fff;font:700 12px var(--mono);letter-spacing:.18em;white-space:nowrap;
+  box-shadow:0 0 24px color-mix(in srgb,var(--gc) 45%,transparent),inset 0 0 12px color-mix(in srgb,var(--gc) 25%,transparent);text-shadow:0 0 12px var(--gc);cursor:pointer;transition:background .25s,box-shadow .3s,scale .4s var(--spring)}
+.ov-grp small{font:600 8.5px var(--mono);letter-spacing:.22em;color:color-mix(in srgb,var(--gc) 70%,#fff);opacity:.8;text-shadow:none}
+.ov-grp:hover{scale:1.08;background:color-mix(in srgb,var(--gc) 30%,rgba(7,6,11,.82));box-shadow:0 0 40px var(--gc)}
+.ov-grp.collapsed{border-style:dashed}

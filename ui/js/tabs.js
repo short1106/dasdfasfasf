@@ -5,9 +5,9 @@ import { shatter } from './fx.js';
 import { sfx } from './sound.js';
 
 export class TabStrip {
-  constructor({ onActivate, onClose, onReorder }) {
+  constructor({ onActivate, onClose, onReorder, onMenu }) {
     this.wrap = $('#tabs'); this.strip = $('#tabstrip'); this.glow = $('#tabGlow');
-    this.onActivate = onActivate; this.onClose = onClose; this.onReorder = onReorder;
+    this.onActivate = onActivate; this.onClose = onClose; this.onReorder = onReorder; this.onMenu = onMenu;
     this.active = null; this.drag = null;
     this.gx = new Spring(0, 0.16, 0.7); this.gw = new Spring(80, 0.16, 0.7);
     new ResizeObserver(() => this.narrow()).observe(this.wrap);
@@ -24,6 +24,7 @@ export class TabStrip {
     x.addEventListener('pointerdown', e => e.stopPropagation());
     x.addEventListener('click', e => { e.stopPropagation(); this.onClose(t); });
     el.addEventListener('pointerdown', e => this.down(e, t));
+    el.addEventListener('contextmenu', e => { e.preventDefault(); this.onMenu && this.onMenu(e, t); });
     el.addEventListener('auxclick', e => { if (e.button === 1) { e.preventDefault(); this.onClose(t); } });
     t.el = el; t.elFav = fav; t.elTitle = title; t.elEq = eq;
     this.wrap.appendChild(el);
@@ -44,7 +45,7 @@ export class TabStrip {
 
   setActive(t) {
     this.active = t;
-    for (const el of this.wrap.children) el.classList.toggle('active', el === t.el);
+    for (const el of this.tabEls()) el.classList.toggle('active', el === t.el);
     el2view(t.el);
   }
 
@@ -70,8 +71,10 @@ export class TabStrip {
     }
   }
 
-  narrow() { for (const el of this.wrap.children) el.classList.toggle('narrow', el.offsetWidth < 92); }
-  ids() { return [...this.wrap.children].filter(e => !e.classList.contains('closing')).map(e => Number(e.dataset.id)); }
+  /* Nur echte Tabs, keine Gruppen-Chips */
+  tabEls() { return [...this.wrap.children].filter(e => e.classList.contains('tab')); }
+  narrow() { for (const el of this.tabEls()) if (!el.classList.contains('gcollapsed')) el.classList.toggle('narrow', el.offsetWidth < 92); }
+  ids() { return this.tabEls().filter(e => !e.classList.contains('closing')).map(e => Number(e.dataset.id)); }
 
   /* ===== Drag zum Umsortieren ===== */
   down(e, t) {
@@ -144,7 +147,7 @@ export class TabStrip {
 
 function sib(el, dir) {
   let s = el[dir];
-  while (s && s.classList.contains('closing')) s = s[dir];
+  while (s && (s.classList.contains('closing') || !s.classList.contains('tab') || s.classList.contains('gcollapsed'))) s = s[dir];
   return s;
 }
 function flip(el, change) {
