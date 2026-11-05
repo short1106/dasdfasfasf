@@ -85,6 +85,8 @@ function buildSettings() {
       h('div', { class: 'set-d' }, 'Eingaben ohne Domain werden damit gesucht. Shortcuts: yt, gh, wiki, maps, mc.')),
     section('bolt', 'Animationen', seg('anim', [['normal', 'NORMAL'], ['episch', 'EPISCH'], ['aus', 'AUS']]),
       h('div', { class: 'set-d' }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 'Dein System wünscht reduzierte Bewegung, Standard ist darum „Aus“.' : '„Episch“ ist volle Kraft. „Aus“ schaltet alle Bewegungen ab.')),
+    section('color', 'Design', seg('theme', [['dulidan', 'DULIDAN'], ['japan', 'JAPAN 和']]),
+      h('div', { class: 'set-d' }, '„Japan“ baut die ganze Oberfläche um: Indigo-Nacht, rote Sonne, Kirschblüten, japanische Schrift und das Japan-Logo in der Mitte.')),
     section('color', 'Akzentfarbe', h('div', { class: 'swatches' }, ...sw, cBox)),
     section('d', 'Objekt in der Mitte', seg('center', (window.DW_SHAPES ? window.DW_SHAPES.list : [{ key: 'd', name: 'Dulidan-D' }]).map(s => [s.key, s.name.toUpperCase()]), true),
       h('div', { class: 'set-d' }, 'Die Partikel fliegen auseinander und formen das neue Objekt. Doppelklick auf das Objekt wechselt auch.')),

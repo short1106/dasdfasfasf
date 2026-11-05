@@ -16,6 +16,7 @@ import { runBoot, booted } from './boot.js';
 import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark, history } from './data.js';
 import { sfx } from './sound.js';
 import { openSnip } from './snip.js';
+import { applyJapan, refreshJapan } from './japan.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
 
@@ -390,10 +391,7 @@ function buildHome() {
   }));
 
   /* Slogan-Bänder */
-  const S = 'Dream. Design. Develop. Dominate.';
-  const fill = (el, words) => el.replaceChildren(...Array.from({ length: 16 }, (_, k) => h('span', {}, words[k % words.length])));
-  fill($('#bandA'), [S, 'Dulidan Web']);
-  fill($('#bandB'), ['Dream', 'Design', 'Develop', 'Dominate']);
+  fillBands(settings.theme === 'japan' ? BAND_A_JA : null, settings.theme === 'japan' ? BAND_B_JA : null);
 
   /* Klick auf freie Fläche: Schockwelle im Partikel-Logo */
   homeEl.addEventListener('pointerdown', e => {
@@ -477,6 +475,7 @@ const COMMANDS = () => [
   { icon: 'plus', name: 'Neuer Tab', key: 'Strg T', run: () => newTab() },
   { icon: 'mask', name: 'Neuer Inkognito-Tab', key: 'Strg ⇧ N', run: () => newTab(null, { incognito: true }) },
   { icon: 'snip', name: 'Screenshot / Snipping-Tool', key: 'Strg ⇧ S', run: () => openSnip(active) },
+  { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
   { icon: 'back', name: 'Zurück', key: 'Alt ←', run: () => back(active) },
@@ -646,7 +645,27 @@ onSettings(k => {
   if (k === 'accent' || k === 'custom' || k === 'anim') { logo.refresh(); nebula.refresh(); }
   if (k === 'engine') $('#bigEngine').textContent = engineName().toUpperCase();
   if (k === 'center') { logo.setShape(settings.center); if (active && active.home) logo.shock(); }
+  if (k === 'anim') refreshJapan();
+  if (k === 'theme') {
+    const jp = settings.theme === 'japan';
+    applyJapan(jp, fillBands);
+    logo.refresh(); nebula.refresh();
+    /* Japan-Logo in der Mitte, beim Zurückschalten wieder das vorige Objekt */
+    if (jp && settings.center !== 'japan') { setSetting('centerBefore', settings.center); setSetting('center', 'japan'); }
+    else if (!jp && settings.center === 'japan' && settings.centerBefore) setSetting('center', settings.centerBefore);
+    toast(jp ? '和 Japan-Modus · ようこそ' : 'Dulidan-Design');
+    if (active && active.home) logo.shock();
+  }
 });
+/* Slogan-Bänder (im Japan-Modus mit japanischen Wörtern) */
+const BAND_A_JA = ['ドゥリダン', 'DULIDAN WEB', '桜', '和'], BAND_B_JA = ['夢を見る · Dream', 'デザイン · Design', '開発 · Develop', '制覇 · Dominate'];
+function fillBands(a, b) {
+  const S = 'Dream. Design. Develop. Dominate.';
+  const fill = (el, words) => el && el.replaceChildren(...Array.from({ length: 16 }, (_, k) => h('span', {}, words[k % words.length])));
+  fill($('#bandA'), a || [S, 'Dulidan Web']);
+  fill($('#bandB'), b || ['Dream', 'Design', 'Develop', 'Dominate']);
+}
+applyJapan(settings.theme === 'japan', null);
 /* Doppelklick auf das Objekt: nächstes Objekt */
 function nextShape(dir = 1) {
   const L = (window.DW_SHAPES && window.DW_SHAPES.list) || [];
