@@ -158,6 +158,7 @@ function buildMenu() {
     mi('calc', 'Taschenrechner', 'Strg ⇧ R', () => ctx.calc()),
     mi('snip', 'Screenshot', 'Strg ⇧ S', () => ctx.snip()),
     mi('watch', 'Seiten-Wächter', '', () => ctx.watch()),
+    mi('orbit', 'Tab-Gruppe', 'Strg ⇧ G', () => ctx.group()),
     mi('translate', 'Übersetzer', 'tr …', () => ctx.translate()),
     mi('maps', 'Dulidan Maps', 'maps …', () => ctx.maps()),
     mi('history', 'Verlauf', '', () => ctx.palette('')),

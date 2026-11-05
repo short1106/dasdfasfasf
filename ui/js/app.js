@@ -27,7 +27,7 @@ const tabs = new Map();
 let active = null;
 
 /* ===== Module ===== */
-const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: () => { relayout(); saveSession(); }, onMenu: (e, t) => tabMenu(e, t, { assign: setGroup, toggle: toggleGroup, closeGroup }) });
+const strip = new TabStrip({ onActivate: t => { if (ov.isOpen()) ov.closeNow(); activate(t); }, onClose: t => closeTab(t), onReorder: (_, moved) => { if (moved) dragGroup(moved); relayout(); saveSession(); }, onMenu: (e, t) => openGroupMenu(t, e) });
 view.bindActive(() => active);
 const logo = createLogo($('#logoGL'), $('#logoStage'), homeEl);
 const nebula = createNebula($('#nebula'), homeEl);
@@ -195,6 +195,7 @@ function cycle(d) {
 const updateCount = () => { $('#tabCount').textContent = tabs.size; };
 
 /* ===== Tab-Gruppen (Chips in der Leiste, Sternbilder im Orbit) ===== */
+const openGroupMenu = (t, e = null) => { if (t) tabMenu(e, t, { assign: setGroup, toggle: toggleGroup, closeGroup }); };
 const relayout = () => { layoutGroups(strip.wrap, tabs, toggleGroup); strip.narrow(); };
 function setGroup(t, name) {
   if (!t || t.incognito && name) { if (t && t.incognito) toast('Inkognito-Tabs bleiben ohne Gruppe'); return; }
@@ -215,6 +216,19 @@ function toggleGroup(name) {
   } else { g.collapsed = !g.collapsed; relayout(); }
   chipBurst(strip.wrap, name); sfx(g.collapsed ? 'close' : 'open');
   saveSession();
+}
+/* Zusammenziehen: Tab zwischen zwei Mitglieder einer Gruppe oder direkt hinter ihren Chip ziehen → kommt in die Gruppe.
+   Aus der Gruppe herausziehen (kein Nachbar mehr aus der Gruppe) → raus */
+function dragGroup(t) {
+  if (t.incognito) return;
+  const vis = strip.ids().map(id => tabs.get(id)).filter(x => x && !(x.group && groups.get(x.group) && groups.get(x.group).collapsed) || x === t);
+  const i = vis.indexOf(t), p = vis[i - 1], n = vis[i + 1];
+  const chip = t.el.previousElementSibling && t.el.previousElementSibling.classList.contains('tgrp') ? t.el.previousElementSibling.dataset.g : null;
+  const join = chip && chip !== t.group && n && n.group === chip ? chip : p && n && p.group && p.group === n.group && p.group !== t.group ? p.group : null;
+  if (join) { setGroup(t, join); return; }
+  if (t.group && !(p && p.group === t.group) && !(n && n.group === t.group) && [...tabs.values()].some(x => x !== t && x.group === t.group)) {
+    const g = t.group; t.group = null; toast(`Tab aus „${g}“ herausgezogen`);
+  }
 }
 async function closeGroup(name) {
   const list = [...tabs.values()].filter(t => t.group === name);
@@ -511,6 +525,7 @@ const ACTIONS = {
   incognito: () => newTab(null, { incognito: true }),
   snip: () => openSnip(active),
   pip: () => togglePip(),
+  group: () => openGroupMenu(active),
   'watch-pick': () => watchPick(),
   watch: () => openPanel('watch', $('#btnMenu')),
   'close-tab': () => closeTab(active),
@@ -549,6 +564,7 @@ const COMMANDS = () => [
   { icon: 'bolt', name: 'Torjubel testen', key: '', run: () => api.goalTest() },
   { icon: 'watch', name: 'Seiten-Wächter: Bereich markieren', key: '', run: () => watchPick() },
   { icon: 'watch', name: 'Seiten-Wächter öffnen', key: '', run: () => ACTIONS.watch() },
+  { icon: 'orbit', name: 'Tab-Gruppe wählen …', key: 'Strg ⇧ G', run: () => openGroupMenu(active) },
   ...[...new Set([...groups.keys(), ...PRESETS.map(p => p.name)])].map(n => ({ icon: 'orbit', name: `Tab zur Gruppe: ${n}`, key: '', run: () => setGroup(active, n) })),
   ...[...groups.keys()].map(n => ({ icon: 'orbit', name: `Gruppe ${groups.get(n).collapsed ? 'aufklappen' : 'zuklappen'}: ${n}`, key: '', run: () => toggleGroup(n) })),
   ...(active && active.group ? [{ icon: 'x', name: 'Tab aus Gruppe entfernen', key: '', run: () => setGroup(active, null) }] : []),
@@ -630,6 +646,7 @@ $('#btnSettings').addEventListener('click', e => openPanel('settings', e.current
 $('#btnDl').addEventListener('click', e => openPanel('downloads', e.currentTarget));
 $('#btnCalc').addEventListener('click', e => openPanel('calc', e.currentTarget));
 $('#btnMenu').addEventListener('click', e => openPanel('menu', e.currentTarget));
+$('#btnGroup').addEventListener('click', () => openGroupMenu(active));
 $('#titlebar').addEventListener('dblclick', e => { if (e.target.closest('.tabstrip') && !e.target.closest('.tab,button')) newTab(); });
 addEventListener('resize', () => { omni.close(); big.close(); });
 
@@ -641,6 +658,7 @@ function keyName(e) {
   if (c && e.shiftKey && k === 'n') return 'incognito';
   if (c && e.shiftKey && k === 's') return 'snip';
   if (c && e.shiftKey && k === 'p') return 'pip';
+  if (c && e.shiftKey && k === 'g') return 'group';
   if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';
@@ -855,7 +873,7 @@ async function start() {
   pwUi.initPasswords({ activeId: () => active && active.id, refreshTab: id => { const t = tabs.get(id); if (t) { t.pw = (t.pw || 0) + 1; if (t === active) updateToolbar(); } }, refreshAll: () => updateToolbar() });
   initWallet();
   initCalc();
-  initPanels({ newTab: () => newTab(), incognito: () => ACTIONS.incognito(), snip: () => ACTIONS.snip(), watch: () => ACTIONS.watch(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
+  initPanels({ newTab: () => newTab(), group: () => openGroupMenu(active), incognito: () => ACTIONS.incognito(), snip: () => ACTIONS.snip(), watch: () => ACTIONS.watch(), overview: () => ov.open(), passwords: () => ACTIONS.passwords(), wallet: () => ACTIONS.wallet(), calc: () => ACTIONS.calc(), translate: () => ACTIONS.translate(), maps: () => ACTIONS.maps(), palette: q => pal.open(q), downloads: ACTIONS.downloads, settings: ACTIONS.settings, replayBoot, autostart: async on => { const r = await api.autostart.set(on); if (r && r.ok === false) toast(r.msg); else toast(on ? 'Dulidan Web startet jetzt mit Windows' : 'Autostart aus'); }, clearHistory: () => { clearHistory(); toast('Verlauf gelöscht'); }, quit, toast });
   pal.initPalette({
     tabs: () => strip.ids().map(id => tabs.get(id)).filter(Boolean).map(t => Object.assign(t, { active: t === active })),
     activate: t => activate(t),

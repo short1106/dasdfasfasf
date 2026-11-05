@@ -24,7 +24,12 @@ export class TabStrip {
     x.addEventListener('pointerdown', e => e.stopPropagation());
     x.addEventListener('click', e => { e.stopPropagation(); this.onClose(t); });
     el.addEventListener('pointerdown', e => this.down(e, t));
-    el.addEventListener('contextmenu', e => { e.preventDefault(); this.onMenu && this.onMenu(e, t); });
+    /* Rechte Maustaste schon beim Drücken: in der Titelleiste (Zieh-Bereich) kommt contextmenu unter Windows nicht zuverlässig an */
+    let rAt = 0;
+    const rmenu = e => { if (performance.now() - rAt < 500) return; rAt = performance.now(); this.onMenu && this.onMenu(e, t); };
+    el.addEventListener('pointerdown', e => { if (e.button === 2) { e.preventDefault(); rmenu(e); } });
+    el.addEventListener('mousedown', e => { if (e.button === 2) rmenu(e); });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); rmenu(e); });
     el.addEventListener('auxclick', e => { if (e.button === 1) { e.preventDefault(); this.onClose(t); } });
     t.el = el; t.elFav = fav; t.elTitle = title; t.elEq = eq;
     this.wrap.appendChild(el);
@@ -81,12 +86,13 @@ export class TabStrip {
     if (e.button !== 0) return;
     const r = t.el.getBoundingClientRect();
     this.drag = { t, el: t.el, sx: e.clientX, grab: e.clientX - r.left, started: false, x: new Spring(r.left, 0.3, 0.62), px: e.clientX, id: e.pointerId };
-    t.el.setPointerCapture(e.pointerId);
-    const move = ev => this.move(ev), up = ev => {
-      t.el.removeEventListener('pointermove', move); t.el.removeEventListener('pointerup', up); t.el.removeEventListener('pointercancel', up);
+    /* Am Fenster lauschen statt Pointer-Capture: beim Umsortieren wandert der Tab im DOM und verlöre sonst die Capture */
+    const move = ev => { if (ev.pointerId === e.pointerId) this.move(ev); }, up = ev => {
+      if (ev.pointerId !== e.pointerId) return;
+      removeEventListener('pointermove', move, true); removeEventListener('pointerup', up, true); removeEventListener('pointercancel', up, true);
       this.up(ev);
     };
-    t.el.addEventListener('pointermove', move); t.el.addEventListener('pointerup', up); t.el.addEventListener('pointercancel', up);
+    addEventListener('pointermove', move, true); addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
   }
   move(e) {
     const d = this.drag; if (!d) return;
@@ -122,7 +128,7 @@ export class TabStrip {
     el.classList.add('settle');
     el.style.transform = '';
     setTimeout(() => el.classList.remove('settle'), 750);
-    this.onReorder(this.ids());
+    this.onReorder(this.ids(), d.t);
   }
 
   /* ===== Glow-Indikator ===== */

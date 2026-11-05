@@ -87,11 +87,10 @@ export function chipBurst(wrap, name) {
 
 /* ===== Menü am Tab (Rechtsklick): Gruppe wählen, neue anlegen, entfernen ===== */
 let menuEl = null;
-export async function tabMenu(e, t, { assign, toggle, closeGroup }) {
+export function tabMenu(e, t, { assign, toggle, closeGroup }) {
   closeMenu();
-  e.preventDefault();
-  /* Das Menü fällt über die Seite: View dafür kurz verstecken */
-  await hold('tgmenu');
+  if (e && e.preventDefault) e.preventDefault();
+  if (!t || !t.el) return;
   const items = [];
   const names = [...new Set([...groups.keys(), ...PRESETS.map(p => p.name)])];
   items.push(h('div', { class: 'tgm-h' }, t.group ? 'GRUPPE · ' + t.group.toUpperCase() : 'ZU GRUPPE HINZUFÜGEN'));
@@ -119,7 +118,10 @@ export async function tabMenu(e, t, { assign, toggle, closeGroup }) {
   const r = t.el.getBoundingClientRect(), mw = 230;
   menuEl.style.left = Math.max(8, Math.min(innerWidth - mw - 8, r.left)) + 'px';
   menuEl.style.top = r.bottom + 6 + 'px';
+  /* Das Menü fällt über die Seite: View dafür verstecken (ohne zu warten, sonst hängt das Menü an der Seitenaufnahme) */
+  hold('tgmenu');
   sfx('open');
+  setTimeout(() => inp.focus({ preventScroll: true }), 50);
   setTimeout(() => { addEventListener('pointerdown', outside, true); addEventListener('keydown', escKey, true); }, 0);
 }
 const outside = e => { if (menuEl && !menuEl.contains(e.target)) closeMenu(); };

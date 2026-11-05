@@ -563,7 +563,7 @@ function wireAutofill(t, wc) {
 }
 
 /* ===== Shortcuts (aus UI und allen Tabs) ===== */
-const FOCUS_UI = new Set(['new-tab', 'incognito', 'snip', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
+const FOCUS_UI = new Set(['new-tab', 'incognito', 'snip', 'group', 'focus-omnibox', 'palette', 'settings', 'downloads', 'overview', 'find', 'passwords', 'calc']);  /* 'disco' bleibt im Tab */
 function keyName(i) {
   const c = i.control || i.meta, k = (i.key || '').toLowerCase();
   if (c && !i.alt) {
@@ -577,6 +577,7 @@ function keyName(i) {
     if (k === 'm' && i.shift) return 'disco';
     if (k === 's' && i.shift) return 'snip';
     if (k === 'p' && i.shift) return 'pip';
+    if (k === 'g' && i.shift) return 'group';
     if (k === 'r') return 'reload';
     if (k === ',') return 'settings';
     if (k === 'j') return 'downloads';
