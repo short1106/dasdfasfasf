@@ -17,6 +17,7 @@ import { addHistory, updateHistory, clearHistory, isBookmarked, toggleBookmark, 
 import { sfx } from './sound.js';
 import { openSnip } from './snip.js';
 import { applyJapan, refreshJapan } from './japan.js';
+import { applyRussia, refreshRussia, BAND_RU, BAND_RU2 } from './russia.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
 import { groups, ensureGroup, layoutGroups, chipBurst, tabMenu, PRESETS } from './groups.js';
@@ -472,7 +473,7 @@ function buildHome() {
   }));
 
   /* Slogan-Bänder */
-  fillBands(settings.theme === 'japan' ? BAND_A_JA : null, settings.theme === 'japan' ? BAND_B_JA : null);
+  themeBands();
 
   /* Klick auf freie Fläche: Schockwelle im Partikel-Logo */
   homeEl.addEventListener('pointerdown', e => {
@@ -569,6 +570,7 @@ const COMMANDS = () => [
   ...[...groups.keys()].map(n => ({ icon: 'orbit', name: `Gruppe ${groups.get(n).collapsed ? 'aufklappen' : 'zuklappen'}: ${n}`, key: '', run: () => toggleGroup(n) })),
   ...(active && active.group ? [{ icon: 'x', name: 'Tab aus Gruppe entfernen', key: '', run: () => setGroup(active, null) }] : []),
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
+  { icon: 'color', name: 'Design: Россия (Russland) an/aus', key: '', run: () => setSetting('theme', settings.theme === 'russland' ? 'dulidan' : 'russland') },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
   { icon: 'back', name: 'Zurück', key: 'Alt ←', run: () => back(active) },
@@ -742,15 +744,15 @@ onSettings(k => {
   if (k === 'accent' || k === 'custom' || k === 'anim') { logo.refresh(); nebula.refresh(); }
   if (k === 'engine') $('#bigEngine').textContent = engineName().toUpperCase();
   if (k === 'center') { logo.setShape(settings.center); if (active && active.home) logo.shock(); }
-  if (k === 'anim') refreshJapan();
+  if (k === 'anim') { refreshJapan(); refreshRussia(); }
   if (k === 'theme') {
-    const jp = settings.theme === 'japan';
-    applyJapan(jp, fillBands);
+    applyThemes();
     logo.refresh(); nebula.refresh();
-    /* Japan-Logo in der Mitte, beim Zurückschalten wieder das vorige Objekt */
-    if (jp && settings.center !== 'japan') { setSetting('centerBefore', settings.center); setSetting('center', 'japan'); }
-    else if (!jp && settings.center === 'japan' && settings.centerBefore) setSetting('center', settings.centerBefore);
-    toast(jp ? '和 Japan-Modus · ようこそ' : 'Dulidan-Design');
+    /* Logo des Designs in die Mitte, beim Zurückschalten wieder das vorige Objekt */
+    const want = THEME_LOGO[settings.theme], themed = Object.values(THEME_LOGO).includes(settings.center);
+    if (want && settings.center !== want) { if (!themed) setSetting('centerBefore', settings.center); setSetting('center', want); }
+    else if (!want && themed && settings.centerBefore) setSetting('center', settings.centerBefore);
+    toast(settings.theme === 'japan' ? '和 Japan-Modus · ようこそ' : settings.theme === 'russland' ? '❄ Russland-Modus · Добро пожаловать' : 'Dulidan-Design');
     if (active && active.home) logo.shock();
   }
 });
@@ -762,7 +764,19 @@ function fillBands(a, b) {
   fill($('#bandA'), a || [S, 'Dulidan Web']);
   fill($('#bandB'), b || ['Dream', 'Design', 'Develop', 'Dominate']);
 }
-applyJapan(settings.theme === 'japan', null);
+/* Designs: Japan und Russland bauen eigene Ebenen auf; die Bänder bekommen Wörter in der Sprache des Designs */
+const THEME_LOGO = { japan: 'japan', russland: 'russland' };
+function themeBands() {
+  const t = settings.theme;
+  fillBands(t === 'japan' ? BAND_A_JA : t === 'russland' ? BAND_RU2 : null, t === 'japan' ? BAND_B_JA : t === 'russland' ? BAND_RU : null);
+}
+function applyThemes() {
+  applyJapan(settings.theme === 'japan', null);
+  applyRussia(settings.theme === 'russland');
+  document.documentElement.dataset.theme = settings.theme || 'dulidan';
+  themeBands();
+}
+applyThemes();
 /* Doppelklick auf das Objekt: nächstes Objekt */
 function nextShape(dir = 1) {
   const L = (window.DW_SHAPES && window.DW_SHAPES.list) || [];

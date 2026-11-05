@@ -105,6 +105,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `audio.js`: Pegel → CSS-Variablen `--au`/`--bass`, `onKick`
   - `passwords.js`, `wallet.js`, `calcpanel.js`, `boot.js`, `fx.js` (Cursor, Ripple, Burst), `sound.js`, `data.js` (Verlauf/Lesezeichen in localStorage), `util.js`, `error.js`
 - **Design „Japan 和“** (Einstellung `theme`, Einstellungen → Design, Palette): `html[data-theme=japan]` in `css/japan.css`, `js/japan.js` (Kirschblüten-Canvas über der Oberfläche, rote Sonne mit Wolken, Senkrecht-Schrift, Untertitel, japanische Bänder). Farben über `JAPAN` in `settings.js` (überschreibt den Akzent, also auch WebGL-Logo und Orbit), Mitte wechselt auf das Japan-Logo und beim Ausschalten zurück (`centerBefore`). Schriften von Windows: Yu Mincho/Yu Gothic. Test `tests/e2e/japan.js`.
+- **Design „Россия“** (Einstellung `theme` = `russland`, Einstellungen → Design, Palette): `html[data-theme=russland]` in `css/russia.css`, `js/russia.js` (Schneefall-Canvas mit Glitzern, Kuppel-Silhouette im Basilius-Stil als einmal gezeichnete Canvas unten auf der Startseite, goldenes Glühen hinter dem Logo, Senkrecht-Schrift, Untertitel „ДУЛИДАН · СТУДИЯ“, kyrillische Bänder, Ornament-Borte unter der Leiste). Farben `RUSSIA` in `settings.js`, Logo `russland` in `shared/shapes.js` (D zwischen Zwiebelkuppeln, „ДУЛИДАН“, „СТУДИЯ“, Schneeflocken). `applyThemes()` in `app.js` schaltet Japan/Russland und setzt `data-theme`; `THEME_LOGO` wechselt die Mitte und merkt `centerBefore`. Bewusst ohne Flaggen oder politische Symbole. Test `tests/e2e/russia.js`.
 - **Animationsstufe:** `episch` / `normal` / `aus`. `prefers-reduced-motion` setzt den Standard auf `aus`. Federn als CSS-`linear()`-Easings (`--spring`, `--elastic`), die JS-Federn laufen zeitbasiert.
 
 ### 3.4 Eigene Ergebnisseite `shared/search/` (Desktop und Android)
@@ -273,7 +274,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `list`
   - `gen(key, n, logoImg)` → `{P, L}`, also Zielpunkte in [-1,1]² und Helligkeit
   - `spin(key)`, `diff(key)`, `has(key)`
-- **Formen:** `d`, `japan`, `blume`, `galaxie`, `herz`, `planet`, `atom`, `stern`, `schmetterling`.
+- **Formen:** `d`, `japan`, `russland`, `blume`, `galaxie`, `herz`, `planet`, `atom`, `stern`, `schmetterling`.
   - `d` und `japan` werden aus einer Canvas abgetastet. Das Japan-Logo besteht aus dem D, „ドゥリダン“ und „スタジオ“ mit Glitzer und Herzen. Die Schrift kommt vom System: Yu Gothic/Meiryo unter Windows, Noto CJK unter Android.
   - Alle anderen Formen sind Mathe.
 - **Wechsel:** Die Partikel haben zwei Zielpositionen (`aP`/`aQ`). `uMorph` geht in 1,6 s von 0 auf 1, dabei sprengen und wirbeln die Partikel. Danach wird das Ziel zur Ausgangsform.
@@ -403,6 +404,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `searchtest.js`: Ergebnisseite, braucht `DW_PROXY_BASE`
   - `mapnews.js`: Maps-News (Globus, Thema, Land → Schlagzeilen, Klick auf der Karte)
   - `groups.js`: Tab-Gruppen (Menü, Palette, Chips zu/auf, Orbit Sternbilder, Neustart)
+  - `russia.js`: Design Россия (Farben, Kuppeln, Schnee, Texte, Logo, Wechsel Japan → Russland → Dulidan)
   - `watch.js`: Seiten-Wächter (markieren, Änderung, Vorher/Nachher, Gesehen)
   - `snip.js`: Snipping-Tool (Bereich, Werkzeuge, Speichern, Kopieren, ganze Seite über `fixtures/site/long.html`)
   - `mobileanswers.js`: Sofort-Antworten im Handy-Format

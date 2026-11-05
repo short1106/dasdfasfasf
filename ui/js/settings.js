@@ -45,6 +45,8 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const DEFAULTS = { engine: 'dulidan', anim: reduced ? 'aus' : 'episch', accent: 'dulidan', custom: '#c020b8', sound: false, adblock: true, restore: true, center: 'd', autostart: false, theme: 'dulidan' };
 /* Design „Japan 和“: Ai-Indigo, Shu-Rot, Sakura – überschreibt die Akzentfarbe, solange es an ist */
 export const JAPAN = ['#2b2f77', '#e0393e', '#ffb7c5'];
+/* Design „Россия“: Nachtblau, Purpurrot, Gold */
+export const RUSSIA = ['#1b2a6b', '#d52b1e', '#e8b84a'];
 
 const subs = new Set();
 export const settings = { ...DEFAULTS, ...store.get('dw_settings', {}) };
@@ -62,6 +64,7 @@ export const onSettings = f => subs.add(f);
 
 export function accentColors() {
   if (settings.theme === 'japan') return JAPAN;
+  if (settings.theme === 'russland') return RUSSIA;
   return settings.accent === 'custom' ? deriveAccent(settings.custom) : (ACCENTS[settings.accent] || ACCENTS.dulidan).c;
 }
 

@@ -1,7 +1,7 @@
 /* Dulidan Web · shapes.js – Objekte für die Partikel-Mitte der Startseite (Desktop und Android)
    Jede Form liefert n Zielpunkte in [-1,1]² plus Helligkeit (0..1) und eine Eigenbewegung (Drehung).
    Klassisches Skript statt Modul: die Android-Startseite läuft über file://, dort laden keine ES-Module.
-   Aufbau: Liste · Abtasten aus Canvas (D, Japan-Logo) · Mathe-Formen · Erzeugen */
+   Aufbau: Liste · Abtasten aus Canvas (D, Japan-Logo, Russland-Logo) · Mathe-Formen · Erzeugen */
 (function (g) {
   'use strict';
   const TAU = Math.PI * 2, rnd = Math.random;
@@ -11,6 +11,7 @@
   const LIST = [
     ['d', 'Dulidan-D', 0, false],
     ['japan', 'Japan-Logo', 0, false],
+    ['russland', 'Russland-Logo', 0, false],
     ['blume', 'Blume', 0.06, false],
     ['galaxie', 'Galaxie', 0.22, true],
     ['herz', 'Herz', 0, false],
@@ -63,6 +64,47 @@
       spark(S * 0.2, S * 0.18, S * 0.06); spark(S * 0.8, S * 0.1, S * 0.045); spark(S * 0.84, S * 0.36, S * 0.03);
       const heart = (cx, cy, r) => { x.beginPath(); x.moveTo(cx, cy + r * 0.9); x.bezierCurveTo(cx - r * 1.6, cy - r * 0.2, cx - r * 0.6, cy - r * 1.3, cx, cy - r * 0.45); x.bezierCurveTo(cx + r * 0.6, cy - r * 1.3, cx + r * 1.6, cy - r * 0.2, cx, cy + r * 0.9); x.fill(); };
       x.fillStyle = '#ffb3e6'; heart(S * 0.13, S * 0.84, S * 0.04); heart(S * 0.87, S * 0.84, S * 0.04);
+    };
+  }
+
+  /* Russland-Logo: das D zwischen zwei Zwiebelkuppeln, darunter „ДУЛИДАН“ und klein „СТУДИЯ“, dazu Schneeflocken */
+  const RU_FONT = '"Segoe UI","Arial","Roboto","Noto Sans","DejaVu Sans",sans-serif';
+  function drawRussia(img) {
+    return (x, S) => {
+      drawLogo(img, 0.38, 0.03)(x, S);
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      const text = (t, size, y, col, sp) => {
+        x.font = `900 ${size}px ${RU_FONT}`; x.lineJoin = 'round';
+        if ('letterSpacing' in x) x.letterSpacing = sp + 'px';
+        x.strokeStyle = col; x.lineWidth = size * 0.08; x.strokeText(t, S / 2, y);
+        x.fillStyle = col; x.fillText(t, S / 2, y);
+        if ('letterSpacing' in x) x.letterSpacing = '0px';
+      };
+      text('ДУЛИДАН', S * 0.16, S * 0.6, '#ffffff', S * 0.006);
+      text('СТУДИЯ', S * 0.095, S * 0.78, '#ffd98a', S * 0.03);
+      /* Zwiebelkuppel mit Turm und Spitze, links und rechts vom D */
+      const dome = (cx, by, w, col) => {
+        x.fillStyle = col;
+        x.fillRect(cx - w * 0.32, by - w * 1.1, w * 0.64, w * 1.1);
+        const dy = by - w * 1.1;
+        x.beginPath(); x.moveTo(cx - w * 0.5, dy);
+        x.bezierCurveTo(cx - w * 0.85, dy - w * 0.45, cx - w * 0.3, dy - w * 0.8, cx, dy - w * 1.25);
+        x.bezierCurveTo(cx + w * 0.3, dy - w * 0.8, cx + w * 0.85, dy - w * 0.45, cx + w * 0.5, dy);
+        x.closePath(); x.fill();
+        x.fillRect(cx - w * 0.04, dy - w * 1.6, w * 0.08, w * 0.4);
+        x.beginPath(); x.arc(cx, dy - w * 1.62, w * 0.09, 0, TAU); x.fill();
+      };
+      dome(S * 0.16, S * 0.44, S * 0.11, '#ffcf6b'); dome(S * 0.84, S * 0.44, S * 0.11, '#ffcf6b');
+      dome(S * 0.06, S * 0.46, S * 0.06, '#ff8a7a'); dome(S * 0.94, S * 0.46, S * 0.06, '#ff8a7a');
+      /* Schneeflocken: sechs Arme */
+      const flake = (cx, cy, r) => {
+        x.strokeStyle = '#fff'; x.lineWidth = r * 0.22; x.lineCap = 'round';
+        for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); x.stroke(); }
+      };
+      flake(S * 0.24, S * 0.1, S * 0.04); flake(S * 0.78, S * 0.08, S * 0.032); flake(S * 0.12, S * 0.88, S * 0.03); flake(S * 0.88, S * 0.9, S * 0.035);
+      /* Ornament-Linie unter dem Namen */
+      x.fillStyle = '#ffd98a';
+      for (let k = -4; k <= 4; k++) { const cx = S / 2 + k * S * 0.05, cy = S * 0.69; x.beginPath(); x.moveTo(cx, cy - S * 0.014); x.lineTo(cx + S * 0.014, cy); x.lineTo(cx, cy + S * 0.014); x.lineTo(cx - S * 0.014, cy); x.fill(); }
     };
   }
 
@@ -155,6 +197,7 @@
   function gen(key, n, img) {
     let r = null;
     if (key === 'japan') r = fromCanvas(drawJapan(img), n);
+    else if (key === 'russland') r = fromCanvas(drawRussia(img), n);
     else if (key === 'schmetterling') r = fromCanvas(drawButterfly, n);
     else if (MATH[key]) r = MATH[key](n);
     if (!r) r = fromCanvas(drawLogo(img, 1, 0), n);
