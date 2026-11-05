@@ -181,7 +181,11 @@ body.closing #app{animation:crt .45s var(--ease-io) forwards}
 .ov.out{opacity:0}
 .ov-hud{position:absolute;inset:0;z-index:31;pointer-events:none;font-family:var(--mono);opacity:0;transition:opacity .4s}
 .ov-hud.on{opacity:1}
-.ov-top{position:absolute;left:28px;right:28px;top:22px;display:flex;justify-content:space-between;font-size:10px;letter-spacing:.24em;color:var(--muted)}
+.ov-top{position:absolute;left:28px;right:28px;top:22px;display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.24em;color:var(--muted)}
+.ov-style{pointer-events:auto;padding:7px 14px;border-radius:999px;border:1px solid rgba(var(--pink-rgb),.4);background:rgba(13,10,21,.75);color:var(--pink);font:600 10px var(--mono);letter-spacing:.2em;box-shadow:0 0 18px rgba(var(--mag-rgb),.3);transition:background .2s,transform .45s var(--spring)}
+.ov-style:hover{background:rgba(var(--mag-rgb),.3);transform:scale(1.06)}
+.ov-style.pop{animation:stylePop .7s var(--elastic)}
+@keyframes stylePop{0%{transform:scale(.7);box-shadow:0 0 50px rgba(var(--pink-rgb),.9)}}
 .ov-title{position:absolute;left:28px;bottom:86px;max-width:60%;font-family:var(--sans);font-size:clamp(26px,3.4vw,46px);font-weight:700;letter-spacing:-.04em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 30px rgba(var(--mag-rgb),.7)}
 .ov-host{position:absolute;left:30px;bottom:62px;font-size:11px;letter-spacing:.2em;color:var(--pink)}
 .ov-keys{position:absolute;left:28px;right:28px;bottom:22px;display:flex;flex-wrap:wrap;gap:18px;font-size:10px;letter-spacing:.08em;color:var(--dim)}

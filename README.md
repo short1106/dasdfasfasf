@@ -90,7 +90,7 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | `Strg+Tab` / `Strg+Umschalt+Tab` | Nächster / vorheriger Tab |
 | `Strg+L` | Adressleiste fokussieren |
 | `Strg+K` | Command Palette (Tabs, Lesezeichen, Verlauf, Befehle) |
-| `Strg+E` | Orbit: 3D-Tab-Übersicht |
+| `Strg+E` | Orbit: 3D-Tab-Übersicht (darin `S`: Stil wechseln – Spirale, Karussell, Coverflow) |
 | `Strg+F` / `F3` | Auf der Seite suchen / nächster Treffer |
 | `Strg +` / `Strg -` / `Strg 0` | Zoom größer / kleiner / zurücksetzen |
 | `Strg+D` | Lesezeichen setzen oder entfernen |

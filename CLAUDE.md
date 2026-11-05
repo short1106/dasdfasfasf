@@ -100,7 +100,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `tabs.js`, `view.js`, `palette.js`, `panels.js`
   - `gl.js`: WebGL-Partikel-Logo und Nebel
   - `morph.js`: Partikel-Seitenwechsel
-  - `overview.js`: **Orbit**, die 3D-Tab-Übersicht in WebGL (Spirale, Sternenfeld, Gitterboden)
+  - `overview.js`: **Orbit**, die 3D-Tab-Übersicht in WebGL mit drei Stilen (Taste `S` oder Chip oben, gemerkt in `dw_orbit_style`): **Spirale** (Flug, Gitterboden), **Karussell** (Ring um einen Mittelpunkt, Neon-Kreise mit drehenden Speichen, hintere Karten blenden aus), **Coverflow** (Mitte frontal, Seiten schräg, Spiegelbild im Boden bei y = −1,12). `place(stil, i)` + `camOf(stil)`, Wechsel als 0,9-s-Morph zwischen altem und neuem Platz. Test `tests/e2e/orbitstyles.js`
   - `audio.js`: Pegel → CSS-Variablen `--au`/`--bass`, `onKick`
   - `passwords.js`, `wallet.js`, `calcpanel.js`, `boot.js`, `fx.js` (Cursor, Ripple, Burst), `sound.js`, `data.js` (Verlauf/Lesezeichen in localStorage), `util.js`, `error.js`
 - **Animationsstufe:** `episch` / `normal` / `aus`. `prefers-reduced-motion` setzt den Standard auf `aus`. Federn als CSS-`linear()`-Easings (`--spring`, `--elastic`), die JS-Federn laufen zeitbasiert.

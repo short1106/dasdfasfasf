@@ -1,7 +1,8 @@
 /* Dulidan Web · overview.js – "Orbit": alle Tabs als schwebende Live-Vorschauen im WebGL-Raum
-   Maus = fliegen, Rad/Pfeile = durch die Spirale, Klick/Enter = hineinzoomen bis die Karte die Seite exakt füllt.
-   Aufbau: Mathe · Shader · Karten-Texturen · Layout/Kamera · Picking · Öffnen/Schließen */
-import { $, api, clamp, lerp, anim, hostOf, scramble, hexToRgb } from './util.js';
+   Maus = fliegen, Rad/Pfeile = durch die Tabs, Klick/Enter = hineinzoomen bis die Karte die Seite exakt füllt.
+   Drei Stile (Taste S / Chip oben): Spirale (Flug durch den Raum), Karussell (Ring mit Neon-Kreisen), Coverflow (Spiegelboden).
+   Aufbau: Mathe · Shader · Karten-Texturen · Stile (Platz, Kamera, Boden) · Picking · Öffnen/Schließen */
+import { $, api, clamp, lerp, anim, hostOf, scramble, hexToRgb, store } from './util.js';
 import { accentColors } from './settings.js';
 import { audio } from './audio.js';
 import { hold, release } from './view.js';
@@ -165,14 +166,41 @@ export function createOverview(ctx) {
 
   const layoutPos = i => [Math.sin(i * 0.85) * 2.5, Math.cos(i * 0.85) * 0.85 - 0.15, -i * 4.8];
 
-  /* Karten, an denen die Kamera vorbeigeflogen ist, weichen zur Seite und verblassen */
+  /* ===== Stile: Platz jeder Karte (Mitte, Drehung, Sichtbarkeit), Ruhe-Kamera, Boden ===== */
+  const STYLES = ['spirale', 'karussell', 'coverflow'], STYLE_NAME = { spirale: 'SPIRALE', karussell: 'KARUSSELL', coverflow: 'COVERFLOW' };
+  let style = STYLES.includes(store.get('dw_orbit_style', 'spirale')) ? store.get('dw_orbit_style', 'spirale') : 'spirale';
+  let prevStyle = style, morphT0 = -1e9;
+  const MORPH = 900;
+  const ringN = () => Math.max(cards.length, 7), ringStep = () => (Math.PI * 2) / ringN(), ringR = () => Math.max(6.5, ringN() * 1.05);
+  /* Karten, an denen die Kamera vorbeigeflogen ist, weichen zur Seite und verblassen (nur Spirale) */
   const passed = i => clamp((f - i - 0.2) * 1.4, 0, 1);
+  function place(st, i, t) {
+    if (st === 'karussell') {
+      const th = (i - f) * ringStep(), R = ringR();
+      return { c: [Math.sin(th) * R, 0, -R + Math.cos(th) * R], yaw: th, vis: clamp((Math.cos(th) + 0.25) * 1.6, 0, 1), side: 0 };
+    }
+    if (st === 'coverflow') {
+      const d = i - f, s = clamp(d, -1, 1), a = Math.abs(d);
+      return { c: [s * 2.7 + (d - s) * 1.05, -0.05, -Math.abs(s) * 2.3 - (a - Math.abs(s)) * 0.35], yaw: -s * 1.05, vis: clamp(1 - (a - 5) * 0.5, 0, 1), side: 0 };
+    }
+    const c = layoutPos(i), pa = zoom.idx === i && zoom.v > 0.02 ? 0 : passed(i);
+    c[0] += Math.sign(c[0] || 1) * pa * 4; c[1] += pa * 1.2;
+    return { c, yaw: -Math.sin(i * 0.85) * 0.3 + Math.sin(t * 0.55 + i) * 0.04, vis: 1 - pa, side: 1 };
+  }
+  /* Beim Stilwechsel fliegen die Karten weich vom alten in den neuen Platz */
+  const morphK = () => { const k = clamp((performance.now() - morphT0) / MORPH, 0, 1); return easeIO(k); };
+  function placed(i, t) {
+    const b = place(style, i, t), k = morphK();
+    if (k >= 1 || prevStyle === style) return b;
+    const a = place(prevStyle, i, t);
+    return { c: mix3(a.c, b.c, k), yaw: lerp(a.yaw, b.yaw, k), vis: lerp(a.vis, b.vis, k), side: lerp(a.side, b.side, k) };
+  }
+  const vis = (i, t) => placed(i, t).vis;
   function cardXf(card, i, t, zAmt) {
     const z = zoom.idx === i ? zAmt : 0;
-    const base = layoutPos(i), pa = zoom.idx === i && zoom.v > 0.02 ? 0 : passed(i);
-    base[0] += Math.sign(base[0] || 1) * pa * 4; base[1] += pa * 1.2;
-    const bob = (1 - z) * Math.sin(t * 0.9 + i * 1.7) * 0.09;
-    const yaw = (1 - z) * (-Math.sin(i * 0.85) * 0.3 + Math.sin(t * 0.55 + i) * 0.04);
+    const p = placed(i, t), base = p.c.slice();
+    const bob = (1 - z) * Math.sin(t * 0.9 + i * 1.7) * (0.04 + 0.05 * p.side);
+    const yaw = (1 - z) * p.yaw;
     const pitch = (1 - z) * Math.sin(t * 0.7 + i * 2.1) * 0.03;
     const s = 1 + (i === hot ? 0.06 : 0) * (1 - z);
     card.sc = lerp(card.sc || 1, s, 0.15);
@@ -181,12 +209,27 @@ export function createOverview(ctx) {
     return { c: [base[0], base[1] + bob, base[2]], X, Y, N };
   }
 
-  function restCam(t) {
+  function camOf(st, t) {
+    if (st === 'karussell') return { e: [mx * 2.2 + Math.sin(t * 0.25) * 0.3, 1.25 - my * 1.1, 7.4], c: [mx * 0.6, -0.25 - my * 0.3, -1.6] };
+    if (st === 'coverflow') return { e: [mx * 1.3, 0.3 - my * 0.55, 6.1], c: [mx * 0.35, -0.15, -0.7] };
     const c = layoutPos(f);
-    const e = [c[0] * 0.55 + mx * 1.8 + Math.sin(t * 0.25) * 0.25, c[1] * 0.5 + 0.55 - my * 1.0, c[2] + 6.4];
-    const tg = [c[0] * 0.8 + mx * 0.7, c[1] - my * 0.35, c[2] - 1.2];
-    return { e, c: tg };
+    return { e: [c[0] * 0.55 + mx * 1.8 + Math.sin(t * 0.25) * 0.25, c[1] * 0.5 + 0.55 - my * 1.0, c[2] + 6.4], c: [c[0] * 0.8 + mx * 0.7, c[1] - my * 0.35, c[2] - 1.2] };
   }
+  function restCam(t) {
+    const b = camOf(style, t), k = morphK();
+    if (k >= 1 || prevStyle === style) return b;
+    const a = camOf(prevStyle, t);
+    return { e: mix3(a.e, b.e, k), c: mix3(a.c, b.c, k) };
+  }
+  function setStyle(next) {
+    if (next === style) return;
+    prevStyle = style; style = next; morphT0 = performance.now();
+    store.set('dw_orbit_style', style);
+    $('#ovStyle').textContent = 'STIL · ' + STYLE_NAME[style];
+    $('#ovStyle').classList.remove('pop'); void $('#ovStyle').offsetWidth; $('#ovStyle').classList.add('pop');
+    sfx('fire');
+  }
+  const cycleStyle = () => setStyle(STYLES[(STYLES.indexOf(style) + 1) % STYLES.length]);
   function fillCam(xf) { return { e: add(xf.c, mulS(xf.N, D_FILL)), c: xf.c }; }
 
   function buildCards() {
@@ -252,7 +295,7 @@ export function createOverview(ctx) {
       if (tt <= 0 || tt > bestT) return;
       const hp = sub(add(cam.e, mulS(dir, tt)), xf.c);
       const lx = dot(hp, xf.X) / dot(xf.X, xf.X), ly = dot(hp, xf.Y) / dot(xf.Y, xf.Y);
-      if (Math.abs(lx) <= asp && Math.abs(ly) <= 1 && passed(i) < 0.5) { best = i; bestT = tt; }
+      if (Math.abs(lx) <= asp && Math.abs(ly) <= 1 && vis(i, t) > 0.5) { best = i; bestT = tt; }
     });
     return best;
   }
@@ -290,17 +333,37 @@ export function createOverview(ctx) {
     gl.enable(gl.BLEND);
     const solidT = zoom.v > 0.985;
 
-    /* Gitterboden */
+    /* Boden je Stil: Gitter (Spirale), Neon-Ringe mit Speichen (Karussell), Spiegel-Horizont (Coverflow) */
     gl.blendFunc(gl.ONE, gl.ONE);
-    const L = [], y = -3.2, z0 = Math.floor(cam.e[2] / 3) * 3;
-    for (let k = -2; k < 26; k++) L.push(-40, y, z0 - k * 3, 40, y, z0 - k * 3);
-    for (let x = -36; x <= 36; x += 3) L.push(x, y, z0 + 6, x, y, z0 - 78);
+    const L = [], mk = morphK(), wS = (s) => (style === s ? (prevStyle === s ? 1 : mk) : prevStyle === s ? 1 - mk : 0);
+    const floorA = { spirale: wS('spirale'), karussell: wS('karussell'), coverflow: wS('coverflow') };
+    if (floorA.spirale > 0.01) {
+      const y = -3.2, z0 = Math.floor(cam.e[2] / 3) * 3;
+      for (let k = -2; k < 26; k++) L.push(-40, y, z0 - k * 3, 40, y, z0 - k * 3);
+      for (let x = -36; x <= 36; x += 3) L.push(x, y, z0 + 6, x, y, z0 - 78);
+    }
+    const nGrid = L.length;
+    if (floorA.karussell > 0.01) {
+      const R = ringR(), cy = -1.9, cz = -R, rot = -f * ringStep() + t * 0.05;
+      for (let r = 1; r <= 7; r++) {
+        const rr = R * (0.22 * r) * (1 + audio.bass * 0.05 * (r % 2)), seg = 72;
+        for (let k = 0; k < seg; k++) { const a1 = (k / seg) * 6.2832, a2 = ((k + 1) / seg) * 6.2832; L.push(Math.sin(a1) * rr, cy, cz + Math.cos(a1) * rr, Math.sin(a2) * rr, cy, cz + Math.cos(a2) * rr); }
+      }
+      for (let k = 0; k < 24; k++) { const a = rot + (k / 24) * 6.2832; L.push(0, cy, cz, Math.sin(a) * R * 1.6, cy, cz + Math.cos(a) * R * 1.6); }
+    }
+    const nRing = L.length;
+    if (floorA.coverflow > 0.01) {
+      const y = -1.12;
+      for (let k = 0; k < 14; k++) { const z = 3 - k * k * 0.32; L.push(-30, y, z, 30, y, z); }
+    }
     gl.useProgram(LP.p);
     gl.bindBuffer(gl.ARRAY_BUFFER, lines); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(L), gl.DYNAMIC_DRAW);
     const la = LP.a('aP'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 3, gl.FLOAT, false, 0, 0);
     gl.uniformMatrix4fv(LP.u.uPV, false, PV); gl.uniform3fv(LP.u.uEye, cam.e); gl.uniform3fv(LP.u.uCol, g1);
-    gl.uniform1f(LP.u.uA, (0.55 + audio.bass * 0.9) * (1 - zoom.v));
-    gl.drawArrays(gl.LINES, 0, L.length / 3);
+    const baseA = (0.55 + audio.bass * 0.9) * (1 - zoom.v);
+    if (nGrid) { gl.uniform1f(LP.u.uA, baseA * floorA.spirale); gl.drawArrays(gl.LINES, 0, nGrid / 3); }
+    if (nRing > nGrid) { gl.uniform3fv(LP.u.uCol, mix3(g2, g3, 0.5 + 0.5 * Math.sin(t * 1.3))); gl.uniform1f(LP.u.uA, baseA * 2.6 * floorA.karussell); gl.drawArrays(gl.LINES, nGrid / 3, (nRing - nGrid) / 3); }
+    if (L.length > nRing) { gl.uniform3fv(LP.u.uCol, mix3(g3, [1, 1, 1], 0.3)); gl.uniform1f(LP.u.uA, baseA * 0.6 * floorA.coverflow); gl.drawArrays(gl.LINES, nRing / 3, (L.length - nRing) / 3); }
     gl.disableVertexAttribArray(la);
 
     /* Sterne */
@@ -322,6 +385,19 @@ export function createOverview(ctx) {
     gl.uniform1f(CP.u.uAsp, asp); gl.uniform1f(CP.u.uM, 0.5); gl.uniform1f(CP.u.uT, t);
     gl.uniform3fv(CP.u.uG1, g2); gl.uniform3fv(CP.u.uG2, g3); gl.uniform1i(CP.u.uTex, 0); gl.uniform1i(CP.u.uLbl, 1);
     const order = cards.map((c, i) => [i, cardXf(c, i, t, zoom.v)]).sort((a, b) => Math.hypot(...sub(b[1].c, cam.e)) - Math.hypot(...sub(a[1].c, cam.e)));
+    /* Coverflow: Spiegelbild jeder Karte im Boden (an y = -1,12 gespiegelt, schwach) */
+    if (floorA.coverflow > 0.01 && zoom.v < 0.98) {
+      const yf = -1.12;
+      for (const [i, xf] of order) {
+        const c = cards[i];
+        gl.uniform3fv(CP.u.uC, [xf.c[0], 2 * yf - xf.c[1], xf.c[2]]); gl.uniform3fv(CP.u.uX, [xf.X[0], -xf.X[1], xf.X[2]]); gl.uniform3fv(CP.u.uY, [xf.Y[0], -xf.Y[1], xf.Y[2]]);
+        gl.uniform1f(CP.u.uHot, 0); gl.uniform1f(CP.u.uAu, 0); gl.uniform1f(CP.u.uSolid, 0);
+        gl.uniform1f(CP.u.uFade, 0.22 * floorA.coverflow * vis(i, t) * (1 - zoom.v));
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.tex);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, c.lbl);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    }
     for (const [i, xf] of order) {
       const c = cards[i];
       const isZ = i === zoom.idx && zoom.v > 0.02;
@@ -329,7 +405,7 @@ export function createOverview(ctx) {
       gl.uniform3fv(CP.u.uC, xf.c); gl.uniform3fv(CP.u.uX, xf.X); gl.uniform3fv(CP.u.uY, xf.Y);
       gl.uniform1f(CP.u.uHot, c.hot); gl.uniform1f(CP.u.uAu, c.tab && audio.tabId === c.id ? audio.level : 0);
       gl.uniform1f(CP.u.uSolid, isZ ? zoom.v : 0);
-      gl.uniform1f(CP.u.uFade, isZ ? 1 : solidT ? 0 : 1 - passed(i));
+      gl.uniform1f(CP.u.uFade, isZ ? 1 : solidT ? 0 : vis(i, t));
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.tex);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, c.lbl);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -379,6 +455,7 @@ export function createOverview(ctx) {
     else if (k === 'ArrowLeft' || k === 'ArrowUp') { e.preventDefault(); fT = clamp(Math.round(fT) - 1, 0, cards.length - 1); }
     else if (k === 'Enter') { e.preventDefault(); enter(clamp(Math.round(fT), 0, cards.length - 1)); }
     else if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); kill(clamp(Math.round(fT), 0, cards.length - 1)); }
+    else if ((k === 's' || k === 'S') && !e.ctrlKey && !e.metaKey) { e.preventDefault(); cycleStyle(); }
   };
 
   async function kill(i) {
@@ -436,6 +513,7 @@ export function createOverview(ctx) {
     zoom = { idx: ai, v: 1, from: 1, to: 1, t0: 0, dur: 0, done: null };
     t0 = performance.now(); refreshT = t0;
     cv.hidden = false; hud.hidden = false;
+    $('#ovStyle').textContent = 'STIL · ' + STYLE_NAME[style]; prevStyle = style;
     document.body.classList.add('orbit');
     addEventListener('keydown', onKey, true);
     cv.addEventListener('pointermove', onMove); cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('click', onClick);
@@ -454,5 +532,6 @@ export function createOverview(ctx) {
   }
 
   new ResizeObserver(() => { if (open) size(); }).observe(vp);
+  $('#ovStyle').addEventListener('click', e => { e.stopPropagation(); cycleStyle(); });
   return { ok: true, open: openOv, close, isOpen: () => open, toggle: () => (open ? close() : openOv()), closeNow: () => open && shut() };
 }
