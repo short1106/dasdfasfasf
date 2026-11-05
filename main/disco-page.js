@@ -628,8 +628,8 @@
     emit(400, 0, 0, 0.05, 1.8, FX.hue);
     raf = requestAnimationFrame(loop);
     cmd('ready');
-    /* Ohne Video gleich in Lyric Motion – das passt zu reinem Audio besser */
-    setTimeout(() => { if (on && hasVideo === false && mode === 'video') setMode('motion'); }, 1500);
+    /* Startmodus ist Lyric Motion (Wunsch des Nutzers), V wechselt zum Video */
+    setTimeout(() => { if (on && mode === 'video') setMode('motion'); }, 300);
   }
   function stop() {
     if (!on) return;

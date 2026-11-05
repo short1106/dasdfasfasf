@@ -161,7 +161,7 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
   - **Lyric Motion** (`V` schaltet live um): ohne Video, nur die Wörter im 3D-Raum wie im Orbit, mit Sternen, Gitterboden und fliegender Kamera.
     - Die Wörter knallen aus der Tiefe (Slam), fliegen vorbei, stapeln sich, glitchen, kreisen oder zerfallen in Partikel.
     - Der Refrain bekommt automatisch die krassesten Effekte. Beim Drop rollt die Kamera und das Bild invertiert kurz.
-    - Läuft nur Audio, startet Lyric Motion von selbst.
+    - Die Disko startet immer in Lyric Motion, `V` holt das Video in die Mitte.
   - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.).
     - Zuerst kommen die **YouTube-Untertitel** des Videos, wenn es welche gibt. Die sind exakt auf das Video getimt, Intro inklusive.
     - Sonst kommen synchronisierte Texte von [LRCLIB](https://lrclib.net). Die werden **am echten Gesang ausgerichtet**: Bis der Gesang einsetzt, steht „♪ warte auf Gesang …“ da, danach rutscht der Text auf die gesungenen Zeilen.

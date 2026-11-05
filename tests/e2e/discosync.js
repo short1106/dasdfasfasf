@@ -1,6 +1,6 @@
 /* Disko: Lyrics-Timing und Lyric Motion.
    intro.html: Video mit 6-s-Intro, LRCLIB-Text ohne Intro → Lyrics müssen warten und sich auf +6 s ausrichten.
-   Dann: V schaltet auf Lyric Motion (Screenshots), S synchronisiert und wird gemerkt.
+   Startet in Lyric Motion, dann: V schaltet auf Video (Screenshots), S synchronisiert und wird gemerkt.
    Vorher: tests/serve.sh (8798 + make-track.py phrases für phrases.webm). */
 const { _electron } = require('playwright');
 const path = require('path'), fs = require('fs');
@@ -29,7 +29,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     log.push(r);
     if (i === 11) await shot('s1-video-lyrics.png');
     if (i === 14) { await key('V'); }
-    if (i === 17 || i === 19 || i === 21) await shot('s2-motion-' + i + '.png');
+    if (i === 17 || i === 19 || i === 21) await shot('s2-video-' + i + '.png');
     await wait(1000);
   }
   console.log(log.join('\n'));

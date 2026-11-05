@@ -188,8 +188,8 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Stile: Refrain (mehrfach vorkommende Zeilen) → Slam/Shatter, Energie > 0,55 → Glitch/Stack, sonst Fly/Ring.
   - Bass → Kamera-Punch, Stimme → Leuchten, Melodie → Farbfluss, Drop → Kamera-Rolle, Explosion, kurzer Invert.
   - Farben über `hsv()` auf Dulidan-Töne gefaltet (Blauviolett bis Pink).
-  - Ohne Video startet der Modus nach 1,5 s selbst. Ohne Lyrics laufen Titel und „DULIDAN DISCO“ (`idleMotion`).
-  - Welcher Modus bei Videos zuerst kommt: noch offen, Standard ist Video.
+  - Ohne Lyrics laufen Titel und „DULIDAN DISCO“ (`idleMotion`).
+  - Startmodus ist immer Lyric Motion (vom Nutzer entschieden), `V` wechselt zum Video-Modus.
 - **Test:** `tests/e2e/discosync.js` mit `intro.html` (`phrases.webm`, 6-s-Intro, LRC ohne Intro → erwartet +6 s, Sync-Datei 6).
 
 ### 3.9 Dulidan Maps `shared/maps/` (Desktop)
@@ -418,7 +418,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
 4. Idee E (Whisper/KI-Spracherkennung im Browser) bewusst **nicht**: zu schwer, Gesang wird schlecht erkannt.
 
 ### 7.2 Neuer Modus „Lyric Motion“ (Desktop) – ERLEDIGT (siehe 3.6)
-> Umgesetzt in `main/disco-motion.js`. Offen: Startmodus bei Videos (jetzt Video) mit dem Nutzer klären; Ideen wie Echo-Trails noch nicht drin.
+> Umgesetzt in `main/disco-motion.js`, Startmodus Lyric Motion. Ideen wie Echo-Trails noch nicht drin.
 
 Der Nutzer findet die Idee „geil“: ein Modus **ohne Video**, nur Motion-Art-Lyrics. Schnell, kraftvoll, mit dem Hintergrund verzahnt, **im Stil von Orbit** (3D-Raum, Sternenfeld, Gitterboden, fliegende Kamera; Technik und Look aus `ui/js/overview.js` übernehmen).
 
