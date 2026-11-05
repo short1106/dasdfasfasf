@@ -62,7 +62,7 @@ async function run(force) {
     setStatus('');
     if (shownLoad) refreshInstalled();
     engineBadge(r.engine);
-    $('#via').textContent = r.engine === 'local' ? '🔒 LOKAL · NICHTS VERLÄSST DEN PC' : r.engine === 'online' ? '☁ ONLINE · MYMEMORY' : '';
+    $('#via').textContent = r.engine === 'local' ? '🔒 LOKAL · NICHTS VERLÄSST ' + (/Android/.test(navigator.userAgent) ? 'DAS HANDY' : 'DEN PC') : r.engine === 'online' ? '☁ ONLINE · MYMEMORY' : '';
     await morphTo(out, [...out.querySelectorAll('.w')].map(w => w.textContent), words(r.text), S.to);
     document.title = text.slice(0, 40) + ' · Dulidan Übersetzer';
     history.replaceState(null, '', '?' + new URLSearchParams({ q: text.slice(0, 1500), from: S.from, to: S.to }));

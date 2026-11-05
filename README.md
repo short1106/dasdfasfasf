@@ -44,6 +44,9 @@ Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ord
   - Rechner: über den Knopf oben auf der Startseite oder im Menü. Er fällt von oben ein, Wischen nach oben schließt ihn.
     - Tippst du eine Rechnung ins Suchfeld (etwa `12*(3+4)`), steht das Ergebnis sofort darunter.
     - Enter öffnet den Rechner, Antippen des Vorschlags kopiert das Ergebnis.
+- **Dulidan Maps** (`maps ort`, Startseiten-Karte „Maps“ oder Menü → „Maps“): dieselbe Nachtkarte wie am PC, mit Suche, Routen und Verkehrs-Modus (Menü → „Verkehr“).
+  - „Mein Standort“ nimmt auf dem Handy das echte GPS. Android fragt beim ersten Antippen einmal nach der Erlaubnis. Nur Dulidan Maps bekommt den Standort, fremde Seiten nie.
+- **Übersetzer** (`tr text` oder Menü → „Übersetzer“): Deutsch, Englisch, Spanisch und Französisch übersetzt das Handy selbst, nach einmaligem Laden des Sprachpakets auch offline. Japanisch und Türkisch gehen online.
 - **Widget „Dulidan Suche“ für den Startbildschirm:** Menü → „Widget“ legt es direkt ab. Alternativ: Startbildschirm lange drücken → Widgets → Dulidan Web.
   - Tippen öffnet einen leeren Tab mit Tastatur.
   - Das Mikrofon startet die Sprachsuche.

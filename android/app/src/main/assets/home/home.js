@@ -253,7 +253,7 @@
 
   /* ===== Suche ===== */
   const bar = $('#bar'), q = $('#q'), chip = $('#chip');
-  const SC = { yt: 'YouTube', gh: 'GitHub', wiki: 'Wikipedia', maps: 'Maps', mc: 'Minecraft Wiki' };
+  const SC = { yt: 'YouTube', gh: 'GitHub', wiki: 'Wikipedia', maps: 'Maps', tr: 'Übersetzer', mc: 'Minecraft Wiki' };
   let sc = null, beamA = 0, beamV = 0, last = performance.now();
   function setChip(k) { sc = k; chip.hidden = !k; if (k) { chip.textContent = SC[k].toUpperCase(); app.haptic('tick'); } }
   function beamStep(now) {
@@ -266,7 +266,7 @@
   q.addEventListener('blur', () => bar.classList.remove('focus'));
   q.addEventListener('input', () => {
     beamV = Math.min(beamV + 500, 2800);
-    const m = !sc && /^(yt|gh|wiki|maps|mc)\s(.*)$/i.exec(q.value);
+    const m = !sc && /^(yt|gh|wiki|maps|tr|mc)\s(.*)$/i.exec(q.value);
     if (m) { setChip(m[1].toLowerCase()); q.value = m[2]; }    showCalc();
   });
   /* Rechnung im Suchfeld → Ergebnis live darunter, Tippen öffnet den Rechner */
@@ -318,7 +318,7 @@
     d: '<path d="M6 4h6c5 0 8 3.4 8 8s-3 8-8 8H6zM10 8v8h2c2.4 0 4-1.6 4-4s-1.6-4-4-4z" fill="currentColor" stroke="none"/>'
   };
   const CARDS = [['YouTube', 'yt', 'https://m.youtube.com'], ['GitHub', 'gh', 'https://github.com'], ['Wikipedia', 'wiki', 'https://de.m.wikipedia.org'],
-    ['Maps', 'maps', 'https://www.google.com/maps'], ['Minecraft', 'mc', 'https://de.minecraft.wiki'], ['Dulidan', 'd', 'https://dulidan-studios.com']];
+    ['Maps', 'maps', 'https://dulidan.search/maps/index.html'], ['Minecraft', 'mc', 'https://de.minecraft.wiki'], ['Dulidan', 'd', 'https://dulidan-studios.com']];
   $('#cards').append(...CARDS.map(([n, ic, url], i) => {
     const c = document.createElement('button'); c.className = 'card'; c.style.setProperty('--i', i);
     c.innerHTML = `<svg viewBox="0 0 24 24">${ICONS[ic]}</svg><span class="n"></span>`;

@@ -158,4 +158,14 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .lg-live span{color:var(--text)}
 @keyframes blink{50%{opacity:.25}}
 .lg-note{margin-top:6px;font-size:11.5px;color:var(--dim);line-height:1.45}
-@media (max-width:640px){.lg{left:10px;right:10px;bottom:14px;width:auto}}
+/* Handy: kompakt, drei Schalter nebeneinander, Steuerung rutscht darüber */
+@media (max-width:640px){
+  .lg{left:10px;right:10px;bottom:calc(14px + env(safe-area-inset-bottom));width:auto;padding:10px 10px 8px}
+  .lg-rows{flex-direction:row}
+  .lg-row{flex:1;grid-template-columns:1fr;justify-items:center;text-align:center;gap:4px;padding:8px 4px}
+  .lg-row:hover{transform:none}
+  .lg-row span{text-align:center;font-size:10px}
+  .lg-ico{width:30px;height:30px;font-size:15px}
+  .lg-note{font-size:10.5px}
+  body.lg-on .ctl{bottom:calc(var(--lg-h,230px) + 26px)}
+}

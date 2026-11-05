@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ccr-5bc0fb9e-frlec2, main]
-    paths: ['android/**', 'shared/**', '.github/workflows/build-apk.yml']
+    paths: ['android/**', 'shared/**', 'package-lock.json', '.github/workflows/build-apk.yml']
 
 permissions:
   contents: write
@@ -22,6 +22,13 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
+      # Maps (MapLibre) und Übersetzer (Bergamot) kommen aus node_modules; ohne Skripte, also ohne Electron-Download
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+        working-directory: .
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

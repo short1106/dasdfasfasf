@@ -41,6 +41,15 @@ async function locateIP() {
   } catch {}
   return null;
 }
+/* Echter Standort (GPS am Handy), nur auf Wunsch; ohne Erlaubnis oder ohne GPS bleibt der ungefähre über IP */
+function locateGPS(timeout = 7000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res({ lng: p.coords.longitude, lat: p.coords.latitude, label: 'Mein Standort (±' + Math.round(p.coords.accuracy) + ' m)' }),
+      () => res(null), { enableHighAccuracy: true, timeout, maximumAge: 60000 });
+  });
+}
+async function gpsAllowed() { try { return (await navigator.permissions.query({ name: 'geolocation' })).state === 'granted'; } catch { return false; } }
 function setMe(p) {
   me = p;
   if (!meMarker) meMarker = new maplibregl.Marker({ element: mk('me') }).setLngLat([p.lng, p.lat]).addTo(map);
@@ -50,7 +59,8 @@ map.on('load', async () => {
   setupRouteLayers();
   const params = new URLSearchParams(location.search);
   const q = params.get('q');
-  const p = await locateIP();
+  /* Schon erlaubt (Handy): gleich genau, sonst ungefähr über IP – ohne beim Start nach Erlaubnis zu fragen */
+  const p = (await gpsAllowed() && await locateGPS(5000)) || await locateIP();
   if (p) setMe(p);
   if (params.get('layer') === 'verkehr') return openTraffic();
   if (q) { $('#q').value = q; const r = await searchPlaces(q).catch(() => []); if (r[0]) return showPlace(r[0], true); }
@@ -244,7 +254,7 @@ map.on('rotate', () => { $('#needle').style.transform = `rotate(${-map.getBearin
 $('#tilt').addEventListener('click', e => { const on = map.getPitch() < 20; map.easeTo({ pitch: on ? 58 : 0, duration: 900 }); e.currentTarget.classList.toggle('on', on); });
 map.on('pitchend', () => $('#tilt').classList.toggle('on', map.getPitch() >= 20));
 $('#locate').addEventListener('click', async () => {
-  const p = me || await locateIP();
+  const p = await locateGPS() || me || await locateIP();
   if (!p) return toast('Standort nicht verfügbar');
   setMe(p); map.flyTo({ center: [p.lng, p.lat], zoom: 14, pitch: 50, duration: reduced ? 0 : 2400 });
   toast(p.label || 'Mein Standort');
@@ -295,7 +305,8 @@ function openTraffic() {
   lgView = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
   try { map.setProjection({ type: 'globe' }); } catch {}
   LG.start();
-  $('#lg').hidden = false; $('#traffic').classList.add('on');
+  $('#lg').hidden = false; $('#traffic').classList.add('on'); document.body.classList.add('lg-on');
+  document.body.style.setProperty('--lg-h', $('#lg').offsetHeight + 'px');
   /* Rausfliegen, bis man die Welt sieht; Mitte grob beim Standort */
   const c = me ? [me.lng, Math.max(-20, Math.min(45, me.lat))] : [20, 30];
   map.flyTo({ center: c, zoom: innerWidth < 700 ? 1.1 : 1.7, pitch: 0, bearing: 0, duration: reduced ? 0 : 3200, curve: 1.8, essential: true });
@@ -305,7 +316,7 @@ function openTraffic() {
 function closeTraffic() {
   if (!LG.active) return;
   LG.stop(); clearInterval(lgCountT);
-  $('#lg').hidden = true; $('#traffic').classList.remove('on');
+  $('#lg').hidden = true; $('#traffic').classList.remove('on'); document.body.classList.remove('lg-on');
   try { map.setProjection({ type: 'mercator' }); } catch {}
   if (lgView && lgView.zoom > 3) map.flyTo({ ...lgView, duration: reduced ? 0 : 2200 });
 }

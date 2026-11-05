@@ -398,7 +398,16 @@ class MainActivity : Activity() {
             return try { startActivityForResult(params.createIntent(), REQ_FILE); true } catch (e: ActivityNotFoundException) { fileCb = null; false }
         }
         override fun onPermissionRequest(r: PermissionRequest) { r.deny() }
-        override fun onGeolocationPermissionsShowPrompt(origin: String, cb: GeolocationPermissions.Callback) { cb.invoke(origin, false, false) }
+        /* Standort bekommt nur die eigene Karte (https://dulidan.search/), fremde Seiten nie */
+        override fun onGeolocationPermissionsShowPrompt(origin: String, cb: GeolocationPermissions.Callback) {
+            if (Uri.parse(origin).host != SearchProxy.HOST) { cb.invoke(origin, false, false); return }
+            val granted = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (granted) { cb.invoke(origin, true, false); return }
+            geoPending?.let { (o, c) -> c.invoke(o, false, false) }
+            geoPending = origin to cb
+            requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION), REQ_GEO)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -574,7 +583,7 @@ class MainActivity : Activity() {
         val t = active ?: return
         if (!bar.pill.input.hasFocus()) {
             val sq = SearchProxy.queryOf(t.url)
-            val shown = if (t.home) "" else sq ?: (Uri.parse(t.url).host?.removePrefix("www.") ?: t.url)
+            val shown = if (t.home) "" else sq ?: SearchProxy.labelOf(t.url) ?: (Uri.parse(t.url).host?.removePrefix("www.") ?: t.url)
             bar.pill.input.setText(shown)
         }
         bar.home.lit = t.home
@@ -633,6 +642,9 @@ class MainActivity : Activity() {
             }
             "boot" -> playBoot()
             "calc" -> calc.show()
+            "maps" -> go(SearchProxy.MAPS)
+            "traffic" -> go(SearchProxy.MAPS + "?layer=verkehr")
+            "translate" -> go(SearchProxy.TRANSLATE)
             "widget" -> if (!SearchWidget.pin(this)) toast("Startbildschirm lange drücken → Widgets → Dulidan Suche")
             "fwd" -> t?.web?.let { if (it.canGoForward()) it.goForward() }
             "copy" -> if (t != null && !t.home) { Calc.copy(this, t.url); toast("Link kopiert") }
@@ -734,5 +746,15 @@ class MainActivity : Activity() {
     }
     override fun onDestroy() { for (t in tabs) t.web?.destroy(); home.destroy(); super.onDestroy() }
 
-    companion object { private const val REQ_FILE = 42; private const val REQ_VOICE = 43 }
+    private var geoPending: Pair<String, GeolocationPermissions.Callback>? = null
+    override fun onRequestPermissionsResult(req: Int, perms: Array<out String>, res: IntArray) {
+        super.onRequestPermissionsResult(req, perms, res)
+        if (req != REQ_GEO) return
+        val ok = res.any { it == android.content.pm.PackageManager.PERMISSION_GRANTED }
+        geoPending?.let { (o, c) -> c.invoke(o, ok, false) }
+        geoPending = null
+        if (!ok) toast("Ohne Standort-Erlaubnis nimmt Maps den ungefähren Ort")
+    }
+
+    companion object { private const val REQ_FILE = 42; private const val REQ_VOICE = 43; private const val REQ_GEO = 44 }
 }

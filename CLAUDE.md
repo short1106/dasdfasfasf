@@ -220,9 +220,9 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Test: `tests/e2e/traffic.js` (gleiche Server wie `maps.js`).
 - **Grenzen:** kein Street View, keine Bewertungen, kein Live-Verkehr und keine ÖPNV-Fahrpläne. Diese Daten gehören Google.
 - **Test:** `tests/e2e/maps.js` gegen `tests/fixtures/maps/tileserver.py` (echte MVT-Kacheln prozedural, braucht `pip install mapbox-vector-tile shapely`, Port 8796) und den Photon/OSRM/geojs-Nachbau in `search-server.js`.
-- **Android:** noch nicht. Dort zeigt `maps` weiter auf Google Maps. Vorher fragen.
+- **Android:** gleiche Seite unter `https://dulidan.search/maps/index.html` (siehe 4.). Dazu dort echtes GPS: `onGeolocationPermissionsShowPrompt` erlaubt den Standort **nur** für den Host `dulidan.search`, Laufzeit-Erlaubnis erst beim Antippen von „Mein Standort“. `maps.js` nimmt GPS beim Start nur, wenn die Erlaubnis schon da ist (`permissions.query`), sonst IP. Am Desktop verweigert Electron Geolocation sofort → IP.
 
-### 3.8 Übersetzer `shared/translate/` (Desktop)
+### 3.8 Übersetzer `shared/translate/` (Desktop und Android)
 - **Aufruf:**
   - `tr text` in der Adressleiste (Shortcut in `settings.js`)
   - Palette und Menü „Übersetzer“
@@ -245,6 +245,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   3. Gleiche Wörter flackern nur kurz, beim Landen gibt es Pop und Funken.
 - **Weitere Funktionen:** Tauschen-Knopf, Kopieren, Vorlesen (`speechSynthesis`), Energiestrahl am Rand während der Arbeit.
 - **Test-Haken:** `DW_MODEL_BASE` (Modelle von einem lokalen Server) und `DW_PROXY_BASE` (MyMemory-Nachbau in `tests/fixtures/search-server.js`).
+- **Android:** `https://dulidan.search/translate/index.html`, Sprachpakete über `Models.kt` (gleiche Quelle, SHA-256-Prüfung, `filesDir/translate-models/`). Ob Dedicated Worker + WASM in der Android-WebView über `shouldInterceptRequest` laden, ist auf echtem Gerät ungetestet; scheitert die lokale Engine, springt die Seite auf MyMemory um.
 
 ### 3.7 Objekt in der Mitte (Desktop und Android)
 - **`shared/shapes.js`** ist ein *klassisches* Skript, kein Modul, weil die Android-Startseite über `file://` läuft. Es setzt `window.DW_SHAPES`:
@@ -299,14 +300,18 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `Panels.kt`: Vorschläge, Toast, Menü-Sheet mit 12 Kacheln, Boot, Update-Pille
   - `Calc.kt`: derselbe Parser wie `shared/calc.js`, dazu das Rechner-Panel, das von oben einfällt
   - `SearchWidget.kt`: Startbildschirm-Widget (Suche, Sprachsuche, Rechner)
-  - `SearchProxy.kt`: Ergebnisseite und Proxy unter `https://dulidan.search/`
+  - `SearchProxy.kt`: eigene Seiten unter `https://dulidan.search/`: `search/`, `maps/`, `translate/`, `vendor/maplibre/`, `vendor/bergamot/`, `calc.js`. API wie am Desktop: `/api/fetch` (gleiche Host-Whitelist wie `main.js`, OSM-Dienste mit App-Kennung `DulidanWeb/<ver> (Android; +repo)`), `/api/mapconfig` (OpenFreeMap), `/api/model`. Alles nur mit `x-dw: 1`. `labelOf()` zeigt „Maps · ort“/„Übersetzer · text“ in der Leiste.
+  - `Models.kt`: Bergamot-Sprachpakete laden, prüfen, ablegen (wie `main/translate-models.js`)
   - `Updater.kt`: Ablauf beim Start und bei `onResume`, höchstens alle 3 h:
     1. Liest `android-version.json`.
     2. Im WLAN lädt es neue Versionen **automatisch** in den Cache, im Mobilfunk fragt die Pille erst.
     3. Installiert über `PackageInstaller` mit `USER_ACTION_NOT_REQUIRED` (API 31+) und `setRequestUpdateOwnership` (API 34+). Nach dem ersten Selbst-Update kommen die Updates damit ohne Nachfrage, sonst zeigt `UpdateReceiver` die Bestätigung.
     4. Fehlt die Erlaubnis „Apps installieren“, führt die Pille in die Einstellungen.
     5. Passt der Schlüssel nicht, sagt die App ehrlich „einmal neu installieren“.
-- **Assets:** `assets/home/` (Startseite, klassische Skripte, Logo als data-URL), `assets/fonts/`. Dazu `shared/` über `sourceSets["main"].assets.srcDir("../../shared")`, also `assets/search/…` und `assets/calc.js`.
+- **Assets:** `assets/home/` (Startseite, klassische Skripte, Logo als data-URL), `assets/fonts/`. Dazu `shared/` über `sourceSets["main"].assets.srcDir("../../shared")`, also `assets/search/…`, `assets/maps/…`, `assets/translate/…` und `assets/calc.js`.
+  - **Vendor:** Task `copyVendor` in `app/build.gradle.kts` kopiert MapLibre (`maplibre-gl.js/.css`) und Bergamot (`translator.js`, `worker/*`) aus `../node_modules` nach `build/vendor-assets/vendor/…`. Darum braucht der APK-Build vorher `npm ci --ignore-scripts` im Repo-Ordner (CI macht das, ohne Electron-Download).
+  - **Menü:** zusätzlich „Maps“, „Verkehr“, „Übersetzer“, „Link kopieren“. Shortcuts `maps …` und `tr …` (auch auf der Startseite).
+  - **Test:** `tests/e2e/mobileapps.js` (Chromium im Handy-Format, Dateien genau wie in den APK-Assets, GPS erlaubt).
 - **Leistung (gegen Ruckeln):**
   - Die Startseite wird pausiert, sobald ein Tab sie verdeckt: `home.onPause()` plus JS `dwPause`. Vorher lief sie unsichtbar weiter.
   - **Automatische Qualitätsstufen in `home.js`:** Schafft das Handy keine ~45 FPS, sinken Nebel-Auflösung und Partikel-DPR, und `body.lite` schaltet teure CSS-Animationen ab.
@@ -320,7 +325,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - Akzent: 6 Presets plus „eigene Farbe“ über den Spektrum-Regler (`SpectrumBar` in `Panels.kt`). `Dw.apply(key, custom)` leitet die drei Töne ab wie der Desktop.
   - **Widget-Farbe:** „Wie App“, ein Akzent oder eigene Farbe. `SearchWidget` zeichnet Rand, Mikro- und Rechner-Knopf als Bitmap in dieser Farbe, weil sich Verläufe in RemoteViews nicht umfärben lassen.
   - Bei jedem Farbwechsel ruft die App `SearchWidget.refresh()`.
-- **Auf Android fehlen noch:** Disko-Modus, Musik-Analyse, Passwörter/Autofill. Vorher fragen.
+- **Auf Android fehlen noch:** Disko-Modus, Musik-Analyse, Passwörter/Autofill. Vorher fragen. Maps und Übersetzer sind drin.
 
 ---
 

@@ -127,7 +127,8 @@ class MenuSheet(ctx: Context, private val store: Store, private val act: (String
         /* Aktionen als Kacheln */
         val acts = listOf("＋" to "Neuer Tab" to "new", "▤" to "Tabs" to "tabs", "↻" to "Neu laden" to "reload", "→" to "Vorwärts" to "fwd",
             "÷" to "Rechner" to "calc", "▦" to "Widget" to "widget", "⇪" to "Teilen" to "share", "⟳" to "Update" to "update",
-            "▭" to "Desktop" to "desktop", "⌂" to "Start" to "home", "⚡" to "Boot" to "boot", "⨯" to "Tab zu" to "close")
+            "▭" to "Desktop" to "desktop", "⌂" to "Start" to "home", "⚡" to "Boot" to "boot", "⨯" to "Tab zu" to "close",
+            "◉" to "Maps" to "maps", "✈" to "Verkehr" to "traffic", "あ" to "Übersetzer" to "translate", "⧉" to "Link kopieren" to "copy")
         var row: LinearLayout? = null
         acts.forEachIndexed { i, (pair, key) ->
             if (i % 4 == 0) { row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }; sheet.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10).toInt() }) }

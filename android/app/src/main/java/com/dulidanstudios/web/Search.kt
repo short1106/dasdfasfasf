@@ -23,10 +23,12 @@ object Search {
         "yt" to Triple("YouTube", "https://m.youtube.com/results?search_query=%s", "https://m.youtube.com"),
         "gh" to Triple("GitHub", "https://github.com/search?q=%s", "https://github.com"),
         "wiki" to Triple("Wikipedia", "https://de.m.wikipedia.org/w/index.php?search=%s", "https://de.m.wikipedia.org"),
-        "maps" to Triple("Maps", "https://www.google.com/maps/search/%s", "https://www.google.com/maps"),
+        /* Dulidan Maps und Übersetzer: eigene Seiten wie am Desktop (shared/maps, shared/translate) */
+        "maps" to Triple("Maps", SearchProxy.MAPS + "?q=%s", SearchProxy.MAPS),
+        "tr" to Triple("Übersetzer", SearchProxy.TRANSLATE + "?q=%s", SearchProxy.TRANSLATE),
         "mc" to Triple("Minecraft Wiki", "https://de.minecraft.wiki/?search=%s", "https://de.minecraft.wiki")
     )
-    private val SHORT = Regex("^(yt|gh|wiki|maps|mc)\\s+(.*)$", RegexOption.IGNORE_CASE)
+    private val SHORT = Regex("^(yt|gh|wiki|maps|tr|mc)\\s+(.*)$", RegexOption.IGNORE_CASE)
     private val HOSTLIKE = Regex("^(?:[\\w-]+\\.)+[a-z][a-z0-9-]{1,62}(?::\\d{1,5})?(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
     private val LOCAL = Regex("^(?:localhost|\\d{1,3}(?:\\.\\d{1,3}){3})(?::\\d{1,5})?(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
 

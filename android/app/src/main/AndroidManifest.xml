@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Standort nur für Dulidan Maps („Mein Standort“), gefragt wird erst beim Antippen -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Updates aus der App heraus installieren -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
