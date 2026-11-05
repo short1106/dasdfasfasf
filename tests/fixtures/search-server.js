@@ -14,6 +14,7 @@ const nav = (s, prev) => `<div class="nav-link">${prev ? `<form action="/html/" 
 <form action="/html/" method="post"><input type="submit" class="btn btn--alt" value="Next"><input type="hidden" name="q" value="minecraft"><input type="hidden" name="s" value="${s}"><input type="hidden" name="nextParams" value=""><input type="hidden" name="v" value="l"><input type="hidden" name="o" value="json"><input type="hidden" name="dc" value="${s + 1}"><input type="hidden" name="api" value="d.js"><input type="hidden" name="vqd" value="4-111"><input type="hidden" name="kl" value="de-de"></form></div>`;
 const html = (from, n, next, prev) => `<!DOCTYPE html><html><body><div class="serp__results"><div id="links" class="results">${res(0, true)}${Array.from({ length: n }, (_, k) => res(from + k)).join('')}${next ? nav(next, prev) : ''}</div></div></body></html>`;
 const LOG = [];
+let GOALS = 0;
 http.createServer((req, rsp) => {
   let body = '';
   req.on('data', d => (body += d));
@@ -22,6 +23,7 @@ http.createServer((req, rsp) => {
     const u = new URL(req.url, 'http://x');
     const send = (t, type = 'text/html') => { rsp.writeHead(200, { 'content-type': type }); rsp.end(t); };
     if (u.pathname === '/__log') return send(JSON.stringify(LOG), 'application/json');
+    if (u.pathname === '/__goal') { GOALS++; return send(String(GOALS), 'text/plain'); }
     /* Maps-Nachbau: Ortssuche (Photon), Rückwärtssuche, Routen (OSRM-Format), IP-Standort */
     if (u.pathname === '/get.geojs.io/v1/ip/geo.json') return send(JSON.stringify({ latitude: '51.4344', longitude: '6.7623', city: 'Duisburg' }), 'application/json');
     if (u.pathname === '/photon.komoot.io/api/') {
@@ -106,6 +108,12 @@ http.createServer((req, rsp) => {
       if ((mm = /^\/api\.openligadb\.de\/getmatchdata\/(bl[123])$/.exec(u.pathname))) return J(league(mm[1]).out.filter(m => m.group.groupOrderID === 11));
       if ((mm = /^\/api\.openligadb\.de\/getmatchdata\/(bl[123])\/\d{4}$/.exec(u.pathname))) return J(league(mm[1]).out);
       if ((mm = /^\/api\.openligadb\.de\/getbltable\/(bl[123])\/\d{4}$/.exec(u.pathname))) return J(table(mm[1]));
+      /* Torjubel-Test: laufendes BVB-Spiel, jedes GET /__goal erhöht den BVB-Stand */
+      if (u.pathname === '/api.openligadb.de/getmatchesbyteam/Dortmund/1/1') {
+        const T1 = { teamId: 101, teamName: 'Borussia Dortmund', shortName: 'Dortmund' }, T2 = { teamId: 104, teamName: 'FC Schalke 04', shortName: 'Schalke' };
+        const g = Array.from({ length: GOALS }, (_, i) => ({ scoreTeam1: i + 1, scoreTeam2: 0, matchMinute: 10 + i * 9, goalGetterName: 'Spieler ' + (i + 1) }));
+        return J([{ matchID: 777, matchDateTimeUTC: new Date(Date.now() - 50 * 60000).toISOString(), matchIsFinished: false, team1: T1, team2: T2, matchResults: [], goals: g }]);
+      }
       if (u.pathname.startsWith('/api.openligadb.de/getmatchesbyteam/Dortmund/')) return J(league('bl1').out.filter(m => (m.team1.teamId === 101 || m.team2.teamId === 101) && Math.abs(m.group.groupOrderID - 10.5) < 4));
       return J([]);
     }

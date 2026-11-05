@@ -487,6 +487,7 @@ const COMMANDS = () => [
   { icon: 'mask', name: 'Neuer Inkognito-Tab', key: 'Strg ⇧ N', run: () => newTab(null, { incognito: true }) },
   { icon: 'snip', name: 'Screenshot / Snipping-Tool', key: 'Strg ⇧ S', run: () => openSnip(active) },
   { icon: 'pip', name: 'Bild-in-Bild (Video schwebt über allem)', key: 'Strg ⇧ P', run: () => togglePip() },
+  { icon: 'bolt', name: 'Torjubel testen', key: '', run: () => api.goalTest() },
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },

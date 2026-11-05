@@ -13,6 +13,7 @@ const adblock = require('./main/adblock.js');
 const updater = require('./main/updater.js');
 const lyrics = require('./main/lyrics.js');
 const translateModels = require('./main/translate-models.js');
+const goals = require('./main/goals.js');
 const { pageMenu } = require('./main/contextmenu.js');
 
 const ROOT = __dirname;
@@ -108,6 +109,13 @@ function serveApp(ses) {
     if (u.host !== 'app') return new Response('Not found', { status: 404 });
     if (u.pathname === '/api/fetch') return searchProxy(req, u);
     if (u.pathname === '/api/model') return modelRoute(req, u);
+    /* Torjubel: „Mein Verein“ setzen/lesen (nur eigene Seiten mit x-dw) */
+    if (u.pathname === '/api/club') {
+      if (req.headers.get('x-dw') !== '1') return new Response('Forbidden', { status: 403 });
+      if (u.searchParams.has('off')) goals.set(null);
+      else if (u.searchParams.get('set')) goals.set(u.searchParams.get('set'), u.searchParams.get('name'));
+      return Response.json(goals.get());
+    }
     if (u.pathname === '/api/mapconfig') return Response.json(MAP_CONFIG);
     const pre = Object.keys(VENDOR).find(p => u.pathname.startsWith(p));
     const file = pre
@@ -315,6 +323,54 @@ function closeTab(id) {
   }
   if (activeId === id) activeId = null;
   if (t.incognito && ![...tabs.values()].some(x => x.incognito)) wipeIncognito();
+}
+
+/* ===== Torjubel: Explosion vom Bildschirmrand über der gerade sichtbaren Seite (isolierte Welt) plus Windows-Meldung ===== */
+function goalFx(d) {
+  return `(() => { try {
+    const d = ${JSON.stringify(d)};
+    const cv = document.createElement('canvas'), dpr = Math.min(2, devicePixelRatio || 1);
+    Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100vw', height: '100vh', zIndex: '2147483647', pointerEvents: 'none' });
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    const box = document.createElement('div');
+    Object.assign(box.style, { position: 'fixed', left: '50%', top: '14%', transform: 'translate(-50%,0) scale(.3)', zIndex: '2147483647', pointerEvents: 'none', textAlign: 'center',
+      font: '900 ' + (d.own ? 92 : 46) + 'px system-ui,sans-serif', letterSpacing: '-.03em', color: '#fff', opacity: '0', transition: 'transform .55s cubic-bezier(.2,1.6,.3,1),opacity .3s',
+      textShadow: d.own ? '0 0 30px #ff2fd0,0 0 70px #c020b8,0 6px 0 #8122b5' : '0 4px 20px rgba(0,0,0,.6)' });
+    const big = document.createElement('div'); big.textContent = d.own ? 'TOOOR!' : 'Tor';
+    const sm = document.createElement('div'); sm.textContent = d.home + '  ' + d.s1 + ':' + d.s2 + '  ' + d.away + (d.minute ? '  ·  ' + d.minute + '.' : '') + (d.scorer ? '  ·  ' + d.scorer : '');
+    Object.assign(sm.style, { font: '700 20px system-ui,sans-serif', letterSpacing: '.04em', marginTop: '6px', padding: '8px 18px', borderRadius: '999px', background: 'rgba(13,10,21,.85)', display: 'inline-block', textShadow: 'none' });
+    box.append(big, document.createElement('br'), sm);
+    document.documentElement.append(cv, box);
+    requestAnimationFrame(() => { box.style.opacity = '1'; box.style.transform = 'translate(-50%,0) scale(1)'; });
+    const g = cv.getContext('2d'), P = [], C = ['#ff7ae6', '#c020b8', '#ffd24d', '#ffffff', '#7af3ff', '#ff3d71'];
+    const shoot = (x, y, ang, n, sp) => { for (let i = 0; i < n; i++) { const a = ang + (Math.random() - .5) * 1.1, v = sp * (.5 + Math.random()); P.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1, c: C[i % C.length], s: (2 + Math.random() * 4) * dpr }); } };
+    const W = cv.width, H = cv.height, n = d.own ? 150 : 0;
+    if (n) { shoot(0, H * .75, -0.55, n, 22 * dpr); shoot(W, H * .75, Math.PI + 0.55, n, 22 * dpr); shoot(0, H, -1.0, n * .6, 26 * dpr); shoot(W, H, Math.PI + 1.0, n * .6, 26 * dpr); }
+    let t0 = performance.now(), last = t0, wave = 1;
+    const step = now => {
+      const dt = Math.min(.05, (now - last) / 1000) * 60; last = now; g.clearRect(0, 0, W, H);
+      if (d.own && now - t0 > 700 && wave) { wave = 0; shoot(W * .1, H, -1.3, 90, 24 * dpr); shoot(W * .9, H, Math.PI + 1.3, 90, 24 * dpr); }
+      /* Rand-Blitz am Anfang */
+      const f = Math.max(0, 1 - (now - t0) / 500); if (f && d.own) { const gr = g.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, 'rgba(255,47,208,' + f * .6 + ')'); gr.addColorStop(.18, 'rgba(255,47,208,0)'); gr.addColorStop(.82, 'rgba(255,47,208,0)'); gr.addColorStop(1, 'rgba(255,47,208,' + f * .6 + ')'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
+      for (const p of P) { p.vy += .32 * dpr * dt; p.vx *= .99; p.x += p.vx * dt; p.y += p.vy * dt; p.l -= .008 * dt; if (p.l > 0) { g.globalAlpha = Math.min(1, p.l * 1.5); g.fillStyle = p.c; g.fillRect(p.x, p.y, p.s, p.s * 1.6); } }
+      g.globalAlpha = 1;
+      if (now - t0 < 3600) requestAnimationFrame(step);
+      else { box.style.opacity = '0'; setTimeout(() => { cv.remove(); box.remove(); }, 350); }
+    };
+    requestAnimationFrame(step);
+  } catch (e) {} })()`;
+}
+function celebrateGoal(d) {
+  try {
+    const title = (d.own ? '⚽ TOOOR! ' : 'Tor · ') + d.club;
+    const body = `${d.home} ${d.s1}:${d.s2} ${d.away}` + (d.minute ? ` · ${d.minute}. Min.` : '') + (d.scorer ? ` · ${d.scorer}` : '');
+    if (electron.Notification && electron.Notification.isSupported()) new electron.Notification({ title, body, silent: !d.own }).show();
+  } catch {}
+  const t = activeId != null && tabs.get(activeId);
+  const code = goalFx(d);
+  if (t && t.view && viewVisible && !t.view.webContents.isDestroyed()) t.view.webContents.executeJavaScriptInIsolatedWorld(1338, [{ code }]).catch(() => {});
+  else if (win) win.webContents.executeJavaScript(code).catch(() => {});
+  ui('goal', d);
 }
 
 /* ===== Inkognito: eigene Session nur im Arbeitsspeicher (Partition ohne „persist:“) =====
@@ -703,6 +759,8 @@ function ipc() {
   });
   const pngOf = d => (typeof d === 'string' && d.startsWith('data:image/png;base64,') && d.length < 80e6 ? nativeImage.createFromDataURL(d) : null);
   /* ===== Bild-in-Bild für jede Seite: größtes (laufendes) Video ins schwebende Chromium-Fenster, das über allen Programmen bleibt ===== */
+  /* Torjubel vorführen (Palette „Torjubel testen“) */
+  h('goal:test', () => { const c = goals.get(); celebrateGoal({ club: c ? c.name : 'Dein Verein', home: c ? c.name : 'Dulidan FC', away: 'Gegner', s1: 1, s2: 0, minute: 90, scorer: 'Test', own: true }); return true; });
   h('pip:toggle', async id => {
     const w = wcOf(id); if (!w) return 'kein-tab';
     const code = `(async () => {
@@ -780,6 +838,7 @@ app.on('web-contents-created', (_, wc) => {
 app.whenReady().then(() => {
   serveApp(session.defaultSession);
   lyrics.initSync(app.getPath('userData'));
+  goals.init(app.getPath('userData'), url => net.fetch(process.env.DW_PROXY_BASE ? process.env.DW_PROXY_BASE + '/' + url.replace(/^https:\/\//, '') : url, { signal: AbortSignal.timeout(10000) }), celebrateGoal);
   translateModels.init(app.getPath('userData'), url => proxySession().fetch(url, { signal: AbortSignal.timeout(180000) }));
   ipc();
   /* Webseiten bekommen eine eigene, dauerhafte Session – getrennt von der Oberfläche */

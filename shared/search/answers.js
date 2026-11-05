@@ -465,12 +465,24 @@ async function team({ filter, name }) {
       live.length ? h('div', { class: 'fx-sec mono live' }, '● LÄUFT GERADE') : null, live.length ? h('ul', { class: 'fx-ms' }, live.map(m => matchRow(m, filter))) : null,
       next.length ? h('div', { class: 'fx-sec mono' }, 'NÄCHSTE SPIELE') : null, next.length ? h('ul', { class: 'fx-ms' }, next.map(m => matchRow(m, filter))) : null,
       past.length ? h('div', { class: 'fx-sec mono' }, 'LETZTE ERGEBNISSE') : null, past.length ? h('ul', { class: 'fx-ms' }, past.slice().reverse().map(m => matchRow(m, filter))) : null,
+      clubBtn(filter, me.teamName || name),
       tbl ? h('div', { class: 'fx-sec mono' }, 'TABELLE') : null,
       tbl ? h('ol', { class: 'fx-table open' }, tbl.map((r, i) => h('li', { class: r.teamInfoId === me.teamId ? 'me' : '', style: `--i:${i}` }, h('span', { class: 'pos mono' }, r._p), img(r.teamIconUrl, 'crest'), h('span', { class: 'nm' }, r.shortName || r.teamName), h('span', { class: 'mono sp' }, r.matches), h('span', { class: 'mono td' }, (r.goalDiff > 0 ? '+' : '') + r.goalDiff), h('b', { class: 'mono' }, r.points)))) : null,
       foot('OPENLIGADB'));
     return autoRefresh(el, make, live.length > 0);
   };
   return make();
+}
+
+/* Torjubel: Verein merken (nur in der Desktop-App, dort gibt es /api/club) */
+function clubBtn(filter, name) {
+  if (location.protocol !== 'dulidan:') return null;
+  const b = h('button', { class: 'btn fx-club-btn' }, '★ Torjubel für ' + name);
+  const show = c => { const on = c && c.filter === filter; b.classList.toggle('on', !!on); b.textContent = on ? '★ Torjubel an – Tore knallen auf jeder Seite' : '☆ Torjubel für ' + name; };
+  const api = q => fetch('/api/club' + q, { headers: { 'x-dw': '1' } }).then(r => r.json()).catch(() => null);
+  api('').then(show);
+  b.addEventListener('click', async () => { const on = b.classList.contains('on'); show(await api(on ? '?off=1' : '?' + new URLSearchParams({ set: filter, name }))); });
+  return b;
 }
 
 /* ===================== Formel 1 (Jolpica, Nachfolger der Ergast-API) ===================== */

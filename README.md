@@ -125,6 +125,7 @@ Eine einzige Leiste für Adressen und Suche. Eingaben ohne Domain landen auf der
     - Oben in der Karte schaltest du zwischen **1., 2. und 3. Liga** um.
     - **Prognose:** Für jedes Spiel des nächsten Spieltags gibt es das wahrscheinlichste Ergebnis und die Chancen für Heimsieg, Remis und Auswärtssieg (1/X/2). Dazu wird der Rest der Saison 5.000-mal durchgespielt. Das ergibt die wahrscheinlichste Abschlusstabelle mit Punkten und den Chancen auf Meisterschaft, Champions League bzw. Aufstieg und Abstieg.
     - Das ist Statistik aus den Toren und Gegentoren der laufenden Saison, keine Garantie.
+  - **Torjubel:** Auf der Vereinskarte (z. B. `bvb`) „☆ Torjubel“ antippen. Wenn dein Verein ein Tor schießt, explodiert Konfetti von den Bildschirmrändern mit „TOOOR!“ und Spielstand, egal auf welcher Seite du bist. Dazu kommt eine Windows-Benachrichtigung mit Torschütze und Minute. Zum Ausprobieren gibt es in der Palette „Torjubel testen“.
   - **Formel 1** (`f1`, `formel 1`): Fahrer-WM mit Teamfarben und Countdown zum nächsten Rennen. Daten: Jolpica.
 - **Woher die Treffer kommen:** Die App holt sie im Hintergrund von DuckDuckGo, also ohne Tracking und ohne API-Schlüssel, dazu Wikipedia. Angezeigt wird alles nur in der eigenen Seite.
   - Der Abruf läuft über einen kleinen Proxy in der App. Er spricht ausschließlich diese festen Quellen an und ist nur für die Ergebnisseite selbst nutzbar, fremde Webseiten kommen nicht an ihn heran.

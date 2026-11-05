@@ -295,6 +295,8 @@ h3 mark{color:inherit;text-shadow:none}
 .fx-form{display:flex;gap:4px;margin-left:auto}
 .fx-form i{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font:700 10px var(--mono);font-style:normal;color:#07060b}
 .fx-form .w{background:#3ddc97}.fx-form .d{background:#a49cb6}.fx-form .l{background:#ff4d6d}
+.fx-club-btn{width:100%;justify-content:center;margin-top:12px;background:rgba(255,255,255,.06);box-shadow:none;border:1px solid rgba(var(--pink-rgb),.35)}
+.fx-club-btn.on{background:var(--grad);box-shadow:0 0 18px rgba(var(--mag-rgb),.5)}
 .fx-sec{margin-top:12px;font-size:9.5px;letter-spacing:.2em;color:var(--pink)}
 /* Formel 1 */
 .f1-list{list-style:none;display:flex;flex-direction:column;gap:3px;margin-top:10px}
