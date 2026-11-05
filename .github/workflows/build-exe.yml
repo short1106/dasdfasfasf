@@ -1,0 +1,50 @@
+# Baut den Windows-Installer DulidanWeb-Setup.exe und stellt ihn samt latest.yml (für Auto-Updates) als Release bereit.
+name: Windows-exe bauen
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ccr-5bc0fb9e-frlec2, main]
+    paths-ignore: ['README.md', 'CLAUDE.md', 'tests/**', 'dulidan-web.zip', 'android/**', '.github/workflows/build-apk.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Jeder Build bekommt eine höhere Version, sonst sieht der Auto-Updater nichts Neues
+      - run: npm version 0.2.${{ github.run_number }} --no-git-tag-version
+      - run: npx electron-builder --win nsis --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DulidanWeb
+          path: |
+            dist/DulidanWeb-Setup.exe
+            dist/latest.yml
+      # Die alte portable exe aus dem Release nehmen, damit niemand mehr die Version ohne Updates lädt
+      - name: Alte portable exe entfernen
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete-asset latest-build DulidanWeb.exe -y -R "$GITHUB_REPOSITORY" || true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Dulidan Web für Windows (neuester Build)
+          prerelease: true
+          make_latest: false
+          body: |
+            DulidanWeb-Setup.exe herunterladen und doppelklicken. Dulidan Web installiert sich in Sekunden, legt Verknüpfungen auf Desktop und im Startmenü an und startet.
+            Danach aktualisiert sich die App selbst: Neue Versionen lädt sie im Hintergrund, oben erscheint „Update · Neu starten“.
+          files: |
+            dist/DulidanWeb-Setup.exe
+            dist/DulidanWeb-Setup.exe.blockmap
+            dist/latest.yml

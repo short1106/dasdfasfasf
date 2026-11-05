@@ -1,0 +1,68 @@
+/* Dulidan Web · japan.css – Design „Japan 和“: Indigo-Nacht, Zinnoberrot, Sakura, rote Sonne, Seigaiha-Wellen, Mincho-Titel
+   Alles nur unter html[data-theme=japan]; Farben setzt settings.js (Akzent = Ai/Shu/Sakura), Kirschblüten kommen aus japan.js.
+   Aufbau: Tokens · Rahmen/Leisten · Tabs · Startseite (Sonne, Wellen, Titel, Senkrecht-Schrift) · Panels/Toasts · Sakura-Canvas */
+
+html[data-theme=japan]{
+  --bg:#0b0a18;--bg-2:#100e22;--surface:#15122b;--surface-2:#1b1734;
+  --text:#f6efe6;--muted:#c9b9ae;--dim:#9a8b86;
+  --line:rgba(246,239,230,.10);--line-2:rgba(224,57,62,.38);
+  --shu:#e0393e;--gold:#e8c27a;--sakura:#ffb7c5;
+  --sans:"Yu Gothic UI","Yu Gothic","Meiryo","Hiragino Sans","Noto Sans JP","Space Grotesk",system-ui,sans-serif;
+  --mincho:"Yu Mincho","YuMincho","Hiragino Mincho ProN","Noto Serif JP","MS Mincho",serif;
+}
+html[data-theme=japan] body{background:radial-gradient(120% 80% at 50% 120%,#2a1030 0%,var(--bg) 55%)}
+
+/* ---------- Rahmen, Leisten: Washi-Körnung, Gold-Haarlinie ---------- */
+html[data-theme=japan] .titlebar,html[data-theme=japan] .toolbar{background:linear-gradient(180deg,rgba(21,18,43,.92),rgba(16,14,34,.85));box-shadow:inset 0 -1px 0 rgba(232,194,122,.18)}
+html[data-theme=japan] .brand-t::after{content:" 和";font-family:var(--mincho);color:var(--shu);font-weight:700;letter-spacing:0}
+html[data-theme=japan] .omni{background:rgba(11,10,24,.85);border-color:rgba(232,194,122,.22);border-radius:6px}
+html[data-theme=japan] .omni:focus-within{border-color:var(--shu);box-shadow:0 0 0 3px rgba(224,57,62,.18),0 0 26px rgba(224,57,62,.35)}
+
+/* ---------- Tabs: wie Ema-Holztäfelchen mit rotem Torii-Balken oben ---------- */
+html[data-theme=japan] .tab{border-radius:4px 4px 0 0}
+html[data-theme=japan] .tab.active{background:linear-gradient(180deg,rgba(224,57,62,.20),rgba(27,23,52,.95));border-color:rgba(224,57,62,.45)}
+html[data-theme=japan] .tab.active::after{content:"";position:absolute;left:6px;right:6px;top:-1px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--shu) 12%,var(--shu) 88%,transparent);box-shadow:0 0 12px rgba(224,57,62,.8)}
+
+/* ---------- Startseite: rote Sonne hinter dem Logo, Seigaiha-Wellen, Mincho-Titel, Senkrecht-Schrift ---------- */
+html[data-theme=japan] .home-grid{background:none!important;
+  -webkit-mask-image:linear-gradient(0deg,#000 0%,rgba(0,0,0,.65) 22%,transparent 45%);mask-image:linear-gradient(0deg,#000 0%,rgba(0,0,0,.65) 22%,transparent 45%);
+  background-image:radial-gradient(circle at 50% 100%,transparent 18px,rgba(232,194,122,.16) 19px,transparent 21px,transparent 27px,rgba(232,194,122,.12) 28px,transparent 30px,transparent 36px,rgba(232,194,122,.09) 37px,transparent 39px)!important;
+  background-size:80px 40px!important;background-position:0 100%!important;animation:seigaiha 18s linear infinite}
+@keyframes seigaiha{to{background-position:80px 100%}}
+html[data-theme=japan] .jp-sun{position:absolute;left:50%;top:41%;width:min(46vh,420px);aspect-ratio:1;transform:translate(-50%,-55%);border-radius:50%;z-index:1;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%,#ff4a4f 0%,#e0393e 52%,rgba(224,57,62,.0) 71%);opacity:.82;filter:saturate(1.1);
+  box-shadow:0 0 120px 30px rgba(224,57,62,.25);animation:sunBreath 7s ease-in-out infinite}
+@keyframes sunBreath{50%{transform:translate(-50%,-55%) scale(1.04);opacity:.92}}
+html:not([data-theme=japan]) .jp-sun,html:not([data-theme=japan]) .jp-vert,html:not([data-theme=japan]) .jp-sub,html:not([data-theme=japan]) .jp-sakura{display:none}
+/* Wolkenstreifen vor der Sonne */
+html[data-theme=japan] .jp-sun::before,html[data-theme=japan] .jp-sun::after{content:"";position:absolute;left:-18%;right:-18%;height:9%;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(11,10,24,.85) 20%,rgba(11,10,24,.85) 80%,transparent)}
+html[data-theme=japan] .jp-sun::before{top:58%;animation:cloud 14s ease-in-out infinite alternate}
+html[data-theme=japan] .jp-sun::after{top:72%;left:-8%;right:-30%;animation:cloud 11s ease-in-out infinite alternate-reverse}
+@keyframes cloud{to{transform:translateX(9%)}}
+html[data-theme=japan] .hero-title{font-family:var(--mincho);font-weight:800;letter-spacing:.02em}
+html[data-theme=japan] .hero-title .w1 .ch{background:linear-gradient(180deg,#fff 35%,var(--sakura));-webkit-background-clip:text;background-clip:text}
+html[data-theme=japan] .hero-title .outline{-webkit-text-stroke:1.5px var(--gold)}
+html[data-theme=japan] .jp-sub{margin-top:4px;font-family:var(--mincho);font-size:clamp(14px,1.6vw,20px);letter-spacing:.6em;color:var(--sakura);text-shadow:0 0 18px rgba(255,183,197,.6);pointer-events:none}
+html[data-theme=japan] .jp-vert{position:absolute;top:50%;transform:translateY(-50%);z-index:3;writing-mode:vertical-rl;font-family:var(--mincho);font-size:clamp(18px,2.4vh,26px);letter-spacing:.5em;color:rgba(246,239,230,.55);pointer-events:none;text-shadow:0 0 14px rgba(224,57,62,.5)}
+html[data-theme=japan] .jp-vert.l{left:5vw}
+html[data-theme=japan] .jp-vert.r{right:5vw;color:rgba(232,194,122,.55)}
+html[data-theme=japan] .jp-vert b{display:inline-block;margin-top:.8em;padding:.35em .2em;border:2px solid var(--shu);border-radius:4px;color:var(--shu);font-size:.7em;letter-spacing:.1em;text-shadow:none}
+html[data-theme=japan] .band{background:linear-gradient(90deg,#b8222a,#e0393e,#b8222a)!important}
+html[data-theme=japan] .band-b{background:linear-gradient(90deg,#1b1a44,#2b2f77,#1b1a44)!important}
+html[data-theme=japan] .band span{font-family:var(--mincho);letter-spacing:.18em}
+html[data-theme=japan] .band span::after{width:10px;height:10px;border-radius:50% 0;background:var(--sakura);transform:rotate(45deg);box-shadow:0 0 10px var(--sakura)}
+html[data-theme=japan] .bigbar-in{border-radius:8px}
+html[data-theme=japan] .big-go{border-radius:6px;background:linear-gradient(135deg,#b8222a,var(--shu))}
+html[data-theme=japan] .card{border-radius:6px}
+html[data-theme=japan] .card .top svg{color:var(--sakura)}
+html[data-theme=japan] .corner{border-color:var(--gold)!important}
+
+/* ---------- Panels, Toasts, Palette: Gold-Rahmen, roter Hanko-Stempel ---------- */
+html[data-theme=japan] .panel,html[data-theme=japan] .pal-in,html[data-theme=japan] .modal{border-color:rgba(232,194,122,.3)!important;border-radius:8px}
+html[data-theme=japan] .panel::after{content:"和";position:absolute;right:14px;bottom:12px;width:30px;height:30px;display:grid;place-items:center;border:2px solid var(--shu);border-radius:5px;color:var(--shu);font:700 16px var(--mincho);opacity:.55;transform:rotate(-6deg);pointer-events:none}
+html[data-theme=japan] .toast{border-color:rgba(224,57,62,.6);border-radius:6px;font-family:var(--sans)}
+html[data-theme=japan] .toast::before{content:"印";display:inline-grid;place-items:center;width:20px;height:20px;margin-right:10px;border-radius:4px;background:var(--shu);color:#fff;font:700 12px var(--mincho);vertical-align:-4px}
+html[data-theme=japan] .btn{border-radius:6px}
+
+/* ---------- Kirschblüten über der ganzen Oberfläche (unter den Webseiten) ---------- */
+.jp-sakura{position:fixed;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
