@@ -191,13 +191,14 @@ async function weather({ place }) {
     const sv = svgEl('svg', { viewBox: `0 0 ${Wd} ${Hd + 14}`, class: 'wx-chart', preserveAspectRatio: 'none' });
     const defs = svgEl('defs'), lg = svgEl('linearGradient', { id: 'wxg', x1: 0, y1: 0, x2: 0, y2: 1 });
     lg.append(svgEl('stop', { offset: 0, 'stop-color': 'rgba(255,122,230,.55)' }), svgEl('stop', { offset: 1, 'stop-color': 'rgba(255,122,230,0)' })); defs.append(lg); sv.append(defs);
-    hrs.forEach((x, i) => { if (x.p > 5) sv.append(svgEl('rect', { x: X(i) - 2, y: Hd - (x.p / 100) * 26, width: 4, height: (x.p / 100) * 26, rx: 2, fill: 'rgba(122,190,255,.45)' })); });
+    hrs.forEach((x, i) => { if (x.p > 5) sv.append(svgEl('rect', { x: X(i) - 2, y: Hd - (x.p / 100) * 26, width: 4, height: (x.p / 100) * 26, rx: 2, fill: 'rgba(122,190,255,.45)', stroke: 'none' })); });
     const pts = hrs.map((x, i) => `${X(i).toFixed(1)},${Y(x.v).toFixed(1)}`);
-    sv.append(svgEl('path', { d: `M0,${Hd} L${pts.join(' L')} L${Wd},${Hd} Z`, fill: 'url(#wxg)' }));
+    sv.append(svgEl('path', { d: `M0,${Hd} L${pts.join(' L')} L${Wd},${Hd} Z`, fill: 'url(#wxg)', stroke: 'none' }));
     const line = svgEl('path', { d: 'M' + pts.join(' L'), fill: 'none', stroke: '#ff7ae6', 'stroke-width': 2.2, 'stroke-linejoin': 'round', class: 'wx-line' });
     sv.append(line);
-    hrs.forEach((x, i) => { if (i % 6 === 0) { const tx = svgEl('text', { x: X(i), y: Hd + 12, 'text-anchor': i ? 'middle' : 'start' }); tx.textContent = x.t.slice(11, 13) + ' Uhr'; sv.append(tx); const tv = svgEl('text', { x: X(i), y: Y(x.v) - 6, 'text-anchor': i ? 'middle' : 'start', class: 'v' }); tv.textContent = Math.round(x.v) + '°'; sv.append(tv); } });
-    chart = h('div', { class: 'wx-hours' }, sv);
+    /* Beschriftung als HTML darüber: SVG-Text würde mit preserveAspectRatio=none verzerrt */
+    const labels = hrs.map((x, i) => i % 6 ? null : [h('span', { class: 'wx-t mono' + (i ? '' : ' first'), style: `left:${(X(i) / Wd) * 100}%` }, x.t.slice(11, 13) + ' Uhr'), h('span', { class: 'wx-v' + (i ? '' : ' first'), style: `left:${(X(i) / Wd) * 100}%;top:${((Y(x.v) - 6) / (Hd + 14)) * 100}%` }, Math.round(x.v) + '°')]).filter(Boolean).flat();
+    chart = h('div', { class: 'wx-hours' }, sv, labels);
   }
   /* 7 Tage: Min–Max als Balken relativ zur Woche */
   const d = w.daily || { time: [] }, wlo = Math.min(...(d.temperature_2m_min || [0])), whi = Math.max(...(d.temperature_2m_max || [1]));
@@ -207,7 +208,8 @@ async function weather({ place }) {
     return h('li', { style: `--i:${i}` }, h('b', {}, name), h('span', { class: 'ic' }, wmo(d.weather_code[i])[2]), h('span', { class: 'pp mono' }, (d.precipitation_probability_max || [])[i] > 20 ? d.precipitation_probability_max[i] + '%' : ''),
       h('span', { class: 'lo mono' }, Math.round(lo) + '°'), h('span', { class: 'bar' }, bar), h('span', { class: 'hi mono' }, Math.round(hi) + '°'));
   });
-  const el = card('wx ' + fx + (day ? ' day' : ' night'), '// WETTER',
+  /* Eigene Klassennamen: „clear“ o. ä. gibt es auf der Seite schon (Leeren-Knopf) */
+  const el = card('wx wx-' + fx + (day ? ' wx-day' : ' wx-night'), '// WETTER',
     cv,
     h('div', { class: 'wx-head' },
       h('div', {}, h('h2', {}, loc.name), h('div', { class: 'wx-sub' }, loc.sub)),
@@ -247,7 +249,7 @@ async function currency(a) {
     const vs = series.map(x => x[1]), lo = Math.min(...vs), hi = Math.max(...vs), W = 300, H = 56;
     const pts = vs.map((v, i) => `${(i / (vs.length - 1) * W).toFixed(1)},${(H - 4 - ((v - lo) / (hi - lo || 1)) * (H - 10)).toFixed(1)}`);
     const sv = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'cv-spark', preserveAspectRatio: 'none' });
-    sv.append(svgEl('path', { d: `M0,${H} L${pts.join(' L')} L${W},${H} Z`, fill: 'rgba(122,243,255,.12)' }), svgEl('path', { d: 'M' + pts.join(' L'), fill: 'none', stroke: '#7af3ff', 'stroke-width': 2, class: 'wx-line' }));
+    sv.append(svgEl('path', { d: `M0,${H} L${pts.join(' L')} L${W},${H} Z`, fill: 'rgba(122,243,255,.12)', stroke: 'none' }), svgEl('path', { d: 'M' + pts.join(' L'), fill: 'none', stroke: '#7af3ff', 'stroke-width': 2, class: 'wx-line' }));
     spark = sv;
     const ch = (vs[vs.length - 1] / vs[0] - 1) * 100;
     trend = (ch >= 0 ? '▲ +' : '▼ ') + nf(ch, 2) + ' % IN 30 TAGEN';
@@ -306,7 +308,7 @@ function matchRow(m, focus) {
 function tableEl(rows, lg, focusId, short = 6) {
   const z = LEAGUES[lg][2], n = rows.length;
   const zone = i => { const p = i + 1; if (z.cl && p <= z.cl) return 'cl'; if (z.up && p <= z.up) return 'up'; if (p === z.el) return 'el'; if (p === z.ecl) return 'ecl'; if (p === z.relUp) return 'relup'; if (p === z.rel) return 'rel'; if (z.down && p >= z.down) return 'down'; return ''; };
-  const list = h('ol', { class: 'fx-table' }, rows.map((r, i) => h('li', { class: zone(i) + (r.teamInfoId === focusId ? ' me' : '') + (i >= short ? ' more' : ''), style: `--i:${i}` },
+  const list = h('ol', { class: 'fx-table' }, rows.map((r, i) => h('li', { class: zone(i) + (r.teamInfoId === focusId ? ' me' : '') + (i >= short ? ' fx-more' : ''), style: `--i:${i}` },
     h('span', { class: 'pos mono' }, i + 1), img(r.teamIconUrl, 'crest'), h('span', { class: 'nm' }, r.shortName || r.teamName), h('span', { class: 'mono sp' }, r.matches),
     h('span', { class: 'mono td' }, (r.goalDiff > 0 ? '+' : '') + r.goalDiff), h('b', { class: 'mono' }, r.points))));
   const btn = n > short ? h('button', { class: 'btn fx-all', onclick: () => { list.classList.toggle('open'); btn.textContent = list.classList.contains('open') ? 'Weniger' : 'Ganze Tabelle'; } }, 'Ganze Tabelle') : null;

@@ -46,7 +46,7 @@ http.createServer((req, rsp) => {
     /* Sofort-Antworten: Open-Meteo, Frankfurter, OpenLigaDB, Jolpica (Formate wie die echten APIs) */
     const J = o => send(JSON.stringify(o), 'application/json');
     if (u.pathname === '/geocoding-api.open-meteo.com/v1/search') {
-      const P = { berlin: ['Berlin', 52.52, 13.41, 'Berlin', 'Deutschland'], tokio: ['Tokio', 35.69, 139.69, 'Tokio', 'Japan'], münchen: ['München', 48.14, 11.58, 'Bayern', 'Deutschland'] };
+      const P = { duisburg: ['Duisburg', 51.43, 6.76, 'Nordrhein-Westfalen', 'Deutschland'], berlin: ['Berlin', 52.52, 13.41, 'Berlin', 'Deutschland'], tokio: ['Tokio', 35.69, 139.69, 'Tokio', 'Japan'], münchen: ['München', 48.14, 11.58, 'Bayern', 'Deutschland'] };
       const r = P[(u.searchParams.get('name') || '').toLowerCase()];
       return J(r ? { results: [{ id: 1, name: r[0], latitude: r[1], longitude: r[2], admin1: r[3], country: r[4] }] } : { generationtime_ms: 0.2 });
     }

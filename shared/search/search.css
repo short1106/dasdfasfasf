@@ -206,9 +206,9 @@ h3 mark{color:inherit;text-shadow:none}
 .ans .btn{height:32px;font-size:12.5px;margin-top:10px}
 /* Wetter */
 .wx{min-height:300px}
-.wx.day{background:linear-gradient(165deg,rgba(255,170,120,.2),rgba(129,34,181,.22) 45%,rgba(14,11,22,.94) 80%)}
-.wx.night{background:linear-gradient(165deg,rgba(40,40,120,.4),rgba(14,11,22,.95) 70%)}
-.wx.rain,.wx.storm{background:linear-gradient(165deg,rgba(70,90,160,.35),rgba(14,11,22,.95) 70%)}
+.wx.wx-day{background:linear-gradient(165deg,rgba(255,170,120,.2),rgba(129,34,181,.22) 45%,rgba(14,11,22,.94) 80%)}
+.wx.wx-night{background:linear-gradient(165deg,rgba(40,40,120,.4),rgba(14,11,22,.95) 70%)}
+.wx.wx-rain,.wx.wx-storm{background:linear-gradient(165deg,rgba(70,90,160,.35),rgba(14,11,22,.95) 70%)}
 .wx-fx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
 .wx-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .wx-sub{font-size:12.5px;color:var(--muted)}
@@ -221,10 +221,13 @@ h3 mark{color:inherit;text-shadow:none}
 .wx-info{display:flex;flex-direction:column;gap:4px}
 .wx-info b{font-size:17px}
 .wx-info span{font-size:10px;letter-spacing:.12em;color:var(--muted);line-height:1.5}
-.wx-hours{margin:6px -4px 4px}
+.wx-hours{position:relative;margin:6px -4px 4px}
+.wx-t,.wx-v{position:absolute;transform:translate(-50%,0);white-space:nowrap;pointer-events:none}
+.wx-t{bottom:0;font-size:9px;color:var(--dim)}
+.wx-v{transform:translate(-50%,-100%);font:700 11px var(--sans);color:#fff;text-shadow:0 0 8px rgba(0,0,0,.6)}
+.wx-t.first{transform:none}
+.wx-v.first{transform:translate(0,-100%)}
 .wx-chart{width:100%;height:96px;overflow:visible}
-.wx-chart text{font:600 9px var(--mono);fill:var(--dim)}
-.wx-chart text.v{fill:#fff;font-size:10px}
 .wx-line{stroke-dasharray:1200;stroke-dashoffset:1200;animation:wxDraw 1.6s .2s var(--ease) forwards;filter:drop-shadow(0 0 6px rgba(var(--pink-rgb),.8))}
 @keyframes wxDraw{to{stroke-dashoffset:0}}
 .wx-days{list-style:none;display:flex;flex-direction:column;gap:2px;margin-top:4px}
@@ -277,8 +280,8 @@ h3 mark{color:inherit;text-shadow:none}
 .fx-th span:nth-child(2){margin-left:-28px}
 .fx-table{list-style:none;display:flex;flex-direction:column;gap:2px}
 .fx-table li{display:grid;grid-template-columns:24px 22px 1fr 26px 34px 30px;align-items:center;gap:6px;padding:5px 6px;border-radius:9px;font-size:13px;border-left:3px solid transparent;animation:rise .4s var(--spring) both;animation-delay:calc(var(--i) * 25ms)}
-.fx-table li.more{display:none}
-.fx-table.open li.more{display:grid}
+.fx-table li.fx-more{display:none}
+.fx-table.open li.fx-more{display:grid}
 .fx-table li .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fx-table li .sp,.fx-table li .td{font-size:11.5px;color:var(--muted);text-align:right}
 .fx-table li b{text-align:right;font-size:13px}
