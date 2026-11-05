@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('dulidan', {
   disco: { start: call('disco:start'), stop: call('disco:stop') },
   autostart: { get: call('autostart:get'), set: call('autostart:set') },
   wallet: { list: call('wallet:list'), remove: call('wallet:remove'), config: call('wallet:config'), respond: call('wallet:respond') },
+  pip: call('pip:toggle'),
   snip: { capture: call('snip:capture'), copy: call('snip:copy'), save: call('snip:save'), show: call('snip:show') },
   suggest: call('suggest'),
   weather: call('weather'),

@@ -291,6 +291,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - UI: View per `hold('snip')` verstecken, Foto über `#viewport` legen, Bereich ziehen (oder Enter = ganze Ansicht), dann Canvas-Editor mit Stift, Marker, Pfeil, Rahmen, Text, Verpixeln, 6 Farben, Rückgängig (25 Schritte), Tasten 1–6, Strg+C/S/Z.
   - `snip:copy`: Electron 45 hat im Main nur noch die Web-artige Zwischenablage (`clipboard.write([new ClipboardItem({'image/png': Blob})])`), ältere `writeImage`. In xvfb nicht prüfbar.
   - `snip:save` → `Bilder\Dulidan Screenshots\Screenshot JJJJ-MM-TT HH-MM-SS.png`, `snip:show` öffnet den Ordner.
+- **Bild-in-Bild** (`Strg+Umschalt+P`, Knopf `#btnPip` neben Disko wenn Ton läuft, Palette, Rechtsklick auf Video): Main `pip:toggle` führt mit Nutzer-Geste `requestPictureInPicture()` am größten laufenden Video aus (erst Hauptrahmen, dann iframes), `disablePictureInPicture` wird entfernt. Das Chromium-PiP-Fenster bleibt über allen Programmen. Test `tests/e2e/pip.js`.
 - **Autostart:** Einstellung „Mit Windows starten“ → `app.setLoginItemSettings`. Geht nur in der installierten App. Der Schalter liest beim Start den echten Zustand.
 - **Tabs robust:**
   - **Übergänge:** `view.transition()` räumt in `finally` immer auf, damit ein Tab nie „im Übergang“ hängen bleibt (sonst bliebe er leer). Notbremse: 8 s.

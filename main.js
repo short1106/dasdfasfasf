@@ -235,6 +235,7 @@ function wire(t, wc) {
       translate: text => ui('translate', { text: text.slice(0, 3000) }),
       passwords: () => { win.webContents.focus(); ui('shortcut', { name: 'passwords' }); },
       snip: () => { win.webContents.focus(); ui('shortcut', { name: 'snip' }); },
+      pip: () => ui('shortcut', { name: 'pip' }),
       nav: true, inspect: true
     });
     if (m) m.popup({ window: win });
@@ -516,6 +517,7 @@ function keyName(i) {
     if (k === 'r' && i.shift) return 'calc';
     if (k === 'm' && i.shift) return 'disco';
     if (k === 's' && i.shift) return 'snip';
+    if (k === 'p' && i.shift) return 'pip';
     if (k === 'r') return 'reload';
     if (k === ',') return 'settings';
     if (k === 'j') return 'downloads';
@@ -700,6 +702,23 @@ function ipc() {
     } catch (e) { if (process.env.DW_DEBUG) console.log('[snip]', e.message); return null; }
   });
   const pngOf = d => (typeof d === 'string' && d.startsWith('data:image/png;base64,') && d.length < 80e6 ? nativeImage.createFromDataURL(d) : null);
+  /* ===== Bild-in-Bild für jede Seite: größtes (laufendes) Video ins schwebende Chromium-Fenster, das über allen Programmen bleibt ===== */
+  h('pip:toggle', async id => {
+    const w = wcOf(id); if (!w) return 'kein-tab';
+    const code = `(async () => {
+      if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return 'aus'; }
+      const vs = [...document.querySelectorAll('video')].filter(v => v.readyState > 0 && v.offsetWidth * v.offsetHeight > 0);
+      if (!vs.length) return 'kein-video';
+      vs.sort((a, b) => (!b.paused - !a.paused) || b.offsetWidth * b.offsetHeight - a.offsetWidth * a.offsetHeight);
+      const v = vs[0]; v.disablePictureInPicture = false; v.removeAttribute('disablepictureinpicture');
+      await v.requestPictureInPicture(); if (v.paused) v.play().catch(() => {});
+      return 'an';
+    })().catch(e => 'fehler:' + e.message)`;
+    /* Erst die Seite selbst, dann eingebettete Rahmen (z. B. YouTube-Player auf fremden Seiten) */
+    try { const r = await w.executeJavaScript(code, true); if (r !== 'kein-video') return r; } catch {}
+    for (const f of w.mainFrame.framesInSubtree) { if (f === w.mainFrame) continue; try { const r = await f.executeJavaScript(code, true); if (r !== 'kein-video') return r; } catch {} }
+    return 'kein-video';
+  });
   h('snip:copy', async d => {
     const img = pngOf(d); if (!img || img.isEmpty()) return false;
     /* Electron 45: Zwischenablage wie im Web (ClipboardItem mit Blob); ältere Versionen: writeImage() */

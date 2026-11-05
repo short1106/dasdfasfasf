@@ -57,7 +57,7 @@ onAudio(a => {
 const discoBtn = $('#btnDisco');
 onAudio(a => {
   const show = !!active && !active.home && a.active && a.tabId === active.id;
-  if (show !== !discoBtn.hidden) discoBtn.hidden = !show;
+  if (show !== !discoBtn.hidden) { discoBtn.hidden = !show; $('#btnPip').hidden = !show; }
   if (show) [a.bass, a.mid, a.high].forEach((v, i) => { discoBtn.querySelector('.eq').children[i].style.transform = `scaleY(${Math.max(0.2, Math.min(1, v * 1.4))})`; });
   discoBtn.style.setProperty('--bass', a.bass.toFixed(3));
 });
@@ -69,6 +69,16 @@ async function startDisco() {
 }
 discoBtn.addEventListener('click', () => startDisco());
 $('#btnSnip').addEventListener('click', () => openSnip(active));
+/* Bild-in-Bild: Video als schwebendes Fenster über allen Programmen */
+async function togglePip() {
+  if (!active || active.home) return toast('Öffne erst eine Seite mit Video');
+  const r = await api.pip(active.id);
+  if (r === 'an') { toast('▣ Bild-in-Bild an – Fenster frei verschiebbar, bleibt über allem'); sfx('fire'); shockwave($('#btnPip')); }
+  else if (r === 'aus') toast('Bild-in-Bild aus');
+  else if (r === 'kein-video') toast('Auf dieser Seite läuft kein Video');
+  else toast('Bild-in-Bild ging hier nicht');
+}
+$('#btnPip').addEventListener('click', togglePip);
 
 let lastShock = 0;
 onKick(b => {
@@ -443,6 +453,7 @@ const ACTIONS = {
   'new-tab': () => newTab(),
   incognito: () => newTab(null, { incognito: true }),
   snip: () => openSnip(active),
+  pip: () => togglePip(),
   'close-tab': () => closeTab(active),
   'focus-omnibox': focusBar,
   palette: () => pal.toggle(),
@@ -475,6 +486,7 @@ const COMMANDS = () => [
   { icon: 'plus', name: 'Neuer Tab', key: 'Strg T', run: () => newTab() },
   { icon: 'mask', name: 'Neuer Inkognito-Tab', key: 'Strg ⇧ N', run: () => newTab(null, { incognito: true }) },
   { icon: 'snip', name: 'Screenshot / Snipping-Tool', key: 'Strg ⇧ S', run: () => openSnip(active) },
+  { icon: 'pip', name: 'Bild-in-Bild (Video schwebt über allem)', key: 'Strg ⇧ P', run: () => togglePip() },
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
@@ -563,6 +575,7 @@ function keyName(e) {
   if (c && e.shiftKey && k === 'm') return 'disco';
   if (c && e.shiftKey && k === 'n') return 'incognito';
   if (c && e.shiftKey && k === 's') return 'snip';
+  if (c && e.shiftKey && k === 'p') return 'pip';
   if (c && !e.altKey) return ({ t: 'new-tab', w: 'close-tab', l: 'focus-omnibox', k: 'palette', r: 'reload', ',': 'settings', j: 'downloads', d: 'bookmark', e: 'overview', f: 'find', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', 0: 'zoom-reset', tab: e.shiftKey ? 'prev-tab' : 'next-tab' })[k];
   if (k === 'f5') return 'reload';
   if (k === 'f11') return 'fullscreen';

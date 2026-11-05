@@ -86,6 +86,7 @@ Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). S
 | `Strg+T` | Neuer Tab |
 | `Strg+Umschalt+N` | Neuer Inkognito-Tab |
 | `Strg+Umschalt+S` | Screenshot (Snipping-Tool) |
+| `Strg+Umschalt+P` | Bild-in-Bild: Video als schwebendes Fenster über allen Programmen |
 | `Strg+W` | Tab schließen |
 | `Strg+Tab` / `Strg+Umschalt+Tab` | Nächster / vorheriger Tab |
 | `Strg+L` | Adressleiste fokussieren |
