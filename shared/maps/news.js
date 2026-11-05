@@ -75,10 +75,12 @@ function gdelt(params, onWait) {
 const GN = { DE: 'de', AT: 'de', CH: 'de', FR: 'fr', BE: 'fr', IT: 'it', ES: 'es', MX: 'es', AR: 'es', CO: 'es', CL: 'es', PE: 'es', PT: 'pt-PT', BR: 'pt-BR', NL: 'nl', PL: 'pl', CZ: 'cs', SK: 'sk',
   HU: 'hu', RO: 'ro', BG: 'bg', RS: 'sr', HR: 'hr', SI: 'sl', GR: 'el', TR: 'tr', RU: 'ru', UA: 'uk', SE: 'sv', NO: 'no', DK: 'da', FI: 'fi', LT: 'lt', LV: 'lv', IL: 'he', SA: 'ar', AE: 'ar', EG: 'ar',
   MA: 'fr', JP: 'ja', KR: 'ko', CN: 'zh-Hans', TW: 'zh-Hant', HK: 'zh-Hant', TH: 'th', VN: 'vi', ID: 'id', MY: 'ms' };
-async function googleNews(c, topic) {
-  const hl = GN[c.iso] || 'en', base = hl.split('-')[0];
-  const qs = new URLSearchParams({ hl, gl: c.iso, ceid: c.iso + ':' + base });
-  const url = topic ? 'https://news.google.com/rss/search?' + new URLSearchParams({ q: topic }) + '&' + qs : 'https://news.google.com/rss?' + qs;
+async function googleNews(c, topic, about) {
+  /* „Über das Land“: deutsche Google-News-Suche nach dem Land; „Aus dem Land“: Titelseite des Landes in seiner Sprache */
+  const hl = about ? 'de' : GN[c.iso] || 'en', gl = about ? 'DE' : c.iso, base = hl.split('-')[0];
+  const qs = new URLSearchParams({ hl, gl, ceid: gl + ':' + base });
+  const q = about ? [topic, c.de].filter(Boolean).join(' ') : topic;
+  const url = q ? 'https://news.google.com/rss/search?' + new URLSearchParams({ q }) + '&' + qs : 'https://news.google.com/rss?' + qs;
   const j = await viaProxy(url);
   if (!j || j.status >= 400 || !j.body) throw new Error('Auch Google News antwortet nicht');
   const doc = new DOMParser().parseFromString(j.body, 'text/xml');
@@ -98,7 +100,8 @@ const LANG = { german: 'DE', english: 'EN', french: 'FR', spanish: 'ES', italian
 
 /* ===================== Ebenen + Panel ===================== */
 export function createNews(map, { h, onOpen, onClose, reduced }) {
-  let active = false, raf = 0, sel = null, topic = '', weights = new Map(), seq = 0;
+  /* Blickwinkel: 'about' = deutsche Berichte über das Land (Standard), 'from' = Presse des Landes in ihrer Sprache */
+  let active = false, raf = 0, sel = null, topic = '', weights = new Map(), seq = 0, view = 'about';
   const feat = () => ({ type: 'FeatureCollection', features: C.map(c => ({ type: 'Feature', id: c.iso.charCodeAt(0) * 256 + c.iso.charCodeAt(1), properties: { iso: c.iso, name: c.de, w: weights.size ? (weights.get(c.iso) || 0) : 0.35, sel: c.iso === sel ? 1 : 0 }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } })) });
   const LAYERS = ['nw-glow', 'nw-ring', 'nw-core', 'nw-name'];
   function install() {
@@ -170,17 +173,20 @@ export function createNews(map, { h, onOpen, onClose, reduced }) {
     const c = BY_ISO.get(iso); if (!c) return;
     sel = iso; refresh(); const my = ++seq;
     if (fly) map.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom(), 3.2), duration: reduced ? 0 : 1600, essential: true });
-    body.replaceChildren(h('div', { class: 'nw-country' }, h('h2', {}, c.de), h('button', { class: 'nw-back mono', onclick: () => { sel = null; refresh(); topic ? setTopic(topic) : hint(); } }, '← ALLE LÄNDER')), h('div', { class: 'nw-skel' }, h('i'), h('i'), h('i')));
-    say(topic ? 'Neueste Berichte aus ' + c.de + ' zu „' + topic + '“ …' : 'Neueste Nachrichten aus ' + c.de + ' …', true);
+    const seg = h('div', { class: 'nw-seg mono' }, [['about', 'ÜBER ' + c.de.toUpperCase() + ' · DEUTSCH'], ['from', 'PRESSE AUS ' + c.de.toUpperCase()]].map(([k, t]) => h('button', { class: k === view ? 'on' : '', onclick: () => { if (view !== k) { view = k; pick(iso, false); } } }, t)));
+    body.replaceChildren(h('div', { class: 'nw-country' }, h('h2', {}, c.de), h('button', { class: 'nw-back mono', onclick: () => { sel = null; refresh(); topic ? setTopic(topic) : hint(); } }, '← ALLE LÄNDER')), seg, h('div', { class: 'nw-skel' }, h('i'), h('i'), h('i')));
+    const about = view === 'about';
+    say((about ? 'Deutsche Berichte über ' + c.de : 'Neueste Meldungen der Presse aus ' + c.de) + (topic ? ' zu „' + topic + '“' : '') + ' …', true);
     try {
-      const q = (topic ? topic + ' ' : '') + 'sourcecountry:' + c.g;
+      /* Über das Land: Landesname als Suchwort in deutschsprachigen Quellen; aus dem Land: Quellen mit Sitz dort */
+      const q = (topic ? topic + ' ' : '') + (about ? '"' + c.de + '" sourcelang:german' : 'sourcecountry:' + c.g);
       let arts = [], src = 'GDELT';
       try {
         const d = await gdelt({ query: q, mode: 'artlist', maxrecords: '40', sort: 'datedesc', timespan: '2d', format: 'json' }, w => say('Kurz warten (GDELT-Limit) · ' + Math.ceil(w / 1000) + ' s …', true));
         arts = d.articles || [];
       } catch (e) { if (my === seq) say(e.message + ' – hole Google News …', true); }
       if (my !== seq) return;
-      if (!arts.length) { arts = await googleNews(c, topic); src = 'GOOGLE NEWS'; }
+      if (!arts.length) { arts = await googleNews(c, topic, about); src = 'GOOGLE NEWS'; }
       if (my !== seq) return;
       /* Doppelte Überschriften (Agenturmeldungen) nur einmal */
       const seen = new Set(), list = arts.filter(a => a && /^https?:\/\//.test(a.url) && a.title && !seen.has(a.title.toLowerCase()) && seen.add(a.title.toLowerCase())).slice(0, 24);

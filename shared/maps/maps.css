@@ -192,6 +192,9 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .nw-country{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 0 8px}
 .nw-country h2{font-size:24px;letter-spacing:-.03em}
 .nw-back{font-size:9.5px;letter-spacing:.12em;color:var(--muted)}
+.nw-seg{display:flex;gap:5px;margin:0 0 10px}
+.nw-seg button{flex:1;padding:7px 6px;border-radius:999px;font-size:9px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line);transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nw-seg button.on{color:var(--pink);border-color:rgba(var(--pink-rgb),.5);background:rgba(var(--pink-rgb),.1)}
 .nw-back:hover{color:var(--pink)}
 .nw-skel{display:flex;flex-direction:column;gap:8px}
 .nw-skel i{height:68px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.09),rgba(255,255,255,.04));background-size:200% 100%;animation:shimmer 1.2s linear infinite}

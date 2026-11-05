@@ -116,11 +116,11 @@ http.createServer((req, rsp) => {
         const S = [['Germany', 9], ['United States', 14], ['Ukraine', 22], ['Russia', 17], ['Poland', 8], ['France', 6], ['United Kingdom', 7], ['Japan', 2]];
         return J({ query_details: { title: q }, timeline: S.map(([n, v]) => ({ series: n, data: [{ date: '20261104T000000Z', value: v / 10 }, { date: '20261105T000000Z', value: v / 8 }] })) });
       }
-      const m = /sourcecountry:(\w+)/.exec(q), land = m ? m[1] : 'welt', topic = q.replace(/sourcecountry:\w+/, '').trim();
+      const m = /sourcecountry:(\w+)/.exec(q) || /"([^"]+)"/.exec(q), land = m ? m[1] : 'welt', topic = q.replace(/sourcecountry:\w+|"[^"]+"|sourcelang:\w+/g, '').trim();
       /* Wie im echten Fehlerfall: leere Antwort → die Seite muss auf Google News ausweichen */
-      if (land === 'unitedkingdom') return send('', 'application/json');
+      if (land === 'unitedkingdom' || land === 'Großbritannien') return send('', 'application/json');
       const t = new Date(Date.now() - 25 * 60000), sd = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-      const LG = { germany: 'German', japan: 'Japanese', france: 'French' }[land] || 'English';
+      const LG = /sourcelang:german/.test(q) ? 'German' : { germany: 'German', japan: 'Japanese', france: 'French' }[land] || 'English';
       return J({ articles: Array.from({ length: 14 }, (_, i) => ({ url: 'https://news.test/' + land + '/' + i, url_mobile: '', title: (topic ? topic + ': ' : '') + 'Schlagzeile ' + (i + 1) + ' aus ' + land + (i === 3 ? ' (Doppelt)' : ''), seendate: sd(new Date(t - i * 47 * 60000)), socialimage: i % 3 ? 'https://img.test/news' + i + '.jpg' : '', domain: land + '-zeitung' + (i % 4) + '.test', language: LG, sourcecountry: land }))
         .concat([{ url: 'https://news.test/dup', title: (topic ? topic + ': ' : '') + 'Schlagzeile 4 aus ' + land + ' (Doppelt)', seendate: sd(t), domain: 'dup.test', language: LG }]) });
     }

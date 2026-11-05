@@ -29,7 +29,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* Land antippen (aus der Top-Liste) */
   await js("document.querySelector('.nw-top li').click(); 1");
   R.land = await until("document.querySelectorAll('.nw-list li').length ? document.querySelector('.nw-country h2').textContent + ' · ' + document.querySelectorAll('.nw-list li').length + ' Meldungen · ' + document.querySelector('.nw-status').textContent : ''", 25000);
-  R.erste = await js("(() => { const a = document.querySelector('.nw-list .nw-a'); return a.querySelector('b').textContent + ' | ' + a.querySelector('.nw-tx span').textContent + ' | Ziel ' + a.target + ' | DE-Knopf: ' + !!document.querySelector('.nw-tr'); })()");
+  R.erste = await js("(() => { const a = document.querySelector('.nw-list .nw-a'); return a.querySelector('b').textContent + ' | ' + a.querySelector('.nw-tx span').textContent + ' | Ziel ' + a.target + ' | DE-Knopf: ' + !!document.querySelector('.nw-tr') + ' | Ansicht: ' + document.querySelector('.nw-seg .on').textContent; })()");
+  /* Umschalten auf Presse aus dem Land (Originalsprache) */
+  await js("document.querySelectorAll('.nw-seg button')[1].click(); 1");
+  R.presse = await until("document.querySelector('.nw-seg button:nth-child(2).on') && document.querySelectorAll('.nw-list li').length ? document.querySelector('.nw-list b').textContent + ' | ' + document.querySelector('.nw-list .nw-tx span').textContent + ' | DE-Knopf: ' + !!document.querySelector('.nw-tr') : ''", 25000);
+  await js("document.querySelectorAll('.nw-seg button')[0].click(); 1"); await wait(6500);
   await wait(1700); await shot('n3-land.png');
   /* Land direkt auf der Karte anklicken (Deutschland) */
   await js("document.querySelector('.nw-back').click(); 1"); await wait(400);
@@ -42,7 +46,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await js("document.querySelector('.nw-back').click(); 1"); await wait(300);
   await js("window.__nwPick && 1");
   await js("(() => { const li = [...document.querySelectorAll('.nw-top li')].find(l => /Großbritannien/.test(l.textContent)); if (li) li.click(); return !!li; })()");
-  R.ausweich = await until("document.querySelector('.nw-country h2') && document.querySelector('.nw-country h2').textContent === 'Großbritannien' && document.querySelectorAll('.nw-list li').length ? document.querySelectorAll('.nw-list li').length + ' Meldungen · ' + document.querySelector('.nw-status').textContent + ' · 1.: ' + document.querySelector('.nw-list b').textContent : ''", 30000);
+  R.ausweich = await until("document.querySelector('.nw-country h2') && document.querySelector('.nw-country h2').textContent === 'Großbritannien' && document.querySelectorAll('.nw-list li').length ? document.querySelectorAll('.nw-list li').length + ' Meldungen · ' + document.querySelector('.nw-status').textContent + ' · 1.: ' + document.querySelector('.nw-list b').textContent : ''", 40000);
   /* Schließen */
   await js("document.querySelector('#nw .x').click(); 1"); await wait(1200);
   R.zu = await js("document.getElementById('nw').hidden + ' · ' + JSON.stringify(__map.getProjection()) + ' · ' + __map.getLayoutProperty('nw-core', 'visibility')");
