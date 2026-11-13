@@ -341,3 +341,5 @@ body.orbit .tab-glow{opacity:.3!important}
 .ov-grp small{font:600 8.5px var(--mono);letter-spacing:.22em;color:color-mix(in srgb,var(--gc) 70%,#fff);opacity:.8;text-shadow:none}
 .ov-grp:hover{scale:1.08;background:color-mix(in srgb,var(--gc) 30%,rgba(7,6,11,.82));box-shadow:0 0 40px var(--gc)}
 .ov-grp.collapsed{border-style:dashed}
+/* Lautstärke der Hintergrundmusik */
+.vol{width:100%;margin:10px 0 4px;accent-color:var(--pink);cursor:pointer}

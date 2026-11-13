@@ -20,6 +20,7 @@ import { applyJapan, refreshJapan } from './japan.js';
 import { applyRussia, refreshRussia, BAND_RU, BAND_RU2 } from './russia.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
+import { musicState, apply as applyMusic, trackName } from './bgmusic.js';
 import { groups, ensureGroup, layoutGroups, chipBurst, tabMenu, PRESETS } from './groups.js';
 
 const body = document.body, homeEl = $('#home');
@@ -58,8 +59,10 @@ onAudio(a => {
 });
 /* Disko-Knopf: erscheint, sobald im aktiven Tab Musik läuft, und tanzt mit */
 const discoBtn = $('#btnDisco');
+let lastTabAudio = false;
 onAudio(a => {
   const show = !!active && !active.home && a.active && a.tabId === active.id;
+  if (!!a.active !== lastTabAudio) { lastTabAudio = !!a.active; musicState({ tabAudio: lastTabAudio }); }
   if (show !== !discoBtn.hidden) { discoBtn.hidden = !show; $('#btnPip').hidden = !show; }
   if (show) [a.bass, a.mid, a.high].forEach((v, i) => { discoBtn.querySelector('.eq').children[i].style.transform = `scaleY(${Math.max(0.2, Math.min(1, v * 1.4))})`; });
   discoBtn.style.setProperty('--bass', a.bass.toFixed(3));
@@ -416,6 +419,7 @@ function toggleStar() {
 let homeHideT = 0, introT = 0;
 function updateHome(fresh = false) {
   const show = !!(active && active.home);
+  musicState({ home: show });
   clearTimeout(homeHideT);
   if (show) {
     homeEl.classList.remove('gone');
@@ -571,6 +575,7 @@ const COMMANDS = () => [
   ...(active && active.group ? [{ icon: 'x', name: 'Tab aus Gruppe entfernen', key: '', run: () => setGroup(active, null) }] : []),
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
   { icon: 'color', name: 'Design: Россия (Russland) an/aus', key: '', run: () => setSetting('theme', settings.theme === 'russland' ? 'dulidan' : 'russland') },
+  { icon: 'sound', name: 'Hintergrundmusik an/aus', key: '', run: () => { setSetting('music', !settings.music); toast(settings.music ? '♪ ' + trackName(settings.theme) : 'Hintergrundmusik aus'); } },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
   { icon: 'reload', name: 'Neu laden', key: 'F5', run: () => reload(active) },
   { icon: 'back', name: 'Zurück', key: 'Alt ←', run: () => back(active) },
@@ -726,7 +731,7 @@ api.on(e => {
       body.classList.toggle('win-blur', !e.focused);
       break;
     case 'html-full': body.classList.toggle('html-full', !!e.on); setTimeout(view.sendBounds, 50); break;
-    case 'disco': body.classList.toggle('disco-on', !!e.on); break;
+    case 'disco': body.classList.toggle('disco-on', !!e.on); musicState({ disco: !!e.on }); break;
     case 'incognito-wiped': incognitoWiped(); break;
     case 'watch-changed': toast('👁 Seiten-Wächter: „' + (e.title || 'Seite') + '“ hat sich geändert'); sfx('fire'); if (panelIsWatch()) renderWatch(); break;
     case 'crash':
@@ -745,6 +750,7 @@ onSettings(k => {
   if (k === 'engine') $('#bigEngine').textContent = engineName().toUpperCase();
   if (k === 'center') { logo.setShape(settings.center); if (active && active.home) logo.shock(); }
   if (k === 'anim') { refreshJapan(); refreshRussia(); }
+  if (k === 'music' || k === 'musicVol' || k === 'theme') applyMusic();
   if (k === 'theme') {
     applyThemes();
     logo.refresh(); nebula.refresh();
