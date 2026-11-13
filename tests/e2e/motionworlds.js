@@ -34,7 +34,7 @@ const B = 'http://127.0.0.1:8798';
   R.auto = log.filter((_, i) => i % 3 === 0).join('\n   ');
   /* Alle Welten mit W */
   const worlds = [];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 10; i++) {
     await key('W'); await wait(2600);
     const s = await st(); worlds.push(s.split(' | ')[0] + ' / ' + (s.split(' | ')[1] || ''));
     await shot('m' + (i + 1) + '-' + s.split(' ')[0] + '.png');
@@ -54,6 +54,14 @@ const B = 'http://127.0.0.1:8798';
   R.ohneZeiten = pl.filter((_, i) => i % 3 === 0).join('\n   ');
   await shot('p-plain.png');
   await key('Escape'); await wait(800);
+  /* 4./5. Russisches und kasachisches Lied → Welten Russland und Kasachstan */
+  for (const [f, k] of [['ru.html', 'russisch'], ['kz.html', 'kasachisch']]) {
+    await open(f);
+    const L2 = [];
+    for (let i = 0; i < 12; i++) { L2.push(await st()); if (i === 10) await shot('w-' + k + '.png'); await wait(1000); }
+    R[k] = L2.filter((_, i) => i % 3 === 0).join('\n   ');
+    await key('Escape'); await wait(1000);
+  }
   for (const [k, v] of Object.entries(R)) console.log(k + ':\n   ' + v);
   console.log('Fehler UI:', errs.join(' | ') || 'keine', '| Seite:', JSON.stringify((await app.evaluate(() => global.__errs)).filter(e => !/favicon|Autofill|DevTools|GPU stall|ReadPixels|Electron Security/.test(e))));
   await app.close();

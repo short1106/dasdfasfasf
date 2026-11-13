@@ -546,10 +546,12 @@
   const norm = t => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
 
   /* ===================== Welt-Wahl: Sprache, Thema und Genre entscheiden, wie Lyric Motion aussieht ===================== */
-  const WORLDS = ['dulidan', 'neon', 'inferno', 'galaxie', 'japan', 'ozean', 'synthwave', 'weihnachten'];
-  const WORLD_NAME = { dulidan: 'DULIDAN', neon: 'NEON-CITY', inferno: 'INFERNO', galaxie: 'GALAXIE', japan: 'JAPAN 和', ozean: 'OZEAN', synthwave: 'SYNTHWAVE', weihnachten: 'WEIHNACHTEN 🎄' };
+  const WORLDS = ['dulidan', 'neon', 'inferno', 'galaxie', 'japan', 'ozean', 'synthwave', 'weihnachten', 'russland', 'kasachstan'];
+  const WORLD_NAME = { dulidan: 'DULIDAN', neon: 'NEON-CITY', inferno: 'INFERNO', galaxie: 'GALAXIE', japan: 'JAPAN 和', ozean: 'OZEAN', synthwave: 'SYNTHWAVE', weihnachten: 'WEIHNACHTEN 🎄', russland: 'РОССИЯ', kasachstan: 'ҚАЗАҚСТАН' };
   /* Schlüsselwörter (de/en/es/ja) → Thema; gezählt wird pro Wortanfang */
   const THEMES = {
+    russland: /^(russland|russia|russisch|moskau|moscow|kreml|kremlin|kalinka|katjuscha|katyusha|sibirien|siberia|москв|росси|русск|калинк|катюш|кремл|сибир)/,
+    kasachstan: /^(kasach|kazakh|qazaq|almaty|astana|dombra|steppe|қазақ|казах|алматы|астана|домбыр|дала)/,
     weihnachten: /^(christmas|xmas|weihnacht|santa|nikolaus|christkind|jingle|bells?$|glocke|schnee|snow|tannenbaum|christmas ?tree|rentier|reindeer|rudolph|sleigh|schlitten|mistletoe|noel|navidad|feliz|holy$|heilig|stille$|silent$|lametta|advent|geschenk|presents?$|winter ?wonderland|frosty|kling|feliz)/,
     japan: /^(japan|japanese|tokyo|tokio|kyoto|osaka|sakura|kirschblüt|samurai|ninja|geisha|kimono|anime|shibuya|harajuku|東京|桜|日本|侍)/,
     galaxie: /^(stars?|sterne?n?|galax|universe|universum|space|weltall|kosmos|cosmos|planet|moon|mond|comet|komet|rocket|rakete|astronaut|orbit|supernova|nebula|milky|milchstra|gravity|schwerelos|satellit|estrella|luna|cielo)/,
@@ -563,6 +565,9 @@
     const n = text.length || 1;
     if (kana / n > 0.03 || (han / n > 0.15 && kana > 0)) return 'ja';
     if (ko / n > 0.1) return 'ko';
+    /* Kyrillisch: kasachische Sonderbuchstaben → Kasachisch, sonst Russisch */
+    const cyr = (text.match(/[\u0400-\u04ff]/g) || []).length, kk = (text.match(/[әғқңөұүһӘҒҚҢӨҰҮҺ]/g) || []).length;
+    if (cyr / n > 0.2) return kk >= 3 ? 'kk' : 'ru';
     if (han / n > 0.2) return 'zh';
     const w = text.toLowerCase().split(/[^\p{L}]+/u), c = re => w.filter(x => re.test(x)).length;
     const de = c(/^(ich|und|nicht|der|die|das|du|wir|mein|dich|mich|ist|auf)$/), en = c(/^(the|and|you|i|me|my|is|it|your|love|don't|we)$/), es = c(/^(el|la|que|y|de|mi|tu|yo|amor|con|por|para)$/);
@@ -576,6 +581,8 @@
   function genreWorld(g) {
     g = g.toLowerCase();
     if (/holiday|christmas|weihnacht|xmas/.test(g)) return 'weihnachten';
+    if (/russian|russisch|chanson/.test(g)) return 'russland';
+    if (/kazakh|kasach|central asia/.test(g)) return 'kasachstan';
     if (/j-?pop|j-?rock|anime|japan|enka|kayō|kayo/.test(g)) return 'japan';
     if (/hip.?hop|rap|trap|drill|grime|k-?pop/.test(g)) return 'neon';
     if (/metal|rock|punk|grunge|hardcore|emo|alternative/.test(g)) return 'inferno';
@@ -590,6 +597,8 @@
     let w = '', why = '';
     if (gw === 'weihnachten' || (th.find(x => x[0] === 'weihnachten') || [0, 0])[1] >= 3) { w = 'weihnachten'; why = 'WEIHNACHTSLIED'; }
     else if (lg === 'ja') { w = 'japan'; why = 'JAPANISCH'; }
+    else if (lg === 'kk' || (th.find(x => x[0] === 'kasachstan') || [0, 0])[1] >= 2) { w = 'kasachstan'; why = lg === 'kk' ? 'KASACHISCH' : 'THEMA KASACHSTAN'; }
+    else if (lg === 'ru' || (th.find(x => x[0] === 'russland') || [0, 0])[1] >= 2) { w = 'russland'; why = lg === 'ru' ? 'RUSSISCH' : 'THEMA RUSSLAND'; }
     else if (th[0][0] === 'japan' && th[0][1] >= 2) { w = 'japan'; why = 'THEMA JAPAN'; }
     else if (gw) { w = gw; why = g.toUpperCase(); if (th[0][1] >= 4 && th[0][0] !== gw && /pop|latin|dance/i.test(g)) { w = th[0][0]; why = 'THEMA ' + WORLD_NAME[w]; } }
     else if (th[0][1] >= 3) { w = th[0][0]; why = 'THEMA ' + WORLD_NAME[w]; }

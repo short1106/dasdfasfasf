@@ -1,6 +1,6 @@
 /* Dulidan Web · Disko „Lyric Motion“ – 3D-Welten, in denen die Lyrics als Motion-Art erscheinen.
    Läuft in derselben isolierten Welt wie disco-page.js (Main setzt beide Dateien zusammen ein).
-   Acht Welten (Dulidan, Neon-City, Inferno, Galaxie, Japan, Ozean, Synthwave, Weihnachten) mit eigenem Himmel, Boden, Requisiten,
+   Zehn Welten (Dulidan, Neon-City, Inferno, Galaxie, Japan, Ozean, Synthwave, Weihnachten, Russland, Kasachstan) mit eigenem Himmel, Boden, Requisiten,
    Partikeln, Schrift und Lieblings-Effekten; disco-page.js wählt die Welt nach Sprache, Thema und Genre (setWorld).
    Text erscheint in 15 Arten (Slam, Fly-Through, Shatter, Glitch, Stack, Ring, Split, Welle, Regen, Burn-in, Sternbild,
    Slice, Flip, Typo-Wand), dazu Echo-Trails. Schlüsselwörter bauen hinter dem Wort eine Partikel-Figur auf (Welt → drehende
@@ -46,7 +46,11 @@
     synthwave: { n: 6, C: ['#2a0845', '#ff3ec8', '#ffb347'], floor: 5, amb: 'spark', props: 'palm', burst: 'spark',
       calm: ['flip', 'slice', 'wave'], hot: ['stack', 'slice', 'glitch', 'split'], chorus: ['slam', 'typo', 'shatter'] },
     weihnachten: { n: 7, C: ['#061233', '#e3262f', '#ffd36b'], floor: 6, amb: 'snow', props: 'tree', burst: 'snow',
-      calm: ['wave', 'flip', 'fly', 'constellation'], hot: ['split', 'rain', 'slice'], chorus: ['slam', 'typo', 'shatter', 'split'] }
+      calm: ['wave', 'flip', 'fly', 'constellation'], hot: ['split', 'rain', 'slice'], chorus: ['slam', 'typo', 'shatter', 'split'] },
+    russland: { n: 8, C: ['#0b1440', '#d52b1e', '#e8b84a'], floor: 7, amb: 'snow', props: 'birch', burst: 'tsar',
+      calm: ['burn', 'wave', 'flip', 'fly'], hot: ['split', 'slice', 'rain', 'stack'], chorus: ['slam', 'typo', 'shatter'] },
+    kasachstan: { n: 9, C: ['#065a7a', '#00afca', '#f2c230'], floor: 8, amb: 'gold', props: 'yurt', burst: 'sun',
+      calm: ['wave', 'flip', 'constellation', 'fly'], hot: ['split', 'slice', 'rain'], chorus: ['slam', 'typo', 'shatter', 'split'] }
   };
   /* ===================== Schlüsselwörter: Partikel-Animationen und Farben (de/en/es) ===================== */
   /* Keine Bilder: Schlüsselwörter bauen hinter dem Wort eine leuchtende Partikel-Figur auf (Vektor-Look wie das Dulidan-Logo)
@@ -237,7 +241,7 @@
         float ridge=.04+abs(fract(sx*.9)-.5)*.3+n2(vec2(sx*5.,2.))*.05;
         if(y<ridge){ c=C1*.6; float wf=smoothstep(.04,0.,abs(fract(y*30.)-.5)-.45)+smoothstep(.006,0.,abs(y-ridge))*2.;
           c+=C2*wf*.5*(.6+B); }
-      } else { /* Weihnachten: Sternennacht mit Nordlicht, Weihnachtsstern, verschneite Hügel mit Fenstern */
+      } else if(W<7.5){ /* Weihnachten: Sternennacht mit Nordlicht, Weihnachtsstern, verschneite Hügel mit Fenstern */
         c=mix(vec3(.05,.1,.26),C1*.7,clamp(y*1.1,0.,1.));
         vec2 g=floor(p*120.); c+=vec3(step(.993,h21(g))*(.5+.5*sin(T*2.+h21(g)*30.)));
         float au=fbm(vec2(sx*.8+T*.03,y*2.))*smoothstep(.15,.7,y)*smoothstep(1.1,.6,y);
@@ -251,6 +255,40 @@
           float win=step(.82,h11(hid))*step(.3,fract(hq.x))*step(fract(hq.x),.6)*step(hill-.08,y)*step(y,hill-.03);
           c+=C3*win*(1.2+B*.8); }
         c+=C3*exp(-max(y,0.)*6.)*.12;
+      } else if(W<8.5){ /* Russland: Winternacht, Nordlicht in Grün und Purpur, Zwiebelkuppeln mit Gold am Horizont */
+        c=mix(vec3(.05,.08,.22),C1*.55,clamp(y*1.2,0.,1.));
+        vec2 g=floor(p*130.); c+=vec3(step(.993,h21(g))*(.5+.5*sin(T*2.+h21(g)*30.)));
+        float au=fbm(vec2(sx*1.1+T*.04,y*1.5+T*.02)), cur=smoothstep(.18,.6,y)*smoothstep(1.15,.5,y)*pow(au,2.)*(.6+.4*sin(sx*6.+T));
+        c+=mix(vec3(.2,1.,.6),vec3(.85,.3,.85),.5+.5*sin(sx*2.+T*.3))*cur*.75*(.7+M*.6);
+        for(int l=0;l<2;l++){ float fl=float(l), cw=.34-fl*.1, sxx=sx*(1.-fl*.15)+fl*7.3;
+          float cx=floor(sxx/cw), lx=(fract(sxx/cw)-.5)*cw, hh=h11(cx+fl*9.);
+          if(hh<.25) continue;
+          float th=(.04+hh*.12)*(1.-fl*.35), tw=cw*(.16+hh*.1), br=tw*1.3;
+          vec2 q=vec2(lx,y)-vec2(0.,th+br*.72);
+          float tower=step(abs(lx),tw)*step(y,th);
+          float bulb=step(length(q*vec2(1.,1.12)),br)*step(-br*.65,q.y);
+          float tip=step(abs(lx),max(0.,(br*1.95-q.y))*.3)*step(br*.6,q.y)*step(q.y,br*1.95);
+          if(tower+bulb+tip>.5){
+            vec3 dc=hh<.5?C3:hh<.75?C2*1.15:vec3(.15,.65,.55);
+            c=(bulb+tip>.5)?dc*(.3+.75*smoothstep(-br,br*.8,-q.x*.8+q.y*.6))*(1.-fl*.45)+vec3(1.,.9,.6)*pow(max(0.,1.-length(q-vec2(-br*.35,br*.3))/(br*.35)),3.)*.6*(1.-fl):
+              vec3(.05,.06,.15)+vec3(1.,.75,.4)*step(.62,h21(floor(vec2(lx*70.,y*55.))+cx))*step(.25,fract(y*55.))*.8*(1.-fl*.6);
+          } }
+        c+=C3*exp(-max(y,0.)*7.)*.15;
+      } else { /* Kasachstan: hellblauer Steppenhimmel, goldene Sonne mit Strahlen, Steppenadler, ferne Hügel */
+        c=mix(vec3(.75,.93,.98),C2*.95,clamp(y*1.25,0.,1.));
+        vec2 sc=vec2(-YAW*.5,.5); vec2 q=p-sc; float sd=length(q), an=atan(q.y,q.x);
+        float rays=step(.5,fract(an*32./6.2832+T*.015))*smoothstep(.42,.17,sd)*step(.15,sd);
+        c=mix(c,C3*1.1,smoothstep(.135,.128,sd)+rays*.85); c+=C3*exp(-sd*4.)*(.25+B*.4);
+        /* Adler: Körper und zwei geschwungene Flügel, schlägt langsam */
+        vec2 e=p-vec2(sc.x,sc.y-.24); float fl=sin(T*2.2)*.35;
+        float ax=abs(e.x), wy=.06*sin(ax*9.)*(1.+fl)-ax*.25*(1.-fl*.5);
+        float wing=step(abs(e.y-wy),.016*(1.-ax/.36))*step(ax,.36);
+        float body=step(length(e*vec2(3.2,1.)),.055)+step(length((e-vec2(0.,.045))*vec2(1.8,1.6)),.022);
+        float tail=step(abs(e.x),.03+(-.05-e.y)*.4)*step(e.y,-.04)*step(-.11,e.y);
+        c=mix(c,C3*1.05,clamp(wing+body+tail,0.,1.));
+        float hill=.03+sin(sx*1.7)*.03+sin(sx*4.3+2.)*.015;
+        if(y<hill) c=mix(C2*.75,vec3(.55,.75,.8),smoothstep(hill-.12,hill,y));
+        c+=vec3(1.,.95,.75)*exp(-max(y,0.)*9.)*.25;
       }
       /* Unter dem Horizont übernimmt der Boden: Himmel dort abdunkeln (Galaxie hat keinen Boden) */
       if(W<2.5||W>3.5) c*=mix(.1,1.,smoothstep(-.3,.01,y));
@@ -278,7 +316,11 @@
         float col=exp(-abs(w.x+sin(w.z*2.+T*3.)*.35)*1.1)*(.3+.7*pow(wv,3.)); c+=C2*col*(.7+B); }
       else if(F<4.5){ float cs=pow(abs(sin(n2(w.xz*.5+T*.25)*11.)),6.); c=C1*.6+C3*cs*(.3+B*.6); }
       else if(F<5.5){ c=C2*line*(.9+B*1.4)+C3*.08*exp(-d*.04); }
-      else { float sn=.55+.25*n2(w.xz*.15); c=vec3(.45,.52,.72)*sn*.2; vec2 gq=floor(w.xz*3.); c+=vec3(1.)*step(.985,h21(gq))*(.5+.5*sin(T*4.+h21(gq)*50.))*(.7+B); }
+      else if(F<6.5){ float sn=.55+.25*n2(w.xz*.15); c=vec3(.45,.52,.72)*sn*.2; vec2 gq=floor(w.xz*3.); c+=vec3(1.)*step(.985,h21(gq))*(.5+.5*sin(T*4.+h21(gq)*50.))*(.7+B); }
+      else if(F<7.5){ /* Eis mit Rissen und Glitzer */ float n=fbm(w.xz*.18); float cr=pow(1.-abs(sin(n*16.)),18.);
+        c=vec3(.25,.4,.65)*.22+vec3(.75,.9,1.)*cr*(.35+B*.6)+C3*.04; vec2 gq=floor(w.xz*3.5); c+=vec3(1.)*step(.988,h21(gq))*(.5+.5*sin(T*5.+h21(gq)*40.))*.8; }
+      else { /* Goldene Steppe: Grashalme im Wind */ float wv=.5+.5*sin(w.x*.4+w.z*.25+T*1.6+n2(w.xz*.2)*4.);
+        c=mix(vec3(.45,.35,.1),vec3(.95,.78,.3),wv)*(.22+B*.25); c+=C3*step(.99,h21(floor(w.xz*4.)))*.5; }
       c+=C3*rip*1.4;
       gl_FragColor=vec4(c*fade,1.);}`;
   /* Partikel: rund (Glut, Funken), Blütenblatt, Blase, Regenstrich */
@@ -362,7 +404,9 @@
       japan: `700 ${PX}px "Yu Mincho","MS Mincho","Hiragino Mincho ProN","Noto Serif CJK JP",Georgia,serif`,
       ozean: `600 ${PX}px "Segoe UI Semibold","Segoe UI","Helvetica Neue",sans-serif`,
       synthwave: `italic 900 ${PX}px "Arial Black","Segoe UI Black",sans-serif`,
-      weihnachten: `700 ${PX}px Georgia,"Palatino Linotype","Book Antiqua","Times New Roman",serif`
+      weihnachten: `700 ${PX}px Georgia,"Palatino Linotype","Book Antiqua","Times New Roman",serif`,
+      russland: `700 ${PX}px "Palatino Linotype","Book Antiqua",Georgia,"Times New Roman",serif`,
+      kasachstan: `800 ${PX}px "Segoe UI","Arial","Helvetica Neue",sans-serif`
     };
     const mc = document.createElement('canvas').getContext('2d');
     const font = () => FONTS[S.worldId] || FONTS.dulidan;
@@ -396,6 +440,13 @@
         g.addColorStop(0, '#f2fbff'); g.addColorStop(0.42, '#6fb7ff'); g.addColorStop(0.5, '#1b1446'); g.addColorStop(0.62, '#ff6fd8'); g.addColorStop(1, '#fff0fb');
         x.shadowColor = '#ff3ec8'; x.shadowBlur = 30; x.lineWidth = 7; x.strokeStyle = '#ff3ec8'; x.strokeText(t, cx, cy);
         x.shadowBlur = 0; x.fillStyle = g; x.fillText(t, cx, cy);
+        return;
+      }
+      if (id === 'russland' || id === 'kasachstan') {
+        const ru = id === 'russland', g = x.createLinearGradient(0, PAD / 2, 0, hgt - PAD / 2);
+        g.addColorStop(0, '#fffbe6'); g.addColorStop(0.45, '#ffd76a'); g.addColorStop(1, ru ? '#b37a12' : '#d39a12');
+        x.shadowColor = ru ? (big ? '#ff3b30' : '#e8b84a') : (big ? '#7fe9ff' : '#ffd34d'); x.shadowBlur = 32; x.lineWidth = 6; x.strokeStyle = ru ? '#5a0d0a' : '#035a78';
+        x.strokeText(t, cx, cy); x.fillStyle = g; x.fillText(t, cx, cy); x.shadowBlur = 0; x.fillText(t, cx, cy);
         return;
       }
       if (id === 'weihnachten') {
@@ -482,6 +533,12 @@
       if (kind === 'petal') for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = rnd(2, 9); spawn(F[0] + rnd(-2, 2), F[1] + rnd(-1, 2), F[2] + rnd(-2, 2), Math.cos(a) * s, Math.sin(a) * s * 0.6 + 1, rnd(-2, 4), Math.random(), 1, 0.08, 0.2, 1); }
       else if (kind === 'ember') { for (let i = 0; i < n; i++) spawn(F[0] + rnd(-12, 12), -2.1, F[2] + rnd(-10, 8), rnd(-1, 1), rnd(3, 12), rnd(-1, 1), Math.random() * 0.5, 0, -0.2, 0.35, 1); ripple(0, F[2], 2); }
       else if (kind === 'bubble') for (let i = 0; i < n * 0.7; i++) spawn(F[0] + rnd(-6, 6), rnd(-2, 1), F[2] + rnd(-6, 4), rnd(-0.6, 0.6), rnd(1.5, 6), rnd(-0.6, 0.6), Math.random(), 2, -0.15, 0.3, 1);
+      else if (kind === 'tsar' || kind === 'sun') {
+        /* Russland: Schnee und Goldfunken · Kasachstan: goldener Sonnenring mit Strahlen */
+        for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = rnd(4, 12), g = Math.random() < 0.65;
+          if (kind === 'sun') spawnC(F[0], F[1], F[2], Math.cos(a) * s, Math.sin(a) * s, rnd(-0.5, 0.5), g ? [1, 0.82, 0.25] : [0.5, 0.92, 1], 0, 0, 0.5);
+          else if (g) spawn(F[0], F[1], F[2], Math.cos(a) * s * 0.7, Math.sin(a) * s * 0.5 + 1, rnd(-2, 3), Math.random(), 4, 0.1, 0.3, 1);
+          else spawnC(F[0], F[1], F[2], Math.cos(a) * s, Math.sin(a) * s * 0.6, rnd(-1, 2), [1, 0.8, 0.3], 0, 0.3, 0.7); } }
       else if (kind === 'snow') { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = rnd(2, 10); spawn(F[0], F[1], F[2], Math.cos(a) * s, Math.sin(a) * s * 0.7 + 1, rnd(-2, 3), Math.random(), i % 3 ? 4 : 0, 0.1, 0.3, 1); } }
       else if (kind === 'nova') for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = rnd(7, 13); spawn(F[0], F[1], F[2], Math.cos(a) * s, Math.sin(a) * s, rnd(-0.6, 0.6), Math.random(), 0, 0, 0.45, 1); }
       else { emit(n, F[0], F[1], F[2], 2, 9, S.hue); if (kind === 'glitch') S.inv = Math.max(S.inv, 0.5); }
@@ -495,6 +552,7 @@
       else if (t === 'ember') for (let i = n(dt * (40 + A.b * 160) * amp); i > 0; i--) spawn(rnd(-14, 14), -2.1, Z - rnd(0, 50), rnd(-0.4, 0.4), rnd(1.2, 4), rnd(-0.3, 0.3), Math.random() * 0.45, 0, -0.12, 0.35, 1);
       else if (t === 'dust') for (let i = n(dt * 30); i > 0; i--) spawn(rnd(-20, 20), rnd(-4, 9), Z - rnd(10, 90), 0, 0, rnd(0.5, 2), Math.random(), 0, 0, 0.25, 0.6);
       else if (t === 'petal') for (let i = n(dt * (26 + A.m * 50) * amp); i > 0; i--) spawn(rnd(-12, 12), rnd(5, 8), Z - rnd(2, 35), rnd(0.2, 1.2), rnd(-1.2, -0.4), rnd(-0.3, 0.3), Math.random(), 1, 0.02, 0.13, 1);
+      else if (t === 'gold') for (let i = n(dt * (24 + A.m * 40)); i > 0; i--) spawnC(rnd(-14, 14), rnd(-1.8, 5), Z - rnd(4, 45), rnd(-0.2, 0.2), rnd(0.1, 0.5), 0, Math.random() < 0.8 ? [1, 0.85, 0.35] : [0.6, 0.95, 1], 0, -0.02, 0.3, 0.8);
       else if (t === 'snow') for (let i = n(dt * (60 + A.m * 60) * (0.6 + amp * 0.4)); i > 0; i--) spawn(rnd(-14, 14), rnd(5, 9), Z - rnd(2, 45), rnd(-0.3, 0.6), rnd(-1.6, -0.7), rnd(-0.3, 0.3), Math.random(), 4, 0.02, 0.12, 1);
       else if (t === 'bubble') for (let i = n(dt * (28 + A.b * 40)); i > 0; i--) spawn(rnd(-10, 10), -2.1, Z - rnd(2, 40), rnd(-0.2, 0.2), rnd(0.6, 1.8), 0, Math.random(), 2, -0.06, 0.22, 1);
     }
@@ -528,6 +586,21 @@
         x.fillStyle = g; x.beginPath(); for (let i = 0; i <= 24; i++) { const a = i / 24 * 6.283, r = 100 + Math.sin(i * 2.3 + v * 9) * 12; x.lineTo(128 + Math.cos(a) * r, 128 + Math.sin(a) * r); } x.fill();
         x.fillStyle = 'rgba(10,8,30,.55)'; for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(rnd(70, 190), rnd(70, 190), rnd(8, 22), 0, 6.29); x.fill(); }
         x.strokeStyle = 'rgba(122,243,255,.7)'; x.lineWidth = 3; x.beginPath(); x.arc(128, 128, 104, 3.6, 5.4); x.stroke();
+      } else if (type === 'birch') {
+        c.width = 200; c.height = 560; x.lineCap = 'round';
+        x.strokeStyle = '#e9eef5'; x.lineWidth = 16; x.beginPath(); x.moveTo(100, 560); x.lineTo(100 + (v - 0.5) * 30, 40); x.stroke();
+        x.strokeStyle = '#1a1d2b'; x.lineWidth = 3; for (let yy = 80; yy < 540; yy += rnd(18, 40)) { x.beginPath(); x.moveTo(93, yy); x.lineTo(93 + rnd(6, 13), yy + rnd(-2, 2)); x.stroke(); }
+        x.strokeStyle = 'rgba(220,228,240,.85)'; x.lineWidth = 3;
+        for (let i = 0; i < 14; i++) { const yy = rnd(40, 300), s2 = i % 2 ? 1 : -1; x.beginPath(); x.moveTo(100, yy); x.quadraticCurveTo(100 + s2 * 40, yy - 30, 100 + s2 * rnd(60, 90), yy - rnd(50, 90)); x.stroke(); }
+        x.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 18; i++) { x.beginPath(); x.arc(rnd(30, 170), rnd(40, 300), rnd(2, 5), 0, 6.29); x.fill(); }
+      } else if (type === 'yurt') {
+        c.width = 420; c.height = 300;
+        const wall = x.createLinearGradient(0, 120, 0, 300); wall.addColorStop(0, '#fbf6ea'); wall.addColorStop(1, '#d9cfbd');
+        x.fillStyle = wall; x.beginPath(); x.moveTo(40, 300); x.lineTo(40, 170); x.quadraticCurveTo(210, 30, 380, 170); x.lineTo(380, 300); x.fill();
+        x.fillStyle = '#d4a017'; x.fillRect(40, 170, 340, 18); x.fillStyle = '#0a8fb3'; x.fillRect(40, 188, 340, 8);
+        x.strokeStyle = '#c0392b'; x.lineWidth = 4; for (let k = 50; k < 380; k += 26) { x.beginPath(); x.moveTo(k, 186); x.quadraticCurveTo(k + 8, 172, k + 16, 186); x.stroke(); }
+        x.fillStyle = '#b8860b'; x.beginPath(); x.moveTo(175, 300); x.lineTo(175, 220); x.quadraticCurveTo(210, 196, 245, 220); x.lineTo(245, 300); x.fill();
+        x.fillStyle = '#e8b84a'; x.beginPath(); x.ellipse(210, 78, 26, 9, 0, 0, 6.29); x.fill();
       } else if (type === 'tree') {
         c.width = 320; c.height = 480; x.fillStyle = '#3a2210'; x.fillRect(146, 400, 28, 80);
         x.shadowColor = '#0b3d1e'; x.shadowBlur = 10;
@@ -549,6 +622,8 @@
       tower: { gap: 5, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(5.5, 13), y: -2.2 + 9, z, h: 18 + rnd(-3, 6), n: i % 3 }) },
       spike: { gap: 6, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(4.5, 11), y: -2.2 + 2, z, h: rnd(3, 6), n: i % 3 }) },
       rock: { gap: 8, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(4, 12), y: rnd(-1, 6), z, h: rnd(1, 3.2), n: i % 3, spin: rnd(-0.6, 0.6) }) },
+      birch: { gap: 5, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(4.5, 11), y: -2.2 + 4.2, z, h: rnd(7, 9.5), n: i % 3 }) },
+      yurt: { gap: 14, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(6, 13), y: -2.2 + 1.5, z, h: rnd(2.6, 3.4), n: i % 3 }) },
       tree: { gap: 7, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(5, 11), y: -2.2 + 3, z, h: rnd(5, 7), n: i % 3 }) },
       kelp: { gap: 5, make: (z, i) => ({ x: (i % 2 ? 1 : -1) * rnd(3.5, 10), y: -2.2 + 2.5, z, h: 5.2 + rnd(-1, 1.5), n: i % 3 }) }
     };

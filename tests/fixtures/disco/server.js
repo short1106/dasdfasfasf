@@ -34,6 +34,10 @@ http.createServer((req, res) => {
     if (/intro nights/i.test(q)) return res.end(JSON.stringify([{ trackName: 'Intro Nights', artistName: 'Dulidan Testband', duration: 26, syncedLyrics: LRC_INTRO }]));
     /* „Plain Song“: nur Text ohne Zeiten → Zeilen werden auf die Gesangseinsätze gelegt */
     if (/plain song/i.test(q)) return res.end(JSON.stringify([{ trackName: 'Plain Song', artistName: 'Dulidan Testband', duration: 30, plainLyrics: 'Erste Zeile ohne Zeit\nDie ganze Welt in Rot und Gold\nZweite Zeile kommt\nVierte Zeile jetzt\nFünfte Zeile da\nSechste Zeile Ende' }]));
+    /* Kyrillische Testlieder: Russisch (Volkslied) und Kasachisch (mit Sonderbuchstaben) → Welten Russland/Kasachstan */
+    const lrcOf = L => L.map((t, i) => `[00:${String(8 + i * 2.5 | 0).padStart(2, '0')}.${i % 2 ? '50' : '00'}] ${t}`).join('\n');
+    if (/калинка|kalinka/i.test(q)) return res.end(JSON.stringify([{ trackName: 'Калинка', artistName: 'Dulidan Хор', duration: 32, syncedLyrics: lrcOf(['Калинка, калинка, калинка моя', 'В саду ягода малинка, малинка моя', 'Ах, под сосною под зелёною', 'Спать положите вы меня', 'Калинка, калинка, калинка моя', 'В саду ягода малинка, малинка моя']) }]));
+    if (/дала|dala/i.test(q)) return res.end(JSON.stringify([{ trackName: 'Дала', artistName: 'Dulidan Тобы', duration: 32, syncedLyrics: lrcOf(['Дала кең, аспан көк', 'Алтын күн нұр шашады', 'Қыран құс ұшады биік', 'Домбыра үні естіледі', 'Менің жүрегім осында', 'Дала кең, аспан көк']) }]));
     const ok = /neon nights/i.test(q);
     res.end(JSON.stringify(ok ? [{ trackName: 'Neon Nights', artistName: 'Dulidan Testband', duration: 32, syncedLyrics: LRC }] : []));
     return;

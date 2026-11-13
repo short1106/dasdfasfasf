@@ -176,7 +176,7 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
     - Dazu kommen Lichtfächer, Tunnel, eine Spiegelung und Partikelstürme.
   - **Ohne Video:** Ein Spektrum-Ring pulsiert um einen leuchtenden Kern, dazu ein eigener Ring für die Stimme.
   - **Lyric Motion** (`V` schaltet live um): ohne Video, die Wörter fliegen durch eine 3D-Welt.
-    - **8 Welten**, automatisch passend zum Song gewählt (Sprache, Thema des Texts, Genre, Tempo), mit `W` von Hand wechselbar:
+    - **10 Welten**, automatisch passend zum Song gewählt (Sprache, Thema des Texts, Genre, Tempo), mit `W` von Hand wechselbar:
       - **Neon-City** (Rap, Hip-Hop, Nacht/Stadt): Hochhäuser mit flackernden Fenstern, nasse Straße, Regen, Leuchtreklame-Schrift
       - **Inferno** (Rock, Metal, Feuer): Lava-Risse, Glutregen, Rauch, Blitze, Metall-Schrift
       - **Galaxie** (Electronic, Weltall): Nebel, Planet mit Ring, Asteroiden, Supernova beim Drop
@@ -184,6 +184,8 @@ Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 3
       - **Ozean** (Balladen, Liebe, Traurigkeit): Unterwasser-Licht, Seetang, Blasen, Kaustik am Boden
       - **Synthwave** (Pop, Disco, 80er): Streifen-Sonne, Palmen, Drahtgitter-Berge, Chrom-Schrift
       - **Weihnachten 🎄** (Weihnachtslieder): Schneefall, Tannenbäume mit Lichterketten, Nordlicht, goldene Schrift
+      - **Россия** (russische Lieder, erkannt an kyrillischem Text): Nordlicht, goldene und bunte Zwiebelkuppeln, Birken, Eis, Schnee
+      - **Қазақстан** (kasachische Lieder): hellblauer Steppenhimmel, goldene Sonne mit Steppenadler, Jurten, goldene Steppe
       - **Dulidan**: der klassische Look
     - **15 Textarten:** Slam, Fly-Through, Shatter, Glitch, Stack, Ring, Split (Buchstaben fliegen von überall rein), Welle, Regen, Burn-in, Sternbild, Slice, Flip, Typo-Wand. Dazu **Echo-Trails** (leuchtende Nachbilder), im Refrain voll.
     - **Kamera:** Push, Spirale, Orbit, Seitenfahrt, Draufsicht, Dolly-Zoom, Froschperspektive. Neue Abschnitte bekommen einen harten Schnitt.
