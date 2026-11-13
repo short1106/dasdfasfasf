@@ -106,6 +106,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `passwords.js`, `wallet.js`, `calcpanel.js`, `boot.js`, `fx.js` (Cursor, Ripple, Burst), `sound.js`, `data.js` (Verlauf/Lesezeichen in localStorage), `util.js`, `error.js`
 - **Design „Japan 和“** (Einstellung `theme`, Einstellungen → Design, Palette): `html[data-theme=japan]` in `css/japan.css`, `js/japan.js` (Kirschblüten-Canvas über der Oberfläche, rote Sonne mit Wolken, Senkrecht-Schrift, Untertitel, japanische Bänder). Farben über `JAPAN` in `settings.js` (überschreibt den Akzent, also auch WebGL-Logo und Orbit), Mitte wechselt auf das Japan-Logo und beim Ausschalten zurück (`centerBefore`). Schriften von Windows: Yu Mincho/Yu Gothic. Test `tests/e2e/japan.js`.
 - **Design „Россия“** (Einstellung `theme` = `russland`, Einstellungen → Design, Palette): `html[data-theme=russland]` in `css/russia.css`, `js/russia.js` (Schneefall-Canvas mit Glitzern, Kuppel-Silhouette im Basilius-Stil als einmal gezeichnete Canvas unten auf der Startseite, goldenes Glühen hinter dem Logo, Senkrecht-Schrift, Untertitel „ДУЛИДАН · СТУДИЯ“, kyrillische Bänder, Ornament-Borte unter der Leiste). Farben `RUSSIA` in `settings.js`, Logo `russland` in `shared/shapes.js` (D zwischen Zwiebelkuppeln, „ДУЛИДАН“, „СТУДИЯ“, Schneeflocken). `applyThemes()` in `app.js` schaltet Japan/Russland und setzt `data-theme`; `THEME_LOGO` wechselt die Mitte und merkt `centerBefore`. Bewusst ohne Flaggen oder politische Symbole. Test `tests/e2e/russia.js`.
+- **Design „Қазақстан“** (Einstellung `theme` = `kasachstan`, Einstellungen → Design, Palette): `html[data-theme=kasachstan]` in `css/kazakh.css`, `js/kazakh.js`. Hellblauer Hintergrund (`.home` mit Himmelsverlauf, WebGL-Nebel nur per `mix-blend-mode:screen` als goldener Schleier), Flächen tiefblau halbdurchsichtig für lesbare weiße Schrift, Akzente Gold (`KAZAKH` in `settings.js`). Goldene Sonne mit 32 Strahlen hinter dem Logo (`repeating-conic-gradient`, dreht langsam), Ornament-Band links (Widderhorn-Muster, Canvas), Steppe mit Jurten unten (Canvas), Goldstaub, kasachische Texte und Bänder. Logo `kasachstan` in `shapes.js`: goldenes D, darunter Steppenadler, dahinter gedimmte Sonnenstrahlen. Musik: DULIDAN ANTHEM (kein eigener Track in Dulidanopoly). Test `tests/e2e/kazakh.js`.
 - **Hintergrundmusik** (`ui/js/music.js` + `ui/js/bgmusic.js`, Einstellung `music`/`musicVol`, Einstellungen → Hintergrundmusik, Palette): Soundtrack-Engine **unverändert aus Dulidanopoly** übernommen (`short1106/Monopoly`, Branch `ccr-995af2a9-5qeg0a`, `js/music.js`; klassisches Skript, `window.DULI_MUSIC`, alles live per Web Audio synthetisiert, keine Dateien). Design → Track: dulidan → `anthem` (DULIDAN ANTHEM), japan → `japan` (SAKURA NO KAZE), russland → `russia` (DULIDAN KAZACHOK). Läuft nur, solange die Startseite zu sehen ist, kein Tab Ton macht (`audio.active`), keine Disko läuft und das Fenster sichtbar ist (`musicState`, entprellt). Test `tests/e2e/bgmusic.js`.
 - **Animationsstufe:** `episch` / `normal` / `aus`. `prefers-reduced-motion` setzt den Standard auf `aus`. Federn als CSS-`linear()`-Easings (`--spring`, `--elastic`), die JS-Federn laufen zeitbasiert.
 
@@ -276,7 +277,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `list`
   - `gen(key, n, logoImg)` → `{P, L}`, also Zielpunkte in [-1,1]² und Helligkeit
   - `spin(key)`, `diff(key)`, `has(key)`
-- **Formen:** `d`, `japan`, `russland`, `blume`, `galaxie`, `herz`, `planet`, `atom`, `stern`, `schmetterling`.
+- **Formen:** `d`, `japan`, `russland`, `kasachstan`, `blume`, `galaxie`, `herz`, `planet`, `atom`, `stern`, `schmetterling`.
   - `d` und `japan` werden aus einer Canvas abgetastet. Das Japan-Logo besteht aus dem D, „ドゥリダン“ und „スタジオ“ mit Glitzer und Herzen. Die Schrift kommt vom System: Yu Gothic/Meiryo unter Windows, Noto CJK unter Android.
   - Alle anderen Formen sind Mathe.
 - **Wechsel:** Die Partikel haben zwei Zielpositionen (`aP`/`aQ`). `uMorph` geht in 1,6 s von 0 auf 1, dabei sprengen und wirbeln die Partikel. Danach wird das Ziel zur Ausgangsform.
@@ -407,6 +408,7 @@ Eine `WebContentsView` liegt immer über dem HTML der Oberfläche. Für Panels, 
   - `mapnews.js`: Maps-News (Globus, Thema, Land → Schlagzeilen, Klick auf der Karte)
   - `groups.js`: Tab-Gruppen (Menü, Palette, Chips zu/auf, Orbit Sternbilder, Neustart)
   - `bgmusic.js`: Hintergrundmusik je Design (Startseite an, Webseite aus, Schalter, Wechsel Japan/Russland/Dulidan)
+  - `kazakh.js`: Design Қазақстан (Hellblau/Gold, Sonne, Steppe, Ornament, Texte, Logo mit Adler, Wechsel)
   - `russia.js`: Design Россия (Farben, Kuppeln, Schnee, Texte, Logo, Wechsel Japan → Russland → Dulidan)
   - `watch.js`: Seiten-Wächter (markieren, Änderung, Vorher/Nachher, Gesehen)
   - `snip.js`: Snipping-Tool (Bereich, Werkzeuge, Speichern, Kopieren, ganze Seite über `fixtures/site/long.html`)

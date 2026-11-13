@@ -47,6 +47,8 @@ const DEFAULTS = { engine: 'dulidan', anim: reduced ? 'aus' : 'episch', accent: 
 export const JAPAN = ['#2b2f77', '#e0393e', '#ffb7c5'];
 /* Design „Россия“: Nachtblau, Purpurrot, Gold */
 export const RUSSIA = ['#1b2a6b', '#d52b1e', '#e8b84a'];
+/* Design „Қазақстан“: alles Gold (Logo, Akzente), das Hellblau kommt aus kazakh.css */
+export const KAZAKH = ['#b8860b', '#f2c230', '#fff1a8'];
 
 const subs = new Set();
 export const settings = { ...DEFAULTS, ...store.get('dw_settings', {}) };
@@ -65,6 +67,7 @@ export const onSettings = f => subs.add(f);
 export function accentColors() {
   if (settings.theme === 'japan') return JAPAN;
   if (settings.theme === 'russland') return RUSSIA;
+  if (settings.theme === 'kasachstan') return KAZAKH;
   return settings.accent === 'custom' ? deriveAccent(settings.custom) : (ACCENTS[settings.accent] || ACCENTS.dulidan).c;
 }
 

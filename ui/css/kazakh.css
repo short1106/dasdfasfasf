@@ -1,0 +1,62 @@
+/* Dulidan Web · kazakh.css – Design „Қазақстан“: Himmelblau, Weiß und Gold, goldene Sonne mit 32 Strahlen, Ornament-Band, Steppe
+   Alles nur unter html[data-theme=kasachstan]; Akzentfarben (Gold) setzt settings.js, Sonne/Steppe/Goldstaub kommen aus kazakh.js.
+   Hintergrund hellblau, Flächen als tiefes, halbdurchsichtiges Blau, damit weiße Schrift lesbar bleibt.
+   Aufbau: Tokens · Rahmen/Leisten · Tabs · Startseite (Sonne, Steppe, Ornament, Titel) · Panels/Toasts · Goldstaub */
+
+html[data-theme=kasachstan]{
+  --bg:#0a86a8;--bg-2:#0b7c9c;--surface:rgba(4,62,88,.72);--surface-2:rgba(6,74,104,.78);
+  --text:#ffffff;--muted:#e2f5fb;--dim:#b7e2ee;
+  --line:rgba(255,255,255,.16);--line-2:rgba(242,194,48,.5);
+  --kz-blue:#00afca;--kz-gold:#f2c230;--kz-deep:#04506e;
+  --kz-font:"Segoe UI","Arial","Helvetica Neue",sans-serif;
+}
+html[data-theme=kasachstan] body{background:linear-gradient(180deg,#079bbd 0%,#00afca 45%,#4cc8de 75%,#0a86a8 100%)}
+
+/* ---------- Rahmen, Leisten: tiefes Blau mit goldener Kante ---------- */
+html[data-theme=kasachstan] .titlebar,html[data-theme=kasachstan] .toolbar{background:linear-gradient(180deg,rgba(4,70,98,.92),rgba(5,84,115,.86));box-shadow:inset 0 -1px 0 rgba(242,194,48,.45)}
+html[data-theme=kasachstan] .brand-t::after{content:" ҚАЗ";color:var(--kz-gold);font-weight:800;letter-spacing:.06em}
+html[data-theme=kasachstan] .omni{background:rgba(3,52,74,.8);border-color:rgba(242,194,48,.35)}
+html[data-theme=kasachstan] .omni:focus-within{border-color:var(--kz-gold);box-shadow:0 0 0 3px rgba(242,194,48,.2),0 0 26px rgba(242,194,48,.4)}
+
+/* ---------- Tabs ---------- */
+html[data-theme=kasachstan] .tab{color:#d9f2f8}
+html[data-theme=kasachstan] .tab.active{background:linear-gradient(180deg,rgba(242,194,48,.28),rgba(4,62,88,.95));border-color:rgba(242,194,48,.55);color:#fff}
+html[data-theme=kasachstan] .tab.active::after{content:"";position:absolute;left:8px;right:8px;top:-1px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--kz-gold) 15%,#fff3b0 50%,var(--kz-gold) 85%,transparent);box-shadow:0 0 12px rgba(242,194,48,.8)}
+
+/* ---------- Startseite ---------- */
+html:not([data-theme=kasachstan]) .kz-sun,html:not([data-theme=kasachstan]) .kz-steppe,html:not([data-theme=kasachstan]) .kz-orn,html:not([data-theme=kasachstan]) .kz-vert,html:not([data-theme=kasachstan]) .kz-sub,html:not([data-theme=kasachstan]) .kz-dust{display:none}
+/* Goldene Sonne mit 32 Strahlen hinter dem Logo, dreht sich langsam */
+html[data-theme=kasachstan] .kz-sun{position:absolute;left:50%;top:40%;width:min(60vh,560px);aspect-ratio:1;transform:translate(-50%,-55%);z-index:1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,#ffe27a 0 17%,rgba(242,194,48,.0) 17.5%),repeating-conic-gradient(from 0deg,rgba(242,194,48,.55) 0 5.625deg,transparent 5.625deg 11.25deg);
+  -webkit-mask-image:radial-gradient(circle,#000 30%,rgba(0,0,0,.6) 48%,transparent 70%);mask-image:radial-gradient(circle,#000 30%,rgba(0,0,0,.6) 48%,transparent 70%);
+  filter:drop-shadow(0 0 30px rgba(255,226,122,.55));animation:kzSpin 90s linear infinite}
+@keyframes kzSpin{to{transform:translate(-50%,-55%) rotate(360deg)}}
+html[data-theme=kasachstan] .kz-steppe{position:absolute;left:0;right:0;bottom:0;width:100%;height:30vh;z-index:1;pointer-events:none}
+html[data-theme=kasachstan] .kz-orn{position:absolute;left:2.2vw;top:0;bottom:0;height:100%;width:44px;z-index:2;pointer-events:none;opacity:.85}
+html[data-theme=kasachstan] .home-grid{opacity:.18}
+/* Startseite hellblau: Himmel oben kräftig, zur Steppe hin heller; der dunkle WebGL-Nebel nur als goldener Schleier */
+html[data-theme=kasachstan] .home{background:radial-gradient(90% 60% at 50% 38%,#7fdcec 0%,rgba(127,220,236,0) 60%),linear-gradient(180deg,#0596b8 0%,#00afca 50%,#5ccfe2 78%,#0a86a8 100%)}
+html[data-theme=kasachstan] .nebula{mix-blend-mode:screen;opacity:.35}
+html[data-theme=kasachstan] .hero-title{font-family:var(--kz-font);font-weight:800}
+html[data-theme=kasachstan] .hero-title .w1 .ch{background:linear-gradient(180deg,#fff 30%,#ffe27a);-webkit-background-clip:text;background-clip:text}
+html[data-theme=kasachstan] .hero-title .outline{-webkit-text-stroke:1.5px var(--kz-gold)}
+html[data-theme=kasachstan] .kz-sub{margin-top:4px;font-size:clamp(14px,1.6vw,20px);font-weight:700;letter-spacing:.5em;color:#fff3b0;text-shadow:0 0 16px rgba(242,194,48,.75),0 2px 8px rgba(3,52,74,.6);pointer-events:none}
+html[data-theme=kasachstan] .kz-vert{position:absolute;top:50%;right:5vw;transform:translateY(-50%);z-index:3;writing-mode:vertical-rl;font-size:clamp(15px,2vh,22px);font-weight:700;letter-spacing:.45em;color:rgba(255,243,176,.85);pointer-events:none;text-shadow:0 0 12px rgba(4,80,110,.8)}
+html[data-theme=kasachstan] .band{background:linear-gradient(90deg,#c99a12,var(--kz-gold),#c99a12)!important;color:#04506e!important}
+html[data-theme=kasachstan] .band-b{background:linear-gradient(90deg,#04506e,#077ea3,#04506e)!important}
+html[data-theme=kasachstan] .band span{letter-spacing:.16em}
+html[data-theme=kasachstan] .band span::after{width:10px;height:10px;border-radius:50%;background:#fff3b0;box-shadow:0 0 10px var(--kz-gold)}
+html[data-theme=kasachstan] .big-go{background:linear-gradient(135deg,#c99a12,var(--kz-gold));color:#04506e}
+html[data-theme=kasachstan] .bigbar-in{background:rgba(3,52,74,.78)}
+html[data-theme=kasachstan] .card{background:rgba(4,62,88,.6)}
+html[data-theme=kasachstan] .card .top svg{color:var(--kz-gold)}
+html[data-theme=kasachstan] .corner{border-color:var(--kz-gold)!important}
+
+/* ---------- Panels, Toasts, Palette: tiefes Blau, Gold-Rahmen, Sonnen-Siegel ---------- */
+html[data-theme=kasachstan] .panel,html[data-theme=kasachstan] .pal-in,html[data-theme=kasachstan] .modal{background:rgba(3,48,70,.94)!important;border-color:rgba(242,194,48,.4)!important}
+html[data-theme=kasachstan] .panel::after{content:"☀";position:absolute;right:14px;bottom:12px;width:30px;height:30px;display:grid;place-items:center;border:2px solid var(--kz-gold);border-radius:50%;color:var(--kz-gold);font-size:15px;opacity:.6;pointer-events:none}
+html[data-theme=kasachstan] .toast{background:rgba(3,48,70,.95);border-color:rgba(242,194,48,.6)}
+html[data-theme=kasachstan] .toast::before{content:"☀";display:inline-grid;place-items:center;width:20px;height:20px;margin-right:10px;border-radius:50%;background:var(--kz-gold);color:#04506e;font-size:12px;vertical-align:-4px}
+
+/* ---------- Goldstaub über der Oberfläche (unter den Webseiten) ---------- */
+.kz-dust{position:fixed;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}

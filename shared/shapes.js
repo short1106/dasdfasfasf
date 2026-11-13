@@ -1,7 +1,7 @@
 /* Dulidan Web · shapes.js – Objekte für die Partikel-Mitte der Startseite (Desktop und Android)
    Jede Form liefert n Zielpunkte in [-1,1]² plus Helligkeit (0..1) und eine Eigenbewegung (Drehung).
    Klassisches Skript statt Modul: die Android-Startseite läuft über file://, dort laden keine ES-Module.
-   Aufbau: Liste · Abtasten aus Canvas (D, Japan-Logo, Russland-Logo) · Mathe-Formen · Erzeugen */
+   Aufbau: Liste · Abtasten aus Canvas (D, Japan-, Russland-, Kasachstan-Logo) · Mathe-Formen · Erzeugen */
 (function (g) {
   'use strict';
   const TAU = Math.PI * 2, rnd = Math.random;
@@ -12,6 +12,7 @@
     ['d', 'Dulidan-D', 0, false],
     ['japan', 'Japan-Logo', 0, false],
     ['russland', 'Russland-Logo', 0, false],
+    ['kasachstan', 'Kasachstan-Logo', 0, false],
     ['blume', 'Blume', 0.06, false],
     ['galaxie', 'Galaxie', 0.22, true],
     ['herz', 'Herz', 0, false],
@@ -108,6 +109,29 @@
     };
   }
 
+  /* Kasachstan-Logo: goldenes D, darunter ein Steppenadler mit ausgebreiteten Flügeln, dahinter feine Sonnenstrahlen */
+  function drawKazakh(img) {
+    return (x, S) => {
+      /* Strahlen dunkler zeichnen → weniger hell als D und Adler */
+      x.fillStyle = '#6a6a6a';
+      for (let k = 0; k < 32; k++) { const a = k / 32 * TAU, r1 = S * 0.2, r2 = S * 0.3; x.beginPath(); x.moveTo(S / 2 + Math.cos(a - 0.03) * r1, S * 0.27 + Math.sin(a - 0.03) * r1); x.lineTo(S / 2 + Math.cos(a) * r2, S * 0.27 + Math.sin(a) * r2); x.lineTo(S / 2 + Math.cos(a + 0.03) * r1, S * 0.27 + Math.sin(a + 0.03) * r1); x.fill(); }
+      drawLogo(img, 0.36, 0.09)(x, S);
+      /* Adler: zwei geschwungene Flügel mit gefiederter Unterkante, Körper, Kopf mit Schnabel, Schwanzfächer */
+      const cx = S / 2, cy = S * 0.66;
+      x.fillStyle = '#ffffff';
+      for (const s of [-1, 1]) {
+        x.beginPath(); x.moveTo(cx, cy - S * 0.02);
+        x.bezierCurveTo(cx + s * S * 0.12, cy - S * 0.12, cx + s * S * 0.3, cy - S * 0.14, cx + s * S * 0.44, cy - S * 0.08);
+        for (let f = 0; f < 6; f++) { const t = f / 6, px = cx + s * S * (0.44 - t * 0.36), py = cy - S * 0.08 + t * S * 0.1; x.lineTo(px - s * S * 0.02, py + S * 0.045); x.lineTo(px - s * S * 0.06, py + S * 0.015); }
+        x.lineTo(cx, cy + S * 0.04); x.closePath(); x.fill();
+      }
+      x.beginPath(); x.ellipse(cx, cy + S * 0.03, S * 0.035, S * 0.075, 0, 0, TAU); x.fill();
+      x.beginPath(); x.arc(cx + S * 0.012, cy - S * 0.05, S * 0.028, 0, TAU); x.fill();
+      x.beginPath(); x.moveTo(cx + S * 0.035, cy - S * 0.055); x.lineTo(cx + S * 0.065, cy - S * 0.04); x.lineTo(cx + S * 0.032, cy - S * 0.035); x.fill();
+      x.beginPath(); x.moveTo(cx - S * 0.035, cy + S * 0.09); x.lineTo(cx, cy + S * 0.17); x.lineTo(cx + S * 0.035, cy + S * 0.09); x.closePath(); x.fill();
+    };
+  }
+
   /* Mathe-Formen: Punkt erzeugen, (x, y, Helligkeit) */
   function rejection(test, n, box = 1) {
     const P = new Float32Array(n * 2), L = new Float32Array(n);
@@ -198,6 +222,7 @@
     let r = null;
     if (key === 'japan') r = fromCanvas(drawJapan(img), n);
     else if (key === 'russland') r = fromCanvas(drawRussia(img), n);
+    else if (key === 'kasachstan') r = fromCanvas(drawKazakh(img), n);
     else if (key === 'schmetterling') r = fromCanvas(drawButterfly, n);
     else if (MATH[key]) r = MATH[key](n);
     if (!r) r = fromCanvas(drawLogo(img, 1, 0), n);

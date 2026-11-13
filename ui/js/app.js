@@ -18,6 +18,7 @@ import { sfx } from './sound.js';
 import { openSnip } from './snip.js';
 import { applyJapan, refreshJapan } from './japan.js';
 import { applyRussia, refreshRussia, BAND_RU, BAND_RU2 } from './russia.js';
+import { applyKazakh, refreshKazakh, BAND_KZ, BAND_KZ2 } from './kazakh.js';
 import { audio, feed as feedAudio, onAudio, onKick, forgetTab } from './audio.js';
 import { createOverview } from './overview.js';
 import { musicState, apply as applyMusic, trackName } from './bgmusic.js';
@@ -574,6 +575,7 @@ const COMMANDS = () => [
   ...[...groups.keys()].map(n => ({ icon: 'orbit', name: `Gruppe ${groups.get(n).collapsed ? 'aufklappen' : 'zuklappen'}: ${n}`, key: '', run: () => toggleGroup(n) })),
   ...(active && active.group ? [{ icon: 'x', name: 'Tab aus Gruppe entfernen', key: '', run: () => setGroup(active, null) }] : []),
   { icon: 'color', name: 'Design: Japan 和 an/aus', key: '', run: () => setSetting('theme', settings.theme === 'japan' ? 'dulidan' : 'japan') },
+  { icon: 'color', name: 'Design: Қазақстан (Kasachstan) an/aus', key: '', run: () => setSetting('theme', settings.theme === 'kasachstan' ? 'dulidan' : 'kasachstan') },
   { icon: 'color', name: 'Design: Россия (Russland) an/aus', key: '', run: () => setSetting('theme', settings.theme === 'russland' ? 'dulidan' : 'russland') },
   { icon: 'sound', name: 'Hintergrundmusik an/aus', key: '', run: () => { setSetting('music', !settings.music); toast(settings.music ? '♪ ' + trackName(settings.theme) : 'Hintergrundmusik aus'); } },
   { icon: 'x', name: 'Tab schließen', key: 'Strg W', run: () => closeTab(active) },
@@ -749,7 +751,7 @@ onSettings(k => {
   if (k === 'accent' || k === 'custom' || k === 'anim') { logo.refresh(); nebula.refresh(); }
   if (k === 'engine') $('#bigEngine').textContent = engineName().toUpperCase();
   if (k === 'center') { logo.setShape(settings.center); if (active && active.home) logo.shock(); }
-  if (k === 'anim') { refreshJapan(); refreshRussia(); }
+  if (k === 'anim') { refreshJapan(); refreshRussia(); refreshKazakh(); }
   if (k === 'music' || k === 'musicVol' || k === 'theme') applyMusic();
   if (k === 'theme') {
     applyThemes();
@@ -758,7 +760,7 @@ onSettings(k => {
     const want = THEME_LOGO[settings.theme], themed = Object.values(THEME_LOGO).includes(settings.center);
     if (want && settings.center !== want) { if (!themed) setSetting('centerBefore', settings.center); setSetting('center', want); }
     else if (!want && themed && settings.centerBefore) setSetting('center', settings.centerBefore);
-    toast(settings.theme === 'japan' ? '和 Japan-Modus · ようこそ' : settings.theme === 'russland' ? '❄ Russland-Modus · Добро пожаловать' : 'Dulidan-Design');
+    toast(settings.theme === 'japan' ? '和 Japan-Modus · ようこそ' : settings.theme === 'russland' ? '❄ Russland-Modus · Добро пожаловать' : settings.theme === 'kasachstan' ? '☀ Kasachstan-Modus · Қош келдіңіз' : 'Dulidan-Design');
     if (active && active.home) logo.shock();
   }
 });
@@ -771,14 +773,15 @@ function fillBands(a, b) {
   fill($('#bandB'), b || ['Dream', 'Design', 'Develop', 'Dominate']);
 }
 /* Designs: Japan und Russland bauen eigene Ebenen auf; die Bänder bekommen Wörter in der Sprache des Designs */
-const THEME_LOGO = { japan: 'japan', russland: 'russland' };
+const THEME_LOGO = { japan: 'japan', russland: 'russland', kasachstan: 'kasachstan' };
 function themeBands() {
   const t = settings.theme;
-  fillBands(t === 'japan' ? BAND_A_JA : t === 'russland' ? BAND_RU2 : null, t === 'japan' ? BAND_B_JA : t === 'russland' ? BAND_RU : null);
+  fillBands(t === 'japan' ? BAND_A_JA : t === 'russland' ? BAND_RU2 : t === 'kasachstan' ? BAND_KZ2 : null, t === 'japan' ? BAND_B_JA : t === 'russland' ? BAND_RU : t === 'kasachstan' ? BAND_KZ : null);
 }
 function applyThemes() {
   applyJapan(settings.theme === 'japan', null);
   applyRussia(settings.theme === 'russland');
+  applyKazakh(settings.theme === 'kasachstan');
   document.documentElement.dataset.theme = settings.theme || 'dulidan';
   themeBands();
 }

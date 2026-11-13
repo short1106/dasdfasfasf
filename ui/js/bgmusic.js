@@ -4,7 +4,7 @@
    Aufbau: Zuordnung · Zustand prüfen · Start/Stopp */
 import { settings } from './settings.js';
 
-const TRACK = { dulidan: 'anthem', japan: 'japan', russland: 'russia' };
+const TRACK = { dulidan: 'anthem', japan: 'japan', russland: 'russia', kasachstan: 'anthem' };
 let state = { home: false, tabAudio: false, disco: false }, timer = 0;
 const M = () => window.DULI_MUSIC;
 
