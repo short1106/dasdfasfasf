@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Dulidan Maps</title>
+<link rel="icon" href="../search/logo-mark.webp">
+<link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
+<link rel="stylesheet" href="maps.css">
+<script src="/vendor/maplibre/maplibre-gl.js"></script>
+<script type="module" src="maps.js"></script>
+</head>
+<body>
+  <div id="map" class="map"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- Suche -->
+  <section class="panel search" id="search">
+    <a class="brand" href="?" aria-label="Dulidan Maps"><img src="../search/logo-mark.webp" alt=""></a>
+    <form class="sbar" id="form" autocomplete="off">
+      <div class="beam" aria-hidden="true"></div>
+      <div class="sbar-in">
+        <svg viewBox="0 0 24 24" class="ico"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input id="q" type="search" placeholder="Ort, Adresse oder Ort suchen …" spellcheck="false" autocomplete="off">
+        <button class="route-btn" type="button" id="routeBtn" title="Route planen" aria-label="Route planen"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H14a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7h5.6"/></svg></button>
+      </div>
+    </form>
+    <ul class="sugg" id="sugg" hidden></ul>
+  </section>
+
+  <!-- Route -->
+  <section class="panel route" id="route" hidden>
+    <div class="route-head">
+      <span class="tag mono">// ROUTE</span>
+      <button class="x" id="routeClose" aria-label="Route schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="rfield"><i class="dot a"></i><input id="rFrom" placeholder="Start" spellcheck="false" autocomplete="off"></div>
+    <button class="rswap" id="rSwap" aria-label="Start und Ziel tauschen"><svg viewBox="0 0 24 24"><path d="M8 4v16M8 4L5 7M8 4l3 3M16 20V4M16 20l-3-3M16 20l3-3"/></svg></button>
+    <div class="rfield"><i class="dot b"></i><input id="rTo" placeholder="Ziel" spellcheck="false" autocomplete="off"></div>
+    <ul class="sugg in" id="rSugg" hidden></ul>
+    <div class="modes" id="modes">
+      <button data-m="car" class="on"><svg viewBox="0 0 24 24"><path d="M5 16V11l2-5h10l2 5v5M3 16h18v3H3zM7.5 13h.01M16.5 13h.01"/></svg>Auto</button>
+      <button data-m="bike"><svg viewBox="0 0 24 24"><circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-8h5l3 8M10 8l2 8h-6M14 5h3"/></svg>Rad</button>
+      <button data-m="foot"><svg viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2-6-2.5-2.5L11 8l3 3 3 1M9.5 12.5L7 14"/></svg>Zu Fuß</button>
+    </div>
+    <div class="rsum" id="rSum" hidden></div>
+    <ol class="steps" id="steps"></ol>
+  </section>
+
+  <!-- Ort-Karte -->
+  <section class="panel place" id="place" hidden>
+    <div class="tag mono" id="pType"></div>
+    <h2 id="pName"></h2>
+    <div class="paddr" id="pAddr"></div>
+    <div class="pacts">
+      <button class="btn" id="pRoute"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H14a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7h5.6"/></svg>Route hierher</button>
+      <button class="btn ghost" id="pCopy">Koordinaten kopieren</button>
+    </div>
+  </section>
+
+  <!-- Steuerung rechts -->
+  <nav class="ctl" aria-label="Kartensteuerung">
+    <button id="zIn" title="Hineinzoomen"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button id="zOut" title="Herauszoomen"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button id="compass" title="Nach Norden ausrichten"><svg viewBox="0 0 24 24" id="needle"><path d="M12 3l3.5 9H8.5z" fill="currentColor" stroke="none"/><path d="M12 21l-3.5-9h7z" opacity=".4"/></svg></button>
+    <button id="tilt" title="3D an/aus" class="on"><b class="mono">3D</b></button>
+    <button id="traffic" title="Verkehr: Flüge, Schiffe, Züge (T)"><svg viewBox="0 0 24 24"><path d="M12 3c.9 0 1.4.8 1.4 2v4.6l7.1 4v1.9l-7.1-2.2v4.1l2.1 1.6V21L12 20l-3.5 1v-2l2.1-1.6v-4.1l-7.1 2.2v-1.9l7.1-4V5c0-1.2.5-2 1.4-2z"/></svg></button>
+    <button id="newsBtn" title="News pro Land (N)"><svg viewBox="0 0 24 24"><path d="M4.5 5.5h12v13h-12zM16.5 9.5h3v7.5a1.5 1.5 0 0 1-3 0M7.5 9h6M7.5 12.5h6M7.5 16h4"/></svg></button>
+    <button id="locate" title="Mein Standort"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button>
+  </nav>
+
+  <!-- Verkehr -->
+  <section class="panel lg" id="lg" hidden>
+    <div class="route-head">
+      <span class="tag mono">// VERKEHR · WELTWEIT</span>
+      <button class="x" id="lgClose" aria-label="Verkehr schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="lg-rows">
+      <button class="lg-row on" data-k="air"><i class="lg-ico">✈</i><b>Flüge</b><span id="lgAir"></span></button>
+      <button class="lg-row on" data-k="sea"><i class="lg-ico">⛴</i><b>Schiffe</b><span id="lgSea"></span></button>
+      <button class="lg-row on" data-k="rail"><i class="lg-ico">🚆</i><b>Züge</b><span id="lgRail"></span></button>
+      <button class="lg-row live" data-k="live"><i class="lg-ico">🛰</i><b>Live-Flüge</b><span id="lgLive">ECHT · OPENSKY</span></button>
+    </div>
+    <div class="lg-live mono"><i></i><span id="lgCount">0</span> unterwegs in der Animation</div>
+    <p class="lg-note">Beliebte Routen, Menge ungefähr – nicht live. Tippe auf eine Linie für Details.</p>
+  </section>
+
+  <div class="toast mono" id="toast"></div>
+  <div class="ctxmenu" id="ctx" hidden>
+    <button data-c="here">Was ist hier?</button>
+    <button data-c="to">Route hierher</button>
+    <button data-c="from">Route von hier</button>
+  </div>
+</body>
+</html>

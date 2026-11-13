@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>Login-Falsch</title>
+<body style="background:#123;color:#fff;font:18px sans-serif;padding:40px">
+<h1>Anmelden</h1>
+<form id="f"><input name="user" id="user" autocomplete="username" placeholder="E-Mail"><br><br>
+<input type="password" id="pass" autocomplete="current-password" placeholder="Passwort"><br><br>
+<button type="submit">Anmelden</button></form><p id="msg"></p>
+<script>
+document.getElementById('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const u = document.getElementById('user').value, p = document.getElementById('pass').value;
+  if (u === 'shaq@dulidan.de' && p === 'AnderesPasswort') location.href = '/welcome.html?u=' + encodeURIComponent(u);
+  else document.getElementById('msg').textContent = 'Falsches Passwort'; sessionStorage.tries = (+sessionStorage.tries || 0) + 1;
+});
+</script>

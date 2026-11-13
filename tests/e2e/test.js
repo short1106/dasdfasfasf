@@ -1,0 +1,68 @@
+const { _electron } = require('playwright');
+const path = require('path');
+const SP = require('path').join(__dirname, '..', 'out'), APP = require('path').resolve(__dirname, '..', '..');
+const shot = (p, n) => p.screenshot({ path: path.join(SP, 'shots', n + '.png') });
+const wait = ms => new Promise(r => setTimeout(r, ms));
+(async () => {
+  const app = await _electron.launch({ executablePath: path.join(APP, 'node_modules/electron/dist/electron'), args: [APP, '--no-sandbox', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'], env: { ...process.env, ELECTRON_ENABLE_LOGGING: '1' } });
+  const errs = [];
+  app.process().stderr.on('data', d => { const s = String(d); if (/error|Uncaught/i.test(s) && !/dbus|gpu|Fontconfig|viz|vaapi|GLES|EGL|angle|ozone|libva|sandbox|SharedImage|Gtk/i.test(s)) errs.push('STDERR ' + s.trim().slice(0, 300)); });
+  const page = await app.firstWindow();
+  page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errs.push(m.type() + ': ' + m.text()); });
+  page.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
+  await wait(1200); await shot(page, '01-boot');
+  await page.keyboard.press('Enter');
+  await wait(2800); await shot(page, '02-home');
+  await page.mouse.move(700, 300); await wait(300); await page.mouse.move(760, 330); await wait(400); await shot(page, '03-home-mouse');
+  await page.mouse.click(900, 280); await wait(350); await shot(page, '04-shock');
+  await page.click('#bigInput'); await page.keyboard.type('yt lofi', { delay: 60 }); await wait(900); await shot(page, '05-typing-shortcut');
+  await page.keyboard.press('Backspace'); for (let i = 0; i < 5; i++) await page.keyboard.press('Backspace');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('dulidan', { delay: 50 }); await wait(1200); await page.keyboard.press('ArrowDown'); await wait(250); await shot(page, '06-suggest');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+K'); await wait(800); await shot(page, '07-palette');
+  await page.keyboard.type('tab'); await wait(400); await shot(page, '08-palette-filter');
+  await page.keyboard.press('Escape'); await wait(500);
+  await page.click('#btnSettings'); await wait(1000); await shot(page, '09-settings');
+  await page.click('.seg button[data-v="normal"]'); await wait(300);
+  await page.click('.sw[title="Cyber"]'); await wait(600); await shot(page, '10-settings-cyber');
+  await page.click('.sw[title="Dulidan"]'); await page.click('.seg button[data-v="episch"]');
+  await page.keyboard.press('Escape'); await wait(500);
+  await page.click('#btnMenu'); await wait(800); await shot(page, '11-menu'); await page.keyboard.press('Escape'); await wait(400);
+  await page.click('#btnDl'); await wait(800); await shot(page, '12-downloads'); await page.keyboard.press('Escape'); await wait(400);
+  await page.keyboard.press('Control+T'); await wait(300); await shot(page, '13-newtab-anim'); await wait(1200);
+  await page.keyboard.press('Control+T'); await wait(1400);
+  const n1 = await page.locator('.tab:not(.closing)').count();
+  await page.keyboard.press('Control+W'); await wait(120); await shot(page, '14-close-particles'); await wait(700);
+  const n2 = await page.locator('.tab:not(.closing)').count();
+  await page.keyboard.press('Control+Tab'); await wait(500);
+  // Navigation zu lokaler Testseite
+  await page.click('#bigInput').catch(()=>{});
+  await page.keyboard.press('Control+L'); await page.keyboard.type('http://127.0.0.1:8765/index.html'); await page.keyboard.press('Enter');
+  await wait(300); await shot(page, '15-wipe');
+  await wait(2500); await shot(page, '16-page-ui');
+  const viewShot = await app.evaluate(async ({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows()[0];
+    const v = w.contentView.children.find(c => c.getVisible && c.getVisible());
+    if (!v) return 'no visible view';
+    const img = await v.webContents.capturePage();
+    return [img.toPNG().toString('base64'), v.webContents.getURL() + ' | ' + v.webContents.getTitle() + ' | ' + JSON.stringify(v.getBounds())];
+  });
+  if (Array.isArray(viewShot)) { require('fs').writeFileSync(SP + '/shots/17-view.png', Buffer.from(viewShot[0], 'base64')); viewShot.shift(); }
+  const title = await page.locator('.tab.active .t').innerText();
+  await page.keyboard.press('Control+K'); await wait(900); await shot(page, '18-palette-over-page'); await page.keyboard.press('Escape'); await wait(800);
+  // Link in der Seite klicken -> nav-start -> Wipe
+  await app.evaluate(({ BrowserWindow }) => { const v = BrowserWindow.getAllWindows()[0].contentView.children.find(c => c.getVisible()); v.webContents.executeJavaScript("document.querySelector('a').click()", true); });
+  await wait(350); await shot(page, '19-linkwipe'); await wait(2200);
+  const t2 = await page.locator('.tab.active .t').innerText();
+  await page.keyboard.press('Alt+ArrowLeft'); await wait(2600);
+  const t3 = await page.locator('.tab.active .t').innerText();
+  await page.click('#omniInput'); await page.keyboard.type('gh electron'); await wait(500); await shot(page, '20-omni-suggest-over-page');
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await wait(600);
+  await page.click('#btnHome'); await wait(1500); await shot(page, '21-home-again');
+  console.log('titles', t2, '|', t3);
+  const st = await page.evaluate(() => ({ tabs: document.querySelectorAll('.tab').length, omni: document.querySelector('#omniInput').value, back: document.querySelector('#btnBack').disabled }));
+  console.log(JSON.stringify({ tabsBeforeClose: n1, tabsAfterClose: n2, viewShot, title, st }, null, 1));
+  console.log('ERRORS:', errs.length ? errs.join('\n') : 'keine');
+  await app.close();
+})().catch(e => { console.error('TEST FAIL', e); process.exit(1); });

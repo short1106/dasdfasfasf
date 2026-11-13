@@ -1,0 +1,305 @@
+# Dulidan Web
+
+Ein Desktop-Browser von **Dulidan Studios**, gebaut mit Electron. Version 0.1 konzentriert sich auf Optik, die Suchleiste und übertrieben epische Animationen. Farben, Easing-Kurven, Radien, Glow-Effekte und Schriften stammen direkt von [dulidan-studios.com](https://dulidan-studios.com).
+
+> Dream. Design. Develop. Dominate.
+
+## Windows: Installer mit Auto-Update
+
+Lade `DulidanWeb-Setup.exe` unter **Releases → „Dulidan Web für Windows (neuester Build)"** herunter und doppelklicke darauf. Dulidan Web installiert sich in Sekunden für deinen Benutzer, ohne Admin-Rechte. Es legt Verknüpfungen auf dem Desktop und im Startmenü an und startet danach direkt.
+
+**Updates kommen von selbst:**
+- Beim Start und danach alle 3 Stunden schaut die App, ob es eine neue Version gibt, und lädt sie im Hintergrund.
+- Oben in der Titelleiste erscheint dann **„Update · Neu starten“**. Ein Klick, und die neue Version läuft.
+- Klickst du nicht, wird das Update beim nächsten Beenden still installiert.
+
+Passwörter, Lesezeichen und Einstellungen bleiben dabei erhalten. Sie liegen in `%APPDATA%\dulidan-web`.
+
+**Umstieg von der alten portablen `DulidanWeb.exe`:**
+1. Installiere einmal die Setup-Datei.
+2. Lösche danach die alte exe und alte Verknüpfungen.
+
+Die alte Version entpackte sich bei jedem Start in einen temporären Ordner. Deshalb zeigten angeheftete Verknüpfungen „Verknüpfungsproblem“.
+
+Beim ersten Start zeigt Windows eventuell „Der Computer wurde durch Windows geschützt“, weil das Setup nicht kostenpflichtig signiert ist. Klicke dann auf **Weitere Informationen → Trotzdem ausführen**.
+
+Gebaut wird das Setup vom Workflow `.github/workflows/build-exe.yml`. Jeder Build zählt die Version hoch (0.2.x) und lädt `latest.yml` mit hoch, das ist die Datei, die der Updater liest. Selbst bauen geht unter Windows mit `npm install` und dann `npm run dist`.
+
+## Android: die APK
+
+`DulidanWeb.apk` aufs Handy laden und öffnen. Sie liegt unter **Releases → „Dulidan Web für Android (neuester Build)“**. Beim ersten Mal fragt Android, ob Installationen aus dieser Quelle erlaubt sind; das einmal erlauben.
+
+Die Android-Version ist eine eigene native App (Kotlin + Android-WebView) im Ordner `android/`:
+
+- **Startseite:**
+  - Das Partikel-D weicht dem Finger aus, Tippen löst eine Schockwelle mit Vibration aus.
+  - Nebel und Logo kippen mit dem Gyroskop mit.
+  - Dazu eine Riesen-Suchleiste mit Energiestrahl, Shortcut-Chips, Schnellzugriff, Uhr und Slogan-Bänder.
+- **Untere Leiste für den Daumen:** Adressleiste mit rotierendem Energiestrahl, Ladelinie und Werbeblocker-Zähler.
+- **Seitenwechsel als Partikel-Morph:** Die alte Seite zerfällt, fliegt zum D und explodiert in die neue Seite.
+- **Tab-Übersicht als 3D-Karten-Stapel:** Wischen lässt eine Karte in Partikel zerfallen, Antippen zoomt hinein.
+- **Funktionen:**
+  - Live-Vorschläge, Werbeblocker (Hosts-Liste), Tabs wiederherstellen, Vollbild-Videos, Downloads, Datei-Upload.
+  - Teilen, Desktop-Version, Boot-Sequenz.
+  - Rechner: über den Knopf oben auf der Startseite oder im Menü. Er fällt von oben ein, Wischen nach oben schließt ihn.
+    - Tippst du eine Rechnung ins Suchfeld (etwa `12*(3+4)`), steht das Ergebnis sofort darunter.
+    - Enter öffnet den Rechner, Antippen des Vorschlags kopiert das Ergebnis.
+- **Dulidan Maps** (`maps ort`, Startseiten-Karte „Maps“ oder Menü → „Maps“): dieselbe Nachtkarte wie am PC, mit Suche, Routen und Verkehrs-Modus (Menü → „Verkehr“).
+  - „Mein Standort“ nimmt auf dem Handy das echte GPS. Android fragt beim ersten Antippen einmal nach der Erlaubnis. Nur Dulidan Maps bekommt den Standort, fremde Seiten nie.
+- **Sofort-Antworten** wie am PC: Wetter, Währungen, Einheiten, Bundesliga mit Prognose, Vereine und Formel 1.
+- **Übersetzer** (`tr text` oder Menü → „Übersetzer“): Deutsch, Englisch, Spanisch und Französisch übersetzt das Handy selbst, nach einmaligem Laden des Sprachpakets auch offline. Japanisch und Türkisch gehen online.
+- **Widget „Dulidan Suche“ für den Startbildschirm:** Menü → „Widget“ legt es direkt ab. Alternativ: Startbildschirm lange drücken → Widgets → Dulidan Web.
+  - Tippen öffnet einen leeren Tab mit Tastatur.
+  - Das Mikrofon startet die Sprachsuche.
+  - Der Rechner-Knopf öffnet sofort den Rechner.
+  - Dulidan Web lässt sich als Standard-Browser wählen.
+
+**Updates kommen von selbst:** Die App schaut beim Start und beim Zurückkehren nach, höchstens alle 3 Stunden.
+- Im WLAN lädt sie neue Versionen automatisch und installiert sie.
+- Ab Android 12 läuft das nach dem ersten Mal ganz ohne Nachfrage.
+- Im Mobilfunknetz fragt sie vorher: oben „Update · Laden“.
+- Beim ersten Mal fragt Android, ob Dulidan Web Apps installieren darf.
+- Über Menü → „Update“ geht es auch sofort.
+
+Gebaut wird die APK vom Workflow `.github/workflows/build-apk.yml`. Jeder Build zählt die Version hoch und legt `android-version.json` ins Release, mit Version und Fingerabdruck des Signierschlüssels.
+
+**Signierschlüssel:** Updates über die alte Version gehen nur mit immer demselben Schlüssel. Dafür legt man einmalig die Repository-Secrets `DW_KEYSTORE` (Keystore als Base64) und `DW_KEYSTORE_PASS` an. Der Schlüssel gehört nie ins Repo.
+- Ohne Secret erzeugt jeder Build einen neuen Schlüssel. Dann erkennt die App das und sagt ehrlich, dass dieses eine Mal neu installiert werden muss.
+
+## Starten (Entwicklung)
+
+Voraussetzung: [Node.js](https://nodejs.org) 20 oder neuer.
+
+```bash
+npm install
+npm start
+```
+
+**Nur herunterladen?** `dulidan-web.zip` im Repo enthält das komplette Projekt (ohne `node_modules`). Entpacken, im Ordner `npm install` und `npm start` ausführen.
+
+Beim ersten Start läuft die Boot-Sequenz (mit Enter oder Esc überspringbar). Sie lässt sich in den Einstellungen erneut abspielen.
+
+## Tastenkürzel
+
+| Kürzel | Aktion |
+| --- | --- |
+| `Strg+T` | Neuer Tab |
+| `Strg+Umschalt+N` | Neuer Inkognito-Tab |
+| `Strg+Umschalt+S` | Screenshot (Snipping-Tool) |
+| `Strg+Umschalt+G` | Tab-Gruppe für den aktiven Tab wählen |
+| `Strg+Umschalt+P` | Bild-in-Bild: Video als schwebendes Fenster über allen Programmen |
+| `Strg+W` | Tab schließen |
+| `Strg+Tab` / `Strg+Umschalt+Tab` | Nächster / vorheriger Tab |
+| `Strg+L` | Adressleiste fokussieren |
+| `Strg+K` | Command Palette (Tabs, Lesezeichen, Verlauf, Befehle) |
+| `Strg+E` | Orbit: 3D-Tab-Übersicht (darin `S`: Stil wechseln – Spirale, Karussell, Coverflow, Galaxie, Wabe, Sternbilder) |
+| `Strg+F` / `F3` | Auf der Seite suchen / nächster Treffer |
+| `Strg +` / `Strg -` / `Strg 0` | Zoom größer / kleiner / zurücksetzen |
+| `Strg+D` | Lesezeichen setzen oder entfernen |
+| `Strg+J` | Downloads |
+| `Strg+,` | Einstellungen |
+| `Strg+Umschalt+R` | Taschenrechner |
+| `Strg+Umschalt+M` | Disko-Modus (wenn im Tab Musik läuft) |
+| `F5` / `Strg+R` | Neu laden |
+| `Alt+←` / `Alt+→` | Zurück / Vor |
+| `Alt+Pos1` | Startseite |
+| `F11` | Vollbild |
+
+## Suche
+
+Eine einzige Leiste für Adressen und Suche. Eingaben ohne Domain landen auf der **eigenen Ergebnisseite „Dulidan Suche“** und nicht auf der weißen Seite einer Suchmaschine. Das gilt am PC und auf dem Handy.
+
+- **Ergebnisse im Dulidan-Look:**
+  - Karten mit Favicon, Pfad und hervorgehobenen Suchbegriffen. Anzeigen werden herausgefiltert.
+  - Beim Scrollen lädt die Seite endlos nach.
+  - Zurück springt ohne neues Laden an dieselbe Stelle.
+- **Tabs:**
+  - Alle
+  - Bilder als Mosaik mit Lightbox
+  - Videos mit Vorschaubild, Dauer und Aufrufen
+  - News mit Quelle und „vor 3 Std.“
+- **Sofortantworten:** eine Wikipedia-Karte zum Begriff. Bei Rechnungen wie `200*15%` erscheint eine Rechner-Karte mit dem Ergebnis.
+  - **Wetter** (`wetter`, `wetter berlin`, `tokio wetter`): animierte Karte mit fallendem Regen, Schnee, Blitzen, Sonnenstrahlen oder Sternen, dazu Kurve der nächsten 24 Stunden und 7 Tage. Daten: Open-Meteo.
+  - **Währungen** (`100 usd in eur`, `50€ in pfund`, `dollar kurs`): EZB-Kurs, Betrag direkt in der Karte änderbar, Tauschen-Knopf, Verlauf der letzten 30 Tage.
+  - **Einheiten** (`5 meilen in km`, `30 °c in f`, `2 gb in mb`, `100 km/h in mph`): Länge, Gewicht, Volumen, Tempo, Daten, Zeit, Fläche, Temperatur.
+  - **Fußball** (`bundesliga`, `2. liga`, `3. liga`, `bvb`, `fc bayern`, `schalke`, `msv duisburg` …): Spieltag mit Live-Ergebnissen, die sich jede Minute selbst aktualisieren, Tabelle, beim Verein Form, nächste Spiele und Tabellenplatz. Daten: OpenLigaDB.
+    - Oben in der Karte schaltest du zwischen **1., 2. und 3. Liga** um.
+    - **Prognose:** Für jedes Spiel des nächsten Spieltags gibt es das wahrscheinlichste Ergebnis und die Chancen für Heimsieg, Remis und Auswärtssieg (1/X/2). Dazu wird der Rest der Saison 5.000-mal durchgespielt. Das ergibt die wahrscheinlichste Abschlusstabelle mit Punkten und den Chancen auf Meisterschaft, Champions League bzw. Aufstieg und Abstieg.
+    - Das ist Statistik aus den Toren und Gegentoren der laufenden Saison, keine Garantie.
+  - **Torjubel:** Auf der Vereinskarte (z. B. `bvb`) „☆ Torjubel“ antippen. Wenn dein Verein ein Tor schießt, explodiert Konfetti von den Bildschirmrändern mit „TOOOR!“ und Spielstand, egal auf welcher Seite du bist. Dazu kommt eine Windows-Benachrichtigung mit Torschütze und Minute. Zum Ausprobieren gibt es in der Palette „Torjubel testen“.
+  - **Formel 1** (`f1`, `formel 1`): Fahrer-WM mit Teamfarben und Countdown zum nächsten Rennen. Daten: Jolpica.
+- **Woher die Treffer kommen:** Die App holt sie im Hintergrund von DuckDuckGo, also ohne Tracking und ohne API-Schlüssel, dazu Wikipedia. Angezeigt wird alles nur in der eigenen Seite.
+  - Der Abruf läuft über einen kleinen Proxy in der App. Er spricht ausschließlich diese festen Quellen an und ist nur für die Ergebnisseite selbst nutzbar, fremde Webseiten kommen nicht an ihn heran.
+- **Andere Suchmaschine:** Wer doch eine möchte, kann sie in den Einstellungen wählen (DuckDuckGo, Google, Bing, Brave, Ecosia, Startpage).
+- **Gemeinsamer Code:** Die Seite liegt in `shared/search/`. Desktop und Android benutzen dieselben Dateien.
+
+Such-Shortcuts: Wenn du ein Kürzel und ein Leerzeichen tippst, wird daraus ein Chip.
+
+| Kürzel | Ziel |
+| --- | --- |
+| `yt …` | YouTube |
+| `gh …` | GitHub |
+| `wiki …` | Wikipedia (de) |
+| `maps …` | Google Maps |
+| `mc …` | Minecraft Wiki (de) |
+
+Mit Rücktaste in der leeren Leiste entfernst du den Chip wieder.
+
+Rechnen geht direkt in der Leiste. Bei `200*15%` steht als erster Vorschlag `= 30`, Enter kopiert das Ergebnis. Unterstützt werden:
+
+- `+ − × ÷ ^ % !` und Klammern
+- `√`/`sqrt`, `sin`/`cos`/`tan` (in Grad), `log`, `ln`, `π`, `e`
+- Komma als Dezimalzeichen
+
+## Was drin ist
+
+- **Start-Erlebnis:** Boot-Sequenz im Terminal-Look, ein WebGL-Partikel-D mit eigenem Shader (setzt sich zusammen, weicht der Maus aus, zerfällt bei Klick in Schockwellen), ein Nebel-Shader, der auf die Maus reagiert, eine Live-Uhr, Wetter als HUD und das Slogan-Band.
+- **Suchleiste:** pulsierender Glow, ein Energiestrahl, der beim Tippen um die Leiste rast, Live-Vorschläge mit Stagger und Feder-Highlight, eine Schockwelle beim Absenden und ein leuchtender Ladebalken.
+- **Animationen:** Custom Cursor (Ring und Punkt, rastet auf Buttons ein, zeigt Labels), magnetische Buttons, Ripple, Mikro-Bounce, Icon-Rotation, Tilt und Spotlight auf Karten. Tabs wachsen elastisch ein, zerfallen beim Schließen in Partikel und lassen sich mit physikalischem Gefühl ziehen. Der aktive Tab hat einen wandernden Glow. Seitenwechsel laufen mit Logo-Wipe, Panels gleiten mit Blur, Skalierung und Stagger ein, und das Fenster schließt mit einem CRT-Effekt.
+- **Orbit (3D-Tab-Übersicht, `Strg+E`):** Alle Tabs schweben als Live-Vorschauen auf einer Spirale im WebGL-Raum, mit Sternenfeld und Gitterboden.
+  - Mit der Maus fliegst du, mit Mausrad oder Pfeiltasten geht es durch die Tabs.
+  - Klick oder Enter zoomt in eine Karte hinein, bis sie exakt die Seite füllt. Erst dann erscheint die echte Seite.
+  - `Entf` schließt einen Tab, `Esc` zoomt zurück in den aktiven Tab.
+- **Partikel-Übergang:** Beim Seitenwechsel zerfällt das Foto der alten Seite in rund 26 000 Partikel, die zum Dulidan-D zusammenfliegen. Ist die neue Seite geladen, wird sie unsichtbar fotografiert. Dann explodiert das D, und die neue Seite erscheint in einem wachsenden Kreis mit Schockwellen-Ring. Ohne WebGL läuft weiter der Logo-Wipe.
+- **Musik-Reaktion:** Läuft in einem Tab Ton (etwa YouTube), reagieren Logo, Nebel, Energiestrahl und Glow darauf, auch wenn du gerade auf einem anderen Tab bist.
+  - Die Analyse trennt Stereo in Mitte und Seiten. Daraus entstehen drei Spuren:
+    - **Bass:** alles unter 150 Hz
+    - **Stimme:** liegt in der Mitte und klingt tonal
+    - **Melodie:** Seiten und Höhen
+  - Jede Spur regelt ihren Pegel selbst nach. So übersteuert auch bei lauten Songs nichts, nur was heraussticht, schlägt aus.
+  - Kicks kommen aus echten Energiesprüngen im Bass. Drops erkennt die Analyse am ersten kräftigen Einsatz nach einer Bass-Pause.
+- **Disko-Modus** (der Knopf „DISKO“ erscheint, sobald im Tab Musik läuft, oder `Strg+Umschalt+M`): Er macht aus jedem Video oder Song live eine Vollbild-Show.
+  - **Mit Video:**
+    - Das echte Video läuft in der Mitte.
+    - Bei Kicks zoomt es, stößt und verschiebt die Farben.
+    - Beim Drop zerfällt es in Glitch-Streifen.
+    - Dazu kommen Lichtfächer, Tunnel, eine Spiegelung und Partikelstürme.
+  - **Ohne Video:** Ein Spektrum-Ring pulsiert um einen leuchtenden Kern, dazu ein eigener Ring für die Stimme.
+  - **Lyric Motion** (`V` schaltet live um): ohne Video, die Wörter fliegen durch eine 3D-Welt.
+    - **10 Welten**, automatisch passend zum Song gewählt (Sprache, Thema des Texts, Genre, Tempo), mit `W` von Hand wechselbar:
+      - **Neon-City** (Rap, Hip-Hop, Nacht/Stadt): Hochhäuser mit flackernden Fenstern, nasse Straße, Regen, Leuchtreklame-Schrift
+      - **Inferno** (Rock, Metal, Feuer): Lava-Risse, Glutregen, Rauch, Blitze, Metall-Schrift
+      - **Galaxie** (Electronic, Weltall): Nebel, Planet mit Ring, Asteroiden, Supernova beim Drop
+      - **Japan 和** (japanische Lieder, Thema Japan): rote Sonne, Fuji, Torii-Tore, Kirschblüten, Pinsel-Schrift
+      - **Ozean** (Balladen, Liebe, Traurigkeit): Unterwasser-Licht, Seetang, Blasen, Kaustik am Boden
+      - **Synthwave** (Pop, Disco, 80er): Streifen-Sonne, Palmen, Drahtgitter-Berge, Chrom-Schrift
+      - **Weihnachten 🎄** (Weihnachtslieder): Schneefall, Tannenbäume mit Lichterketten, Nordlicht, goldene Schrift
+      - **Россия** (russische Lieder, erkannt an kyrillischem Text): Nordlicht, goldene und bunte Zwiebelkuppeln, Birken, Eis, Schnee
+      - **Қазақстан** (kasachische Lieder): hellblauer Steppenhimmel, goldene Sonne mit Steppenadler, Jurten, goldene Steppe
+      - **Dulidan**: der klassische Look
+    - **15 Textarten:** Slam, Fly-Through, Shatter, Glitch, Stack, Ring, Split (Buchstaben fliegen von überall rein), Welle, Regen, Burn-in, Sternbild, Slice, Flip, Typo-Wand. Dazu **Echo-Trails** (leuchtende Nachbilder), im Refrain voll.
+    - **Kamera:** Push, Spirale, Orbit, Seitenfahrt, Draufsicht, Dolly-Zoom, Froschperspektive. Neue Abschnitte bekommen einen harten Schnitt.
+    - **Erster Refrain:** Zeitlupe, dann eine Explosion in der Art der Welt (Blütensturm, Glutwelle, Supernova …).
+    - **Schlüsselwörter:** Hinter bestimmten Wörtern baut sich eine leuchtende Partikel-Figur auf. „Welt“ wird zur drehenden Weltkugel aus Punkten, ein Herz schlägt im Bass, dazu Krone, Diamant, Blitz, Stern, Sonne, Mond, Uhr, Flügel, Welle, Tannenbaum und mehr. Andere Wörter lösen Effekte aus: Feuer, Goldregen bei Geld, Rauch, Schnee, Regen, Tränen, Konfetti bei Party, Lichtstrahl, Geschwindigkeits-Streifen. Farbwörter wie rot, blau, gold oder pink erscheinen in genau dieser Farbe.
+    - Beim Drop rollt die Kamera und das Bild invertiert kurz. Die Disko startet immer in Lyric Motion, `V` holt das Video in die Mitte.
+  - **Lyrics:** Titel und Künstler liest der Modus aus der Seite (YouTube und Co.).
+    - Zuerst kommen die **YouTube-Untertitel** des Videos, wenn es welche gibt. Die sind exakt auf das Video getimt, Intro inklusive.
+    - Sonst sucht der Modus bei [LRCLIB](https://lrclib.net) (mehrere Schreibweisen, z. B. ohne „Sped Up“ oder „Remix“) und bei **NetEase Cloud Music** (sehr viele Songs, oft wortgenau getimt). Gibt es nur den Text ohne Zeiten, legt er die Zeilen selbst auf die Gesangseinsätze.
+    - Synchronisierte Texte Die werden **am echten Gesang ausgerichtet**: Bis der Gesang einsetzt, steht „♪ warte auf Gesang …“ da, danach rutscht der Text auf die gesungenen Zeilen.
+    - Die Wörter ploppen auf die Silben der Stimme rein, die Zeile springt auf den Beat.
+    - Passt es trotzdem nicht: `S` drücken, wenn eine Zeile einsetzt. Das wird **für dieses Video gemerkt**, ebenso `+`/`−`.
+  - **Steuerung:**
+    - `Esc` beendet, Leertaste pausiert, `←`/`→` spult 5 s.
+    - `1`/`2`/`3` wechselt zwischen Chill, Party und Eskalation.
+    - `L` schaltet die Lyrics ein und aus, `V` wechselt Video ↔ Lyric Motion, `W` wechselt die Welt, `S` synchronisiert.
+    - Oben steht live das Tempo (BPM).
+  - **Grenzen:**
+    - Kopiergeschützte Inhalte (DRM, etwa Netflix oder Spotify Web) lassen sich nicht abgreifen.
+    - Für Nischen-Songs gibt es manchmal keine Lyrics. Dann laufen nur die Effekte.
+- **Passwort-Manager:** Nach dem Anmelden fragt die Adressleiste „Passwort speichern?“. Beim nächsten Besuch füllt Dulidan Web Benutzername und Passwort ein und meldet dich automatisch an.
+  - Auch zweistufige Logins wie bei Google oder Microsoft gehen: erst die E-Mail, dann das Passwort.
+  - Für YouTube und Google meldet sich Dulidan Web als normales Chrome. Mit „Electron“ in der Browser-Kennung würde Google die Anmeldung blockieren („Dieser Browser ist möglicherweise nicht sicher“).
+  - Verwalten kannst du alles über den Schlüssel in der Adressleiste, im Menü oder in der Palette: suchen, anzeigen, kopieren (die Zwischenablage wird nach 30 s geleert) und löschen.
+  - Ist ein gespeichertes Passwort falsch, gibt es höchstens einen automatischen Versuch pro Minute, also keine Endlosschleife.
+- **Adressen & Karten:** Nach dem Absenden eines Formulars fragt Dulidan Web „Adresse speichern?“ bzw. „Karte •••• 4242 speichern?“.
+  - Beim nächsten Mal erscheint direkt am Feld ein Vorschlag. Ausgefüllt wird erst nach deinem Klick, **abgeschickt wird nie automatisch**. „Bestellen“ oder „Bezahlen“ drückst du immer selbst.
+  - Die Prüfnummer (CVC) wird nie gespeichert.
+  - Es funktioniert auch mit Bezahlfeldern in iframes (Stripe, Adyen …). Kartendaten gehen dabei nur an Rahmen derselben Herkunft wie das angeklickte Feld, nie in fremde iframes.
+  - Verwalten kannst du alles unter Menü → „Adressen & Karten“.
+- **Werbeblocker:** Ghostery-Engine mit Werbe- und Tracker-Listen. Das Schild in der Adressleiste zählt, was auf der Seite blockiert wurde. Abschalten kannst du ihn in den Einstellungen.
+- **Tabs wiederherstellen:** Beim Start sind deine Tabs wieder da. Abschalten kannst du das in den Einstellungen.
+- **Rechtsklick-Menü:** Link oder Bild in neuem Tab öffnen, speichern und kopieren, markierten Text im Web suchen, Rechtschreibvorschläge, Untersuchen.
+- **Taschenrechner** (Knopf oben rechts in der Leiste oder `Strg+Umschalt+R`): Das Panel fällt mit Feder ein und funktioniert mit Maus und Tastatur.
+  - Das Ergebnis erscheint live, `=` löst einen Partikel-Burst aus.
+  - Die letzten Rechnungen bleiben als Verlauf stehen, Kopieren geht per Klick.
+  - Ein eigener Parser rechnet, `eval` wird nie benutzt.
+- **Objekt in der Mitte:** Statt des D lassen sich andere Objekte aus Partikeln formen:
+  - Japan-Logo (das D mit „ドゥリダン スタジオ“), Blume, Galaxie, Herz, Planet, Atom, Stern und Schmetterling
+  - Die Partikel sprengen beim Wechsel auseinander und setzen sich neu zusammen.
+  - Wählen kannst du in den Einstellungen oder per Doppelklick auf das Objekt, auf dem Handy per Doppeltipp und im Menü.
+- **Autostart:** Unter Einstellungen → „Beim Start“ → „Mit Windows starten“.
+- **Dulidan Maps:** Aufruf über `maps Duisburg`, Menü, Palette oder die Karte auf der Startseite. Es ist eine eigene Karte im Dulidan-Look.
+  - Nachtkarte mit leuchtenden Straßen und lila 3D-Gebäuden, dazu Kamerafahrten.
+  - Ortssuche mit Vorschlägen beim Tippen.
+  - Routen für Auto, Rad und zu Fuß, die sich als Energielinie einzeichnen, mit Abbiege-Hinweisen auf Deutsch.
+  - Rechtsklick → „Was ist hier?“ und „Route hierher“.
+  - **News** (Zeitungs-Knopf rechts oder Taste `N`): Der Globus zeigt jedes Land als leuchtenden Punkt. Ein Land antippen zeigt die neuesten Schlagzeilen von dort, mit Bild, Quelle und Uhrzeit. Ein Thema eingeben (z. B. „Ukraine“) lässt die Länder leuchten, die gerade am meisten darüber berichten. Fremdsprachige Überschriften lassen sich mit „DE“ übersetzen. Daten: GDELT, alle 15 Minuten neu.
+  - **Verkehr** (Flugzeug-Knopf rechts oder Taste `T`): Die Karte wird zum Globus und zeigt die beliebtesten Flugrouten, Seewege und Schnellzug-Strecken der Welt.
+    - Flugzeuge mit Leuchtspur, Containerschiffe und Züge fahren darauf hin und her. Je mehr Verkehr eine Route hat, desto mehr Fahrzeuge und desto heller die Linie.
+    - **Live-Flüge:** Der Schalter „🛰 Live-Flüge“ zeigt echte Flugzeuge, die gerade in der Luft sind (OpenSky). Sie fliegen flüssig weiter, ein Klick zeigt Rufzeichen, Land, Höhe und Tempo. OpenSky hat ohne Konto ein Tageslimit.
+    - Flüge, Schiffe und Züge lassen sich einzeln an- und ausschalten. Ein Klick auf eine Linie zeigt, wie viel dort ungefähr pro Tag fährt.
+    - Das ist **nicht live**: Routen und Mengen sind gerundete Richtwerte, die Fahrzeuge sind Animation.
+  - Die Daten kommen von OpenStreetMap über OpenFreeMap, Photon und routing.openstreetmap.de, alles frei und ohne Konto. Street View, Bewertungen und Live-Verkehr gibt es dort nicht.
+- **Übersetzer:** Aufruf über `tr text` in der Adressleiste, über Menü und Palette oder per Rechtsklick auf markierten Text → „Übersetzen“.
+  - **Animation:** Die Ausgabe zeigt erst deinen Text, dann transkribiert er sich Wort für Wort in einer Welle zur Übersetzung, mit Glitch-Zeichen, Pop und Funken.
+  - **Lokal:** Deutsch, Englisch, Spanisch und Französisch übersetzt Dulidan Web direkt auf dem PC (Mozilla Bergamot). Das ist privat, und nach dem einmaligen Laden des Sprachpakets (ca. 20–40 MB) geht es offline.
+  - **Online:** Japanisch und Türkisch laufen über den kostenlosen Dienst MyMemory, mit Tageslimit.
+  - Dazu: Sprache automatisch erkennen, Tauschen, Kopieren, Vorlesen.
+- **Snipping-Tool** (`Strg+Umschalt+S`, Scheren-Knopf oben, Menü oder Rechtsklick → „Screenshot erstellen …“):
+  - Bereich ziehen, „Ganze Ansicht“ (Enter) oder „Ganze Seite“ (auch der Teil, den man erst durch Scrollen sieht).
+  - Danach markieren: Stift, Marker, Pfeil, Rahmen, Text, Verpixeln (für Namen oder Passwörter), 6 Farben, Rückgängig.
+  - **Kopieren** (`Strg+C`, danach mit `Strg+V` überall einfügen) oder **Speichern** (`Strg+S`) nach `Bilder\Dulidan Screenshots`.
+- **Tab-Gruppen** (Rechtsklick auf einen Tab, Sternbild-Knopf neben +, `Strg+Umschalt+G` oder einen Tab zwischen zwei Tabs einer Gruppe ziehen): Arbeit, Musik, Shopping, Social, Lernen, Spiele oder ein eigener Name. Jede Gruppe hat einen farbigen Chip in der Tableiste. Ein Klick darauf klappt die ganze Gruppe zu oder wieder auf. Im Orbit (Stil **Sternbilder**) wird jede Gruppe zu einem leuchtenden Sternbild, und ein Klick auf den Namen öffnet oder schließt sie. Gruppen bleiben nach dem Neustart erhalten.
+- **Hintergrundmusik** (Einstellungen → Hintergrundmusik): Auf der Startseite läuft der Soundtrack aus Dulidanopoly passend zum Design: DULIDAN ANTHEM, im Japan-Design SAKURA NO KAZE, im Russland-Design DULIDAN KAZACHOK. Sobald eine Webseite offen ist oder etwas anderes Ton macht, blendet die Musik aus. Lautstärke-Regler und Schalter in den Einstellungen.
+- **Design „Қазақстан“** (Einstellungen → Design → ҚАЗАҚСТАН): Himmelblau, Weiß und Gold. Eine goldene Sonne mit Strahlen dreht sich hinter dem Logo, in der Mitte steht das goldene Dulidan-D mit Steppenadler darunter, links ein goldenes Ornament-Band, unten die Steppe mit Jurten, dazu Goldstaub und kasachische Schrift.
+- **Design „Россия“** (Einstellungen → Design → РОССИЯ): Winternacht mit Schneefall über der ganzen Oberfläche, Zwiebelkuppeln mit leuchtenden Fenstern, Gold und Purpurrot, kyrillische Schrift und das Russland-Logo in der Mitte.
+- **Seiten-Wächter** (Rechtsklick → „Bereich beobachten …“, Menü oder Palette): Du fährst mit der Maus über die Seite, das Element darunter leuchtet. Mit dem Mausrad machst du den Bereich größer oder kleiner, ein Klick legt ihn fest (Preis, Ticket, Ergebnis …). Dulidan Web prüft ihn alle 15 Minuten im Hintergrund, mit deinen Anmeldungen. Ändert sich etwas, kommt eine Windows-Benachrichtigung, und im Panel siehst du ein Vorher/Nachher-Bild samt altem und neuem Text.
+- **Design „Japan 和“** (Einstellungen → Design → JAPAN 和): Die ganze Oberfläche wird japanisch, mit Indigo-Nacht, roter Sonne, fallenden Kirschblüten, Mincho-Schrift, senkrechter japanischer Schrift, roten Bändern und dem Japan-Logo in der Mitte.
+- **Inkognito-Tabs** (`Strg+Umschalt+N`, Menü oder Palette): eigener Tab mit Masken-Symbol und kühlem Farbschema.
+  - Kein Verlauf, keine gespeicherten Passwörter oder Adressen, wird nicht wiederhergestellt.
+  - Cookies, Speicher, Cache und Logins liegen nur im Arbeitsspeicher. Schließt du den letzten Inkognito-Tab, wird alles gelöscht („SPUREN GELÖSCHT“).
+  - Downloads und Lesezeichen bleiben erhalten.
+- **Suchen auf der Seite und Zoom** pro Tab, mit Trefferzähler und Zoom-Anzeige.
+- **Einstellungen:** Suchmaschine, Animationen (Normal, Episch, Aus), Akzentfarbe (sechs Presets und eine freie Farbe), Mikro-Sounds (standardmäßig aus). `prefers-reduced-motion` wird respektiert: Ist es aktiv, steht der Standard auf „Aus".
+
+Ohne WebGL (etwa ohne GPU) erscheint automatisch das statische Logo.
+
+## Aufbau
+
+```
+main.js          Main-Prozess: Fenster (frameless), Tabs als WebContentsView, Protokoll dulidan://, IPC, Downloads
+main/            passwords.js (Tresor) · wallet.js (Adressen & Karten) · adblock.js (Werbeblocker) · contextmenu.js (Rechtsklick)
+preload.js       Schmale IPC-Brücke für die Oberfläche (contextBridge)
+tab-preload.js   Läuft isoliert in Webseiten und meldet nur den Scroll-Fortschritt
+ui/              Oberfläche: Vanilla HTML/CSS/JS, ES-Module, kein Build-Schritt
+  css/           tokens · chrome · home · overlays · error
+  js/            app · tabs · omnibox · view · morph · overview · audio · passwords · wallet · gl · fx · palette · panels · boot · settings · data · sound · util
+assets/          Logo und Schriften (Space Grotesk, JetBrains Mono, OFL)
+```
+
+### Wie Overlays über Webseiten liegen
+
+Eine `WebContentsView` liegt immer über der HTML-Oberfläche. Bevor ein Dropdown, die Palette, ein Panel oder ein Übergang erscheint, fotografiert Dulidan Web die Seite (`capturePage`). Das Foto kommt unter die Oberfläche, und die echte View wird versteckt. Der Logo-Wipe am Ende eines Seitenwechsels läuft per `executeJavaScriptInIsolatedWorld` direkt in der neuen Seite, ohne `innerHTML` und damit kompatibel mit CSP und Trusted Types.
+
+### Wie die Musik-Reaktion funktioniert
+
+`tab-preload.js` greift den Ton von `<video>`- und `<audio>`-Elementen über `captureStream()` ab. Die Wiedergabe der Seite bleibt dabei unverändert. Ein Analyser liefert Bass, Mitten und Höhen rund 30-mal pro Sekunde an die Oberfläche. Geschützte Medien (DRM, etwa Spotify oder Netflix) und fremde Medien ohne CORS geben aus Sicherheitsgründen keinen Ton heraus. Dort bleibt die Musik-Reaktion aus. Damit die Analyse auch in Hintergrund-Tabs weiterläuft, haben Tabs `backgroundThrottling: false`.
+
+### Wo die Passwörter liegen
+
+Alles bleibt lokal in `vault.json` (Passwörter) und `wallet.json` (Adressen & Karten) im App-Datenordner (Windows: `%APPDATA%\dulidan-web`). Jedes Passwort ist einzeln mit Electrons `safeStorage` verschlüsselt, unter Windows ist das **DPAPI**. Nur dein Windows-Benutzerkonto auf diesem PC kann es entschlüsseln. Gibt es keinen System-Schlüsselbund (manche Linux-Systeme), verschlüsselt Dulidan Web mit AES-256-GCM und einem zufälligen lokalen Schlüssel.
+
+- Welche Zugangsdaten eine Seite bekommt, entscheidet der Main-Prozess anhand der echten Frame-URL, nie die Webseite selbst. Ausgefüllt wird nur im Hauptframe und nur auf `https` (plus `localhost` zum Entwickeln).
+- Beim Speichern bekommt die Oberfläche das Passwort nie zu sehen. Sie sagt dem Main-Prozess nur „speichern“ oder „nie“.
+
+### Sicherheit
+
+- Webseiten laufen in einer eigenen Session (`persist:web`), getrennt von der Oberfläche.
+- `contextIsolation: true`, `nodeIntegration: false` und `sandbox: true` für Oberfläche und Tabs
+- Die Oberfläche läuft über ein eigenes Protokoll `dulidan://app/` mit strenger CSP. Es liefert nur `ui/` und `assets/` aus und blockt Path-Traversal.
+- IPC-Aufrufe werden nur von der Oberfläche angenommen. Navigation erlaubt nur `http(s)`, `file` und `dulidan`.
+- `window.open` wird zu einem neuen Tab, `<webview>` ist gesperrt, Berechtigungen sind standardmäßig abgelehnt (bis auf Vollbild und das Schreiben in die Zwischenablage).
+
+## Lizenz der Schriften
+
+Space Grotesk und JetBrains Mono stehen unter der SIL Open Font License, siehe `assets/fonts/`.

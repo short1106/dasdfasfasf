@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>Anmelden – Google-Nachbau</title>
+<body style="background:#fff;color:#222;font:16px sans-serif;padding:40px">
+<h1>Anmelden</h1><p>weiter zu YouTube</p>
+<div id="step"></div><p id="err" style="color:#c00"></p>
+<script>
+let email = '';
+const step = document.getElementById('step'), err = document.getElementById('err');
+function one() {
+  step.innerHTML = '<input type="text" id="identifierId" name="identifier" autocomplete="username" placeholder="E-Mail oder Telefonnummer"> <div id="identifierNext"><button type="button"><span>Weiter</span></button></div>';
+  step.querySelector('button').onclick = () => {
+    email = document.getElementById('identifierId').value;
+    if (!email) { err.textContent = 'Gib eine E-Mail-Adresse ein'; return; }
+    err.textContent = ''; history.pushState({}, '', '/g.html#pwd'); setTimeout(two, 400);
+  };
+}
+function two() {
+  step.innerHTML = '<div>' + email + '</div><input type="password" name="Passwd" autocomplete="current-password" placeholder="Passwort eingeben"> <div id="passwordNext"><button type="button"><span>Weiter</span></button></div>';
+  step.querySelector('button').onclick = () => {
+    const p = document.querySelector('[name=Passwd]').value;
+    sessionStorage.pwTries = (+sessionStorage.pwTries || 0) + 1;
+    if (email === 'shaq.yt@gmail.com' && p === 'YouTube!2026') location.href = '/welcome.html?yt=1';
+    else err.textContent = 'Falsches Passwort';
+  };
+}
+one();
+</script>

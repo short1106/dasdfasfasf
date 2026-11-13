@@ -1,0 +1,30 @@
+/* Hintergrundmusik: Startseite → DULIDAN ANTHEM, Japan → japan, Russland → russia, Webseite → aus, Schalter aus → aus. */
+const { _electron } = require('playwright');
+const path = require('path');
+const APP = path.resolve(__dirname, '..', '..');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+(async () => {
+  const app = await _electron.launch({ executablePath: APP + '/node_modules/electron/dist/electron', args: [APP, '--no-sandbox', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+  const page = await app.firstWindow();
+  const errs = []; page.on('pageerror', e => errs.push('UI ' + e.message));
+  await wait(1500); await page.keyboard.press('Escape'); await wait(2500);
+  const st = () => page.evaluate(() => { const m = window.DULI_MUSIC; return (m.playing ? 'spielt ' + m.track + ' (' + m.section() + ')' : 'still') + ' · Vol ' + m.vol; });
+  const theme = async v => { await page.keyboard.press('Control+,'); await wait(800); await page.click(`.seg:has(button[data-v=russland]) button[data-v=${v}]`); await wait(500); await page.keyboard.press('Escape'); await wait(1500); };
+  const R = {};
+  await page.keyboard.press('Control+T'); await wait(2000);
+  R.start = await st();
+  await theme('japan'); R.japan = await st();
+  await theme('russland'); R.russland = await st();
+  await page.keyboard.press('Control+L'); await page.keyboard.type('127.0.0.1:8765/welcome.html'); await page.keyboard.press('Enter'); await wait(3000);
+  R.webseite = await st();
+  await page.keyboard.press('Control+T'); await wait(2000);
+  R.zurueck = await st();
+  await page.keyboard.press('Control+,'); await wait(800);
+  await page.click('.toggle[aria-label=music]'); await wait(300); await page.keyboard.press('Escape'); await wait(1200);
+  R.aus = await st();
+  await page.keyboard.press('Control+,'); await wait(800); await page.click('.toggle[aria-label=music]'); await page.click('.seg:has(button[data-v=russland]) button[data-v=dulidan]'); await wait(300); await page.keyboard.press('Escape'); await wait(1500);
+  R.dulidan = await st() + ' · Design ' + await page.evaluate(() => document.documentElement.dataset.theme);
+  for (const [k, v] of Object.entries(R)) console.log(k.padEnd(9), v);
+  console.log('Fehler UI:', errs.join(' | ') || 'keine');
+  await app.close();
+})();

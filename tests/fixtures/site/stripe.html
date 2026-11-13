@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Stripe-Nachbau</title>
+<body style="font:15px sans-serif;padding:30px">
+<h1>Bezahlen</h1>
+<label>Name auf der Karte <input id="name" autocomplete="cc-name"></label><br><br>
+<iframe id="num" src="http://localhost:8766/card-number.html" style="width:320px;height:60px"></iframe>
+<iframe id="exp" src="http://localhost:8766/card-exp.html" style="width:160px;height:60px"></iframe><br>
+<p>Werbung:</p><iframe id="ad" src="http://localhost:8767/card-number.html" style="width:320px;height:60px"></iframe>
+<br><button type="button" onclick="document.title='BEZAHLT'">Jetzt bezahlen</button>
